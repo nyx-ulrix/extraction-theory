@@ -1,8 +1,11 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import {
-  ArrowCounterClockwise, ArrowDown, ArrowUp, CaretDown, DownloadSimple, FloppyDisk, GithubLogo, Globe, LinkedinLogo, Plus, SignOut, Table, Trash, UploadSimple,
+  ArrowCounterClockwise, ArrowDown, ArrowLeft, ArrowUp, CaretDown, CaretRight, ChartPolar, Database, DownloadSimple, Drop,
+  FloppyDisk, GithubLogo, Globe, LinkedinLogo, Palette, Plus, Rows, SignOut, Table, Trash, UploadSimple, UserCircle, Wrench, type Icon,
 } from "@phosphor-icons/react";
-import { DEFAULT_AXES, cleanAxes, parsePattern, type DialType } from "../calc.ts";
+import { DEFAULT_AXES, cleanAxes, parsePattern, type DialType, type Layer } from "../calc.ts";
+import Radar from "../components/Radar.tsx";
+import Fingerprint from "../components/Fingerprint.tsx";
 import { PROVIDERS, getKey, setKey, type Provider } from "../ai.ts";
 import { useApp } from "../ctx.ts";
 import { signOut } from "../google.ts";
@@ -21,7 +24,7 @@ import { IconLink, setTheme, useTheme } from "../App.tsx";
 type Patch = (p: Partial<S>) => void;
 
 export default function Settings() {
-  const { db, update, busy, setDirty } = useApp();
+  const { db, update, busy, setDirty, arg, go, back } = useApp();
   const [s, setS] = useState<S>(db.settings);
   const patch: Patch = (p) => setS((x) => ({ ...x, ...p }));
   const dirty = JSON.stringify(s) !== JSON.stringify(db.settings);
@@ -37,19 +40,57 @@ export default function Settings() {
     if (await update((d) => saveSettings(d, next), "Settings saved")) setS(next);
   };
 
+  // Layered: a short list of categories; each opens its own page (arg), and back returns to the list.
+  const cat = CATS.find(([k]) => k === arg);
+  if (!cat) {
+    return (
+      <div className="page">
+        <h1>Settings</h1>
+        <div className="list">
+          {CATS.map(([k, title, desc, I]) => (
+            <div className="item" key={k}>
+              <button type="button" className="item-main settings-row" onClick={() => go("settings", k)}>
+                <I size={22} aria-hidden />
+                <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
+                  <span className="item-title">{title}</span>
+                  <span className="meta">{desc}</span>
+                </span>
+                <CaretRight size={18} aria-hidden />
+              </button>
+            </div>
+          ))}
+        </div>
+        <footer className="credit">
+          <span>Created by Jia En</span>
+          <span className="spacer" />
+          <IconLink href="https://liewjiaen.com" icon={Globe} label="Portfolio" />
+          <IconLink href="https://github.com/nyx-ulrix" icon={GithubLogo} label="GitHub" />
+          <IconLink href="https://www.linkedin.com/in/malcolmliewjiaen/" icon={LinkedinLogo} label="LinkedIn" />
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
-      <h1>Settings</h1>
-      <Brewing s={s} patch={patch} />
-      <Section title="Radar template">
-        <AxesEditor axes={s.axes} onChange={(axes) => patch({ axes })} template={DEFAULT_AXES} />
-      </Section>
-      <Layout s={s} patch={patch} />
-      <Drippers />
-      <Grinders />
-      <Ai s={s} patch={patch} />
-      <ImportData />
-      <Account />
+      <div className="page-head">
+        <IconButton icon={ArrowLeft} label="Back to settings" onClick={back} />
+        <h1 style={{ flex: 1, minWidth: 0 }}>{cat[1]}</h1>
+      </div>
+      {arg === "brewing" && <Brewing s={s} patch={patch} />}
+      {arg === "form" && <Layout s={s} patch={patch} />}
+      {arg === "chart" && (
+        <>
+          <ChartStyle s={s} patch={patch} />
+          <Section title="Radar axes">
+            <AxesEditor axes={s.axes} onChange={(axes) => patch({ axes })} template={DEFAULT_AXES} />
+          </Section>
+        </>
+      )}
+      {arg === "gear" && (<><Drippers /><Grinders /></>)}
+      {arg === "ai" && <Ai s={s} patch={patch} />}
+      {arg === "data" && <ImportData />}
+      {arg === "account" && <Account />}
       {dirty && (
         <div className="savebar">
           <span>{problem || "Unsaved changes."}</span>
@@ -58,14 +99,43 @@ export default function Settings() {
           </Button>
         </div>
       )}
-      <footer className="credit">
-        <span>Created by Jia En</span>
-        <span className="spacer" />
-        <IconLink href="https://liewjiaen.com" icon={Globe} label="Portfolio" />
-        <IconLink href="https://github.com/nyx-ulrix" icon={GithubLogo} label="GitHub" />
-        <IconLink href="https://www.linkedin.com/in/malcolmliewjiaen/" icon={LinkedinLogo} label="LinkedIn" />
-      </footer>
     </div>
+  );
+}
+
+const CATS: [string, string, string, Icon][] = [
+  ["brewing", "Brewing", "Pour entry, grind input, split presets", Drop],
+  ["form", "Brew form", "Which sections each method shows, in what order", Rows],
+  ["chart", "Flavour chart", "Chart shape, chart lines, card art, radar axes", ChartPolar],
+  ["gear", "Gear", "Drippers and grinders", Wrench],
+  ["ai", "Note colours", "AI colour picking for tasting notes", Palette],
+  ["data", "Import", "Add beans and brews from JSON", Database],
+  ["account", "Account", "Your sheet, theme, install app, sign out", UserCircle],
+];
+
+const SAMPLE: Layer[] = [
+  { note: "Peach", color: "#E9AE80", v: { sweetness: 8, aroma: 6, bitterness: 0, body: 4, acidity: 4, finish: 4 } },
+  { note: "Dark chocolate", color: "#4A382B", v: { sweetness: 2, aroma: 4, bitterness: 6, body: 7, acidity: 1, finish: 7 } },
+];
+
+function ChartStyle({ s, patch }: { s: S; patch: Patch }) {
+  return (
+    <Section title="Chart style">
+      <Segmented label="Shape" value={s.radar_shape} onChange={(radar_shape) => patch({ radar_shape })}
+        options={[["sharp", "Sharp"], ["rounded", "Rounded"]]} />
+      <Segmented label="Chart lines" value={s.radar_grid ? "show" : "hide"} onChange={(v) => patch({ radar_grid: v === "show" })}
+        options={[["show", "Show"], ["hide", "Hide"]]} />
+      <Segmented label="Card art on Home and Library" value={s.card_art} onChange={(card_art) => patch({ card_art })}
+        options={[["radar", "Spider chart"], ["blob", "Blob"]]} />
+      <div className="grid-2" style={{ alignItems: "center" }}>
+        <Radar axes={DEFAULT_AXES} layers={SAMPLE} size={280} legend={false} title="Chart preview"
+          rounded={s.radar_shape === "rounded"} grid={s.radar_grid} />
+        <div style={{ display: "grid", placeItems: "center" }}>
+          <Fingerprint axes={DEFAULT_AXES} layers={SAMPLE} size={140} />
+          <span className="meta">Blob card art</span>
+        </div>
+      </div>
+    </Section>
   );
 }
 

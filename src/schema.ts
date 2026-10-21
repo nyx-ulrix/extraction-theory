@@ -179,6 +179,12 @@ export interface Settings {
   axes: AxisDef[];
   /** Per method: ordered list of visible section / field keys. Missing method = defaultLayout(). */
   layout: Record<string, string[]>;
+  /** Spider chart style: sharp polygons, or rounded shapes like the cup fingerprint art. */
+  radar_shape: "sharp" | "rounded";
+  /** Show the rings and spokes behind the spider chart. */
+  radar_grid: boolean;
+  /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
+  card_art: "radar" | "blob";
 }
 export const DEFAULT_SETTINGS: Settings = {
   pour_style: "per_pour",
@@ -192,6 +198,9 @@ export const DEFAULT_SETTINGS: Settings = {
   ai_model: "",
   axes: DEFAULT_AXES,
   layout: {},
+  radar_shape: "sharp",
+  radar_grid: true,
+  card_art: "radar",
 };
 
 /**

@@ -1,20 +1,7 @@
 // Cup fingerprint: the brew's spider chart layers redrawn as smooth see-through shapes,
 // with no grid or labels. Every logged cup gets its own shape and colours.
 import type { AxisDef, Layer } from "../calc.ts";
-
-/** Closed Catmull-Rom spline through points, as cubic Beziers. */
-function smooth(p: [number, number][]) {
-  const n = p.length;
-  const at = (i: number) => p[(i + n) % n];
-  let d = `M${p[0][0].toFixed(2)},${p[0][1].toFixed(2)}`;
-  for (let i = 0; i < n; i++) {
-    const [a, b, c, e] = [at(i - 1), at(i), at(i + 1), at(i + 2)];
-    const c1 = [b[0] + (c[0] - a[0]) / 6, b[1] + (c[1] - a[1]) / 6];
-    const c2 = [c[0] - (e[0] - b[0]) / 6, c[1] - (e[1] - b[1]) / 6];
-    d += `C${c1.map((v) => v.toFixed(2))} ${c2.map((v) => v.toFixed(2))} ${c[0].toFixed(2)},${c[1].toFixed(2)}`;
-  }
-  return d + "Z";
-}
+import { smooth } from "./shape.ts";
 
 export default function Fingerprint({ axes, layers, size = 96 }: { axes: AxisDef[]; layers: Layer[]; size?: number }) {
   if (!layers.length) return null;

@@ -1,6 +1,8 @@
 // Flavour radar: Kiviat grid with coloured axis dots, one see-through polygon per tasting note.
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useContext, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { clamp10, type AxisDef, type Layer } from "../calc.ts";
+import { Ctx } from "../ctx.ts";
+import { shapePath } from "./shape.ts";
 
 const R = 150; // radius of value 10
 const DOT_R = R + 16; // axis dot at the outer end of each spoke
@@ -25,8 +27,11 @@ function extreme(hex: string) {
 
 export default function Radar({
   axes, layers, onChange, selected = null, onSelect, size = 420, legend = true, title = "Flavour radar",
-  emptyText = "Add tasting notes to draw layers.",
+  emptyText = "Add tasting notes to draw layers.", rounded: roundedProp, grid: gridProp,
 }: {
+  /** Chart style; defaults to the user's Settings. Passed explicitly for the Settings preview. */
+  rounded?: boolean;
+  grid?: boolean;
   axes: AxisDef[];
   layers: Layer[];
   onChange?: (layers: Layer[]) => void;
@@ -39,6 +44,14 @@ export default function Radar({
   emptyText?: string;
 }) {
   const n = axes.length;
+  const s = useContext(Ctx)?.db.settings;
+  const rounded = roundedProp ?? s?.radar_shape === "rounded";
+  const grid = gridProp ?? s?.radar_grid !== false;
+  // Rounded style matches the cup fingerprint art: values start a little out from the centre,
+  // so every note reads as a soft shape. Dragging uses the inverse, so points stay under the finger.
+  const MIN = rounded ? 0.16 : 0;
+  const rad = (v: number) => R * (MIN + (1 - MIN) * (v / 10));
+  const fromRad = (r: number) => ((r / R - MIN) / (1 - MIN)) * 10;
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ axis: number | null; id: number } | null>(null);
   const handles = useRef<(SVGGElement | null)[]>([]);
@@ -77,7 +90,7 @@ export default function Radar({
       d.axis = Math.round(a / ((Math.PI * 2) / n)) % n;
     }
     const [ux, uy] = xy(d.axis, n, 1);
-    setVal(d.axis, ((p.x * ux + p.y * uy) / R) * 10);
+    setVal(d.axis, fromRad(p.x * ux + p.y * uy));
   };
   const endDrag = (e: PointerEvent<SVGSVGElement>) => {
     if (drag.current?.id !== e.pointerId) return;
@@ -105,15 +118,15 @@ export default function Radar({
         onPointerCancel={endDrag}
       >
         <title>{title}</title>
-        {RINGS.map((v) => (
-          <polygon key={v} points={poly(n, () => (v / 10) * R)} fill="none" stroke="var(--border-soft)" strokeWidth={1} />
-        ))}
+        {grid && RINGS.map((v) => rounded
+          ? <circle key={v} r={rad(v)} fill="none" stroke="var(--border-soft)" strokeWidth={1} />
+          : <polygon key={v} points={poly(n, () => (v / 10) * R)} fill="none" stroke="var(--border-soft)" strokeWidth={1} />)}
         {axes.map((a, i) => {
           const [x, y] = xy(i, n, DOT_R);
           const [lx, ly] = xy(i, n, LABEL_R);
           return (
             <g key={a.key}>
-              <line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={1} />
+              {grid && <line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={1} />}
               <circle cx={x} cy={y} r={5} fill={a.color} stroke={extreme(a.color) ? "var(--text)" : "none"} strokeWidth={1} />
               <text
                 transform={`translate(${lx.toFixed(2)} ${ly.toFixed(2)}) rotate(${((i / n) * 360).toFixed(2)})`}
@@ -135,7 +148,7 @@ export default function Radar({
 
         {order.map((li) => {
           const l = layers[li];
-          const pts = poly(n, (i) => ((l.v[axes[i].key] ?? 0) / 10) * R);
+          const d = shapePath(axes.map((a, i) => xy(i, n, rad(l.v[a.key] ?? 0))), rounded);
           const outline = extreme(l.color);
           return (
             <g
@@ -144,10 +157,11 @@ export default function Radar({
               onClick={onSelect ? () => onSelect(li) : undefined}
               style={{ cursor: onSelect ? "pointer" : undefined }}
             >
-              {outline && <polygon points={pts} fill="none" stroke="var(--text)" strokeWidth={4} strokeLinejoin="round" />}
-              <polygon points={pts} fill={l.color} fillOpacity={0.35} stroke={l.color} strokeWidth={2} strokeLinejoin="round" />
+              {outline && <path d={d} fill="none" stroke="var(--text)" strokeWidth={4} strokeLinejoin="round" />}
+              <path d={d} fill={l.color} fillOpacity={0.35} stroke={l.color} strokeWidth={2} strokeLinejoin="round" />
               {axes.map((a, i) => {
-                const [x, y] = xy(i, n, ((l.v[a.key] ?? 0) / 10) * R);
+                if (rounded && sel !== li) return null; // the art style shows clean shapes; points only on the note being edited
+                const [x, y] = xy(i, n, rad(l.v[a.key] ?? 0));
                 return <circle key={a.key} cx={x} cy={y} r={3} fill={l.color} stroke={outline ? "var(--text)" : "none"} strokeWidth={1} />;
               })}
             </g>
@@ -157,7 +171,7 @@ export default function Radar({
         {editable && sel != null && axes.map((a, i) => {
           const l = layers[sel];
           const v = l.v[a.key] ?? 0;
-          const [x, y] = xy(i, n, (v / 10) * R);
+          const [x, y] = xy(i, n, rad(v));
           const key = (e: KeyboardEvent) => {
             const step = { ArrowUp: 0.5, ArrowRight: 0.5, ArrowDown: -0.5, ArrowLeft: -0.5 }[e.key];
             if (step == null) return;
@@ -184,7 +198,7 @@ export default function Radar({
                 const p = toSvg(e);
                 const vals = axes.map((ax) => l.v[ax.key] ?? 0);
                 const dist = (k: number) => {
-                  const [hx, hy] = xy(k, n, (vals[k] / 10) * R);
+                  const [hx, hy] = xy(k, n, rad(vals[k]));
                   return p ? Math.hypot(hx - p.x, hy - p.y) : k === i ? 0 : Infinity;
                 };
                 const j = vals.reduce((best, _, k) => (dist(k) < dist(best) ? k : best), i);

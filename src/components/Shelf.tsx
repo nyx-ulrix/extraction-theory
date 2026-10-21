@@ -6,25 +6,30 @@ import { useApp } from "../ctx.ts";
 import { groups, isFinished, norm, originKey } from "../group.ts";
 import type { Rec } from "../schema.ts";
 import { Marquee, SelectField } from "../ui.tsx";
+import { shapePath, sharp, type Pt } from "./shape.ts";
+import Fingerprint from "./Fingerprint.tsx";
 import { str, when } from "../views/History.tsx";
 
 /** Label-free spider chart for small cards: five rings, axis dots in their colours, see-through layers. */
-function MiniRadar({ axes, layers }: { axes: AxisDef[]; layers: Layer[] }) {
+function MiniRadar({ axes, layers, rounded, grid }: { axes: AxisDef[]; layers: Layer[]; rounded: boolean; grid: boolean }) {
   const n = axes.length;
-  const pt = (i: number, v: number): [number, number] => {
+  const MIN = rounded ? 0.16 : 0; // same soft-shape mapping as the full radar and the cup fingerprint
+  const rad = (v: number) => 40 * (MIN + (1 - MIN) * (v / 10));
+  const pt = (i: number, r: number): Pt => {
     const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-    return [Math.cos(a) * v * 4, Math.sin(a) * v * 4];
+    return [Math.cos(a) * r, Math.sin(a) * r];
   };
-  const poly = (v: (i: number) => number) => axes.map((_, i) => pt(i, v(i)).map((x) => x.toFixed(1)).join(",")).join(" ");
   return (
     <svg viewBox="-46 -46 92 92" className="mini-radar" aria-hidden>
-      {[2, 4, 6, 8, 10].map((r) => <polygon key={r} points={poly(() => r)} fill="none" stroke="var(--border-soft)" strokeWidth={0.6} />)}
+      {grid && [2, 4, 6, 8, 10].map((v) => rounded
+        ? <circle key={v} r={rad(v)} fill="none" stroke="var(--border-soft)" strokeWidth={0.6} />
+        : <path key={v} d={sharp(axes.map((_, i) => pt(i, rad(v))))} fill="none" stroke="var(--border-soft)" strokeWidth={0.6} />)}
       {axes.map((a, i) => {
-        const [x, y] = pt(i, 10);
-        return <g key={a.key}><line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={0.6} /><circle cx={x} cy={y} r={2.4} fill={a.color} stroke="var(--text)" strokeWidth={0.4} /></g>;
+        const [x, y] = pt(i, 40);
+        return <g key={a.key}>{grid && <line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={0.6} />}<circle cx={x} cy={y} r={2.4} fill={a.color} stroke="var(--text)" strokeWidth={0.4} /></g>;
       })}
       {layers.map((l, k) => (
-        <polygon key={k} points={poly((i) => l.v[axes[i].key] ?? 0)} fill={l.color} fillOpacity={0.35} stroke={l.color} strokeWidth={1.2} />
+        <path key={k} d={shapePath(axes.map((a, i) => pt(i, rad(l.v[a.key] ?? 0))), rounded)} fill={l.color} fillOpacity={0.35} stroke={l.color} strokeWidth={1.2} />
       ))}
     </svg>
   );
@@ -100,7 +105,11 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
                 {isFinished(bean.finished) && (
                   <span className="card-badge" title="Bag finished"><CheckCircle size={18} weight="fill" aria-hidden /><span className="sr-only">Finished</span></span>
                 )}
-                <MiniRadar axes={fl.axes} layers={fl.layers} />
+                {db.settings.card_art === "blob" ? (
+                  <span className="card-blob"><Fingerprint axes={fl.axes} layers={fl.layers} size={200} /></span>
+                ) : (
+                  <MiniRadar axes={fl.axes} layers={fl.layers} rounded={db.settings.radar_shape === "rounded"} grid={db.settings.radar_grid !== false} />
+                )}
                 <Marquee className="card-title">{name}</Marquee>
                 {sub && <Marquee className="card-sub">{sub}</Marquee>}
                 {bean.origin ? <Marquee className="card-sub">{str(bean.origin)}</Marquee> : null}

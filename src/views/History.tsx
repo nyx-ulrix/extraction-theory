@@ -363,7 +363,7 @@ export function BagToggle({ bean }: { bean: Rec }) {
   return (
     <Segmented
       label={`Bag of ${str(bean.name) || "this bean"}`} value={done ? "done" : "left"}
-      options={[["left", "Still have some"], ["done", "Finished"]]}
+      options={[["left", "Available"], ["done", "Finished"]]}
       onChange={(v) => {
         if (busy || (v === "done") === done) return;
         update((d) => saveBean(d, { id: bean.id, finished: v === "done" }), v === "done" ? "Marked as finished" : "Back in your bean list");
