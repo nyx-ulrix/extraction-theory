@@ -27,7 +27,6 @@
   --series-3: #8e6a8c;
   --series-4: #c27040;
   --mono: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --sans: Inter, "Helvetica Neue", Arial, sans-serif;
   --nav-h: 56px;
 }
 :root[data-theme="dark"] {
@@ -68,7 +67,7 @@ body {
   letter-spacing: 0.02em;
   -webkit-font-smoothing: antialiased;
 }
-h1, h2, h3 { font-family: var(--sans); font-weight: 700; color: var(--text-strong); margin: 0; letter-spacing: -0.02em; line-height: 1.15; }
+h1, h2, h3 { font-family: var(--mono); font-weight: 700; color: var(--text-strong); margin: 0; letter-spacing: 0; line-height: 1.2; }
 h1 { font-size: 28px; }
 h2 { font-size: 18px; letter-spacing: -0.01em; }
 h3 { font-size: 15px; }

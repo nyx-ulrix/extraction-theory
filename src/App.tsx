@@ -317,7 +317,7 @@ const CSS = `
 .app-head { position: sticky; top: 0; z-index: 30; background: var(--bg); border-bottom: 1px solid var(--border-soft); }
 .app-head > .wrap { height: var(--nav-h); display: flex; align-items: center; gap: 8px; }
 .brand { display: flex; align-items: center; gap: 10px; margin-right: 16px; }
-.wordmark { font: 700 18px/1 var(--sans); letter-spacing: -0.02em; color: var(--text-strong); white-space: nowrap; }
+.wordmark { font: 700 16px/1 var(--mono); letter-spacing: 0.02em; color: var(--text-strong); white-space: nowrap; }
 .brand.big .wordmark { font-size: 28px; }
 @media (min-width: 1024px) { .brand.big .wordmark { font-size: 40px; } }
 :root[data-theme="dark"] .logo { filter: invert(1); }

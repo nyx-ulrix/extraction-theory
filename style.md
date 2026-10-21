@@ -7,7 +7,7 @@ Based on the Caffalyst UI design system brief (tokens, type and geometry; its bl
 2. **Square geometry.** `border-radius: 0` everywhere. No shadows.
 3. **Flat contrast.** 1px borders and solid fills only.
 4. **Tracked caps for labels only.** Never for paragraphs.
-5. **Mono for voice, grotesque for brand.** Space Mono body, Inter bold for the wordmark and view titles.
+5. **One typeface.** Space Mono is the primary font everywhere; hierarchy comes from size, weight and tracking, not a second family.
 6. **Short copy.** Plain functional sentences. No em dashes or en dashes anywhere in the UI; use a hyphen. Empty values show `-`.
 7. **No decoration for its own sake.** No numbered section eyebrows, no status dots, no scroll cues.
 
@@ -38,14 +38,16 @@ Theme: saved choice, else `prefers-color-scheme`. Set as `data-theme` on `<html>
 
 | Role | Font | Size | Weight | Tracking |
 |---|---|---|---|---|
-| Wordmark / view title | Inter | 28px (40px laptop) | 700 | -0.02em |
-| Section heading | Inter | 18px | 700 | -0.01em |
+| Wordmark | Space Mono | 16px | 700 | 0.02em |
+| View title | Space Mono | 28px (40px laptop) | 700 | 0 |
+| Section heading | Space Mono | 18px | 700 | 0 |
+| Tagline / eyebrow | Space Mono, caps, `--text` grey | 16px | 400 | 0.2em |
 | Field label | Space Mono, caps | 11px | 400 | 0.2em |
 | Body / inputs | Space Mono | 15px (16px on phone inputs, avoids iOS zoom) | 400 | 0.02em |
 | Buttons | Space Mono, caps | 13px | 700 | 0.2em |
 | Numbers | Space Mono, tabular | as body | | |
 
-Fonts are self-hosted through `@fontsource` (Space Mono 400/700, Inter 700).
+**Space Mono is the only typeface** (primary font for everything: wordmark, headings, body, labels, buttons, numbers). Self-hosted through `@fontsource/space-mono` (400/700). Fallback stack: `"Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace`. Reference: the brief's tagline style, wide-tracked grey caps.
 
 ## 4. Layout
 
