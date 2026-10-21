@@ -1,15 +1,34 @@
-// Home: every past brew as a card with its spider chart and the bean's key facts.
+// Home: every past brew as a small card: spider chart, bean, roastery and process, origin.
 import { Coffee, Plant } from "@phosphor-icons/react";
-import { num, parseFlavour } from "../calc.ts";
+import { parseFlavour, type AxisDef, type Layer } from "../calc.ts";
 import { useApp } from "../ctx.ts";
-import { methodDefs } from "../schema.ts";
 import { Button } from "../ui.tsx";
-import Radar from "../components/Radar.tsx";
-import { beanName, methodOf, ratioOf, stamp, str, when } from "./History.tsx";
+import { beanName, str, when } from "./History.tsx";
+
+/** Label-free spider chart for small cards: five rings, axis dots in their colours, see-through layers. */
+function MiniRadar({ axes, layers }: { axes: AxisDef[]; layers: Layer[] }) {
+  const n = axes.length;
+  const pt = (i: number, v: number): [number, number] => {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    return [Math.cos(a) * v * 4, Math.sin(a) * v * 4];
+  };
+  const poly = (v: (i: number) => number) => axes.map((_, i) => pt(i, v(i)).map((x) => x.toFixed(1)).join(",")).join(" ");
+  return (
+    <svg viewBox="-46 -46 92 92" className="mini-radar" aria-hidden>
+      {[2, 4, 6, 8, 10].map((r) => <polygon key={r} points={poly(() => r)} fill="none" stroke="var(--border-soft)" strokeWidth={0.6} />)}
+      {axes.map((a, i) => {
+        const [x, y] = pt(i, 10);
+        return <g key={a.key}><line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={0.6} /><circle cx={x} cy={y} r={2.4} fill={a.color} stroke="var(--text)" strokeWidth={0.4} /></g>;
+      })}
+      {layers.map((l, k) => (
+        <polygon key={k} points={poly((i) => l.v[axes[i].key] ?? 0)} fill={l.color} fillOpacity={0.35} stroke={l.color} strokeWidth={1.2} />
+      ))}
+    </svg>
+  );
+}
 
 export default function Home() {
   const { db, go } = useApp();
-  const defs = methodDefs(db.fields);
   const brews = [...db.brews].sort((a, b) => when(b) - when(a));
 
   return (
@@ -22,28 +41,18 @@ export default function Home() {
       {brews.length ? (
         <div className="cards">
           {brews.map((b) => {
-            const m = methodOf(b.method, defs);
             const bean = db.beans.find((x) => x.id === b.bean_id);
             // The brew's own tasting, else the roaster's notes for the bean.
             const own = parseFlavour(b.flavour, db.settings.axes);
             const fl = own.layers.length ? own : parseFlavour(bean?.flavour, db.settings.axes);
-            const facts = [str(bean?.origin), str(bean?.process)].filter(Boolean);
-            const dose = num(b.dose_g);
+            const sub = [str(bean?.roastery), str(bean?.process)].filter(Boolean).join(", ");
             return (
-              <button key={str(b.id)} type="button" className="card" onClick={() => go("history", str(b.id))}>
-                <Radar axes={fl.axes} layers={fl.layers} size={240} legend={false} emptyText="No tasting notes yet" title={`${beanName(db, b.bean_id)} flavour`} />
+              <button key={str(b.id)} type="button" className="card" onClick={() => go("history", str(b.id))}
+                aria-label={`${beanName(db, b.bean_id)}${sub ? `, ${sub}` : ""}. Open brew`}>
+                <MiniRadar axes={fl.axes} layers={fl.layers} />
                 <span className="card-title">{beanName(db, b.bean_id)}</span>
-                {bean?.roastery || bean?.product ? (
-                  <span className="muted">{[str(bean.roastery), str(bean.product)].filter(Boolean).join(", ")}</span>
-                ) : null}
-                {!own.layers.length && fl.layers.length ? <span className="meta">Roaster's notes</span> : null}
-                <span className="card-facts">{facts.length ? facts.join(", ") : "Origin and process not set"}</span>
-                <span className="meta num">
-                  {[m.label, str(b.milk_drink)].filter(Boolean).join(", ")} · {stamp(b.brew_date ?? b.created).slice(0, 10) || "-"}
-                </span>
-                <span className="meta num">
-                  {[b.grind_setting ? `Grind ${str(b.grind_setting)}` : "", dose != null ? `${dose} g` : "", ratioOf(b, m)].filter(Boolean).join(", ") || "-"}
-                </span>
+                {sub && <span className="card-sub">{sub}</span>}
+                {bean?.origin ? <span className="card-sub">{str(bean.origin)}</span> : null}
               </button>
             );
           })}
