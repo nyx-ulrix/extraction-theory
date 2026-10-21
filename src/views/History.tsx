@@ -96,6 +96,8 @@ function params(b: Rec, db: Db, m: MethodDef): P[] {
     ["Recipe", m.tempLabel, n(b.temp_c, "°C")],
     ["Recipe", m.time === "shot" ? "Shot time" : "Total time", t(b.total_s)],
     ["Recipe", "Water used", str(b.water_type)],
+    ["Recipe", "Milk drink", str(b.milk_drink)],
+    ["Recipe", "Milk", n(b.milk_g, "g")],
     ["Recipe", "Dripper", b.dripper_id ? gear(b.dripper_id) : ""],
     ["Recipe", "Paper", str(b.paper)],
     ["Recipe", "Drain at", t(b.drain_at_s)],

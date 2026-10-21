@@ -209,6 +209,8 @@ export function buildRecord(d: Draft, db: Db, m: MethodDef, template: AxisDef[])
       ? pressTimes(presses.map((p) => ({ start: p.start_s, duration: p.duration_s }))).total
       : m.time === "none" ? null : n("total_s"),
     water_type: s("water_type"),
+    milk_drink: s("milk_drink"),
+    milk_g: s("milk_drink") ? n("milk_g") : null,
     days_off_roast: daysOffRoast(num(bean?.roast_date), serial),
     dripper_id: dripper ? dripper.id : null,
     paper: m.dripper ? s("paper") : null,

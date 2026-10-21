@@ -8,9 +8,9 @@ import { isFinished } from "../group.ts";
 import {
   buildRecord, DRAFT_KEY, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
-import { layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
+import { MILK_DRINKS, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
 import { addBrew, newId, type Db } from "../store.ts";
-import { Button, Dialog, IconButton, Msg, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
+import { Button, Dialog, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import FlavourEditor from "../components/FlavourEditor.tsx";
 import Timeline from "../components/Timeline.tsx";
 import Chill from "../components/brew/Chill.tsx";
@@ -160,6 +160,22 @@ export default function Brew() {
           <TextField label="Water used" value={str(d.f.water_type)} onChange={(v) => up(withF({ water_type: v }))} />
         </Section>
       );
+      case "milk": {
+        const on = !!str(d.f.milk_drink);
+        return (
+          <Section key={b} title="Milk">
+            <Toggle label="Milk drink" checked={on}
+              onChange={(v) => up(withF(v ? { milk_drink: MILK_DRINKS[2] } : { milk_drink: "", milk_g: null }))} />
+            {on && (
+              <div className="grid-2">
+                <SelectField label="Drink" value={str(d.f.milk_drink)} options={MILK_DRINKS} other
+                  onChange={(v) => up(withF({ milk_drink: v || MILK_DRINKS[2] }))} />
+                <NumField label="Milk" unit="g" min={0} value={num(d.f.milk_g)} onChange={(v) => up(withF({ milk_g: v }))} />
+              </div>
+            )}
+          </Section>
+        );
+      }
       case "dripper": return <Dripper key={b} d={d} up={up} />;
       case "pours": return <Pours key={b} d={d} up={up} total={pourTotal(d, m)} hybrid={dripper?.style === "hybrid"} />;
       case "presses": return <Presses key={b} d={d} up={up} />;

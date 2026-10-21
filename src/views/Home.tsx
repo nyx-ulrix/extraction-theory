@@ -39,7 +39,7 @@ export default function Home() {
                 {!own.layers.length && fl.layers.length ? <span className="meta">Roaster's notes</span> : null}
                 <span className="card-facts">{facts.length ? facts.join(", ") : "Origin and process not set"}</span>
                 <span className="meta num">
-                  {m.label} · {stamp(b.brew_date ?? b.created).slice(0, 10) || "-"}
+                  {[m.label, str(b.milk_drink)].filter(Boolean).join(", ")} · {stamp(b.brew_date ?? b.created).slice(0, 10) || "-"}
                 </span>
                 <span className="meta num">
                   {[b.grind_setting ? `Grind ${str(b.grind_setting)}` : "", dose != null ? `${dose} g` : "", ratioOf(b, m)].filter(Boolean).join(", ") || "-"}

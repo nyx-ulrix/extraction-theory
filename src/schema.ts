@@ -21,7 +21,7 @@ export const TABS = {
     "id", "created", "brew_date", "method", "bean_id", "grinder_id", "grind_setting", "grind_clicks", "grind_um",
     "dose_g", "water_g", "yield_g", "ratio", "temp_c", "total_s", "water_type", "days_off_roast",
     "dripper_id", "paper", "drain_at_s",
-    "chill_method", "ice_g", "ice_max", "chill_start", "chill_stop", "final_ratio",
+    "chill_method", "ice_g", "ice_max", "chill_start", "chill_stop", "final_ratio", "milk_drink", "milk_g",
     "tasting_notes", ...F_COLS, "taste_balance", "taste_strength", "rating", "changed", "notes", "dialed_in",
   ],
   Phases: ["brew_id", "kind", "n", "start_s", "water_g", "temp_c", "duration_s", "agitation", "agitation_timing", "agitation_at_s", "agitation_count", "valve", "note"],
@@ -203,6 +203,7 @@ export const SECTIONS: Record<string, string> = {
   grind: "Grind",
   recipe: "Dose, ratio, temp, time",
   water_type: "Water used",
+  milk: "Milk",
   dripper: "Dripper and paper",
   pours: "Pour phases",
   presses: "Press phases",
@@ -216,7 +217,7 @@ export const SECTIONS: Record<string, string> = {
 export function availableKeys(m: MethodDef, fields: MethodField[]): string[] {
   const own = fields.filter((f) => f.method === m.id).map((f) => f.key);
   return [
-    "bean", "grind", "recipe", ...own, "water_type",
+    "bean", "grind", "recipe", ...own, "water_type", "milk",
     ...(m.dripper ? ["dripper"] : []),
     ...(m.pours ? ["pours"] : []),
     ...(m.presses ? ["presses"] : []),
@@ -241,7 +242,8 @@ export const AGITATION_TIMING = [
   ["after", "After pour"],
   ["at", "At time"],
 ] as const;
-export const CHILL_METHODS = ["Ice drip", "Hyperchiller", "Shaken"];
+export const MILK_DRINKS = ["Cold milk", "Cold milk with ice", "Flat white", "Latte", "Cappuccino"];
+export const CHILL_METHODS =["Ice drip", "Hyperchiller", "Shaken"];
 export const PROCESSES = ["Washed", "Natural", "Honey", "Anaerobic", "Carbonic maceration", "Wet hulled"];
 export const ROAST_LEVELS = ["Super light", "Light", "Medium light", "Medium", "Medium dark", "Dark"];
 

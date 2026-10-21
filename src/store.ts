@@ -204,10 +204,22 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
   const done = new Set(db.brews.map((x) => str(x.import_key)).filter(Boolean));
   const newBrews: Rec[] = [];
   const newPhases: Phase[] = [];
+  const patchedBrews: Rec[] = [];
   let skipped = 0;
   for (const b of brews as Record<string, unknown>[]) {
     if (!b || typeof b !== "object") continue;
     const key = str(b.import_key);
+    // `update: true` patches an already imported brew (found by import_key) instead of skipping it.
+    if (key && done.has(key) && b.update) {
+      const cur = [...db.brews, ...newBrews].find((x) => str(x.import_key) === key);
+      if (cur) {
+        const beanId = b.bean_ref != null ? refs.get(str(b.bean_ref)) : undefined;
+        const patch: Rec = { ...cells(b, ["id", "created", "bean_ref", "bean_id", "phases", "flavour", "update", "import_key"]), id: cur.id, ...(beanId ? { bean_id: beanId } : {}) };
+        await sh.upsert(db.id, db.headers, "Brews", patch);
+        patchedBrews.push(patch);
+      }
+      continue;
+    }
     if (key && done.has(key)) { skipped++; continue; }
     if (key) done.add(key);
     const id = newId();
@@ -226,8 +238,13 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
   if (newBrews.length) await sh.append(db.id, db.headers, "Brews", newBrews);
   const merged = db.beans.map((x) => ({ ...x, ...updated.find((u) => u.id === x.id) }));
   return {
-    db: { ...db, beans: [...merged, ...newBeans], brews: [...db.brews, ...newBrews], phases: [...db.phases, ...newPhases] },
-    beans: newBeans.length + updated.length, brews: newBrews.length, skipped,
+    db: {
+      ...db,
+      beans: [...merged, ...newBeans],
+      brews: [...db.brews.map((x) => ({ ...x, ...patchedBrews.find((p) => p.id === x.id) })), ...newBrews],
+      phases: [...db.phases, ...newPhases],
+    },
+    beans: newBeans.length + updated.length, brews: newBrews.length + patchedBrews.length, skipped,
   };
 }
 
