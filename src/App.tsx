@@ -155,6 +155,8 @@ export default function App() {
       setDb(d);
       setPhase("in");
     } catch (e) {
+      // A saved session Google no longer accepts: back to the one-tap sign-in, not an error page.
+      if (e instanceof AuthError) return setPhase("out");
       setErr(errMsg(e));
       setPhase("error");
     }
