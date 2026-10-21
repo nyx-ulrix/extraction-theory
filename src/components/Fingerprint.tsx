@@ -7,7 +7,7 @@ export default function Fingerprint({ axes, layers, size = 96 }: { axes: AxisDef
   if (!layers.length) return null;
   const n = axes.length;
   return (
-    <svg viewBox="-50 -50 100 100" width={size} height={size} aria-hidden style={{ display: "block", flex: "none", maxWidth: "100%", height: "auto" }}>
+    <svg className="fl" viewBox="-50 -50 100 100" width={size} height={size} aria-hidden style={{ display: "block", flex: "none", maxWidth: "100%", height: "auto" }}>
       {layers.map((l, li) => {
         const pts = axes.map((a, i): [number, number] => {
           const ang = (i / n) * Math.PI * 2 - Math.PI / 2;

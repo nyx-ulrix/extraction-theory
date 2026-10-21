@@ -130,7 +130,7 @@ export default function Radar({
           return (
             <g key={a.key}>
               {grid && <line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={1} />}
-              {grid && <circle cx={x} cy={y} r={5} fill={a.color} stroke={extreme(a.color) ? "var(--text)" : "none"} strokeWidth={1} />}
+              {grid && <circle className="fl" cx={x} cy={y} r={5} fill={a.color} stroke={extreme(a.color) ? "var(--text)" : "none"} strokeWidth={1} />}
               <text
                 transform={`translate(${lx.toFixed(2)} ${ly.toFixed(2)}) rotate(${((i / n) * 360).toFixed(2)})`}
                 textAnchor="middle" fontSize={fs} letterSpacing="0.2em" fill="var(--text)"
@@ -149,6 +149,7 @@ export default function Radar({
           </text>
         )}
 
+        <g className="fl">
         {order.map((li) => {
           const l = layers[li];
           const d = shapePath(axes.map((a, i) => xy(i, n, rad(l.v[a.key] ?? 0))), rounded);
@@ -170,6 +171,7 @@ export default function Radar({
             </g>
           );
         })}
+        </g>
 
         {editable && sel != null && axes.map((a, i) => {
           const l = layers[sel];
@@ -211,7 +213,7 @@ export default function Radar({
               }}
             >
               <circle cx={x} cy={y} r={hitR} fill="transparent" />
-              <circle cx={x} cy={y} r={7} fill={l.color} stroke="var(--text-strong)" strokeWidth={1.5} />
+              <circle className="fl" cx={x} cy={y} r={7} fill={l.color} stroke="var(--text-strong)" strokeWidth={1.5} />
               {focus === i && <rect x={x - 11} y={y - 11} width={22} height={22} fill="none" stroke="var(--focus)" strokeWidth={2} />}
             </g>
           );
@@ -223,12 +225,12 @@ export default function Radar({
           {layers.map((l, i) =>
             onSelect ? (
               <button key={i} type="button" className="chip" style={{ minHeight: 44 }} aria-pressed={sel === i} onClick={() => onSelect(sel === i ? null : i)}>
-                <span className="swatch" style={{ background: l.color }} />
+                <span className="swatch fl" style={{ background: l.color }} />
                 {l.note}
               </button>
             ) : (
               <span key={i} className="chip" style={{ cursor: "default" }}>
-                <span className="swatch" style={{ background: l.color }} />
+                <span className="swatch fl" style={{ background: l.color }} />
                 {l.note}
               </span>
             ),

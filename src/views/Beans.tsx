@@ -216,7 +216,7 @@ function PageArt({ fl, title }: { fl: Flavour; title: string }) {
             <Fingerprint axes={fl.axes} layers={fl.layers} size={280} />
           </div>
           <div className="row" style={{ justifyContent: "center" }}>
-            {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch" style={{ background: l.color }} />{l.note}</span>)}
+            {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch fl" style={{ background: l.color }} />{l.note}</span>)}
           </div>
         </>
       ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} />}

@@ -304,3 +304,5 @@ dialog .dialog-body { padding: 20px; display: grid; gap: 16px; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 @media (max-width: 479px) { .seg.full button { padding: 0 6px; letter-spacing: 0.06em; } }
+/* Flavour chart colours (layers, axis dots, legend swatches) read neon on the dark background. Stored colours are unchanged. */
+:root[data-theme="dark"] .fl { filter: saturate(1.7) brightness(1.35); }
