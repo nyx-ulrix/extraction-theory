@@ -1,6 +1,6 @@
 // A set of coffees as cards (with a small spider chart) or as a list, with roaster / origin / process filters.
-import { useState } from "react";
-import { CheckCircle, ListBullets, SquaresFour, Target } from "@phosphor-icons/react";
+import { useId, useState } from "react";
+import { CheckCircle, Funnel, ListBullets, SquaresFour, Target } from "@phosphor-icons/react";
 import { parseFlavour, type AxisDef, type Layer } from "../calc.ts";
 import { useApp } from "../ctx.ts";
 import { groups, isFinished, norm, originKey } from "../group.ts";
@@ -45,6 +45,9 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
   const [roaster, setRoaster] = useState("");
   const [origin, setOrigin] = useState("");
   const [process, setProcess] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const filterId = useId();
+  const active = [roaster, origin, process].filter(Boolean).length;
 
   const lastBrew = (bean: Rec) => db.brews.filter((b) => b.bean_id === bean.id).sort((a, b) => when(b) - when(a))[0];
   const latest = (bean: Rec) => { const b = lastBrew(bean); return b ? when(b) : 0; };
@@ -58,16 +61,27 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
   return (
     <div className="stack">
       <div className="shelf-bar">
-        <div className="grid-3" style={{ flex: 1 }}>
-          <SelectField label="Roaster" value={roaster} placeholder="All" onChange={setRoaster} options={groups(beans.map((b) => b.roastery))} />
-          <SelectField label="Origin" value={origin} placeholder="All" onChange={setOrigin} options={groups(beans.map((b) => b.origin), originKey)} />
-          <SelectField label="Process" value={process} placeholder="All" onChange={setProcess} options={groups(beans.map((b) => b.process))} />
-        </div>
-        <div className="seg" role="group" aria-label="View">
+        <div className="seg" role="group" aria-label="View and filters">
+          <button type="button" aria-pressed={showFilters} aria-expanded={showFilters} aria-controls={filterId}
+            aria-label={active ? `Filters, ${active} on` : "Filters"} onClick={() => setShowFilters(!showFilters)}>
+            <Funnel size={18} weight={active ? "fill" : "regular"} aria-hidden />{active > 0 && <span className="num">{active}</span>}
+          </button>
           <button type="button" aria-pressed={mode === "cards"} aria-label="Card view" onClick={() => setMode("cards")}><SquaresFour size={18} aria-hidden /></button>
           <button type="button" aria-pressed={mode === "list"} aria-label="List view" onClick={() => setMode("list")}><ListBullets size={18} aria-hidden /></button>
         </div>
       </div>
+      {showFilters && (
+        <div className="shelf-filters" id={filterId}>
+          <div className="grid-3">
+            <SelectField label="Roaster" value={roaster} placeholder="All" onChange={setRoaster} options={groups(beans.map((b) => b.roastery))} />
+            <SelectField label="Origin" value={origin} placeholder="All" onChange={setOrigin} options={groups(beans.map((b) => b.origin), originKey)} />
+            <SelectField label="Process" value={process} placeholder="All" onChange={setProcess} options={groups(beans.map((b) => b.process))} />
+          </div>
+          {active > 0 && (
+            <div><button type="button" className="btn ghost" onClick={() => { setRoaster(""); setOrigin(""); setProcess(""); }}>Clear filters</button></div>
+          )}
+        </div>
+      )}
 
       {!shown.length ? <p>No coffees match these filters.</p> : mode === "cards" ? (
         <div className="cards">
