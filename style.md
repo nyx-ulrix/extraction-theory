@@ -84,11 +84,11 @@ Reference: coloured dots per axis with labels set around the ring.
 | Axis (clockwise from the top) | Colour |
 |---|---|
 | Sweetness | `#E5A396` (Ember 200) |
-| Aroma | `#D2B9CA` |
-| Bitterness | `#7F3F00` |
+| Aroma | `#CBAAC3` (Plum 200) |
+| Bitterness | `#7A4025` (Copper 600) |
 | Body | `#0A0A0A` (outlined in dark) |
-| Acidity | `#E4F28C` |
-| Finish | `#2E3A87` |
+| Acidity | `#FBE8A6` (Gold 100) |
+| Finish | `#3F6E8C` (Info) |
 
 - 3 to 12 axes. The template is set in Settings; each bean and brew can carry its own labels, colours and count.
 - Five concentric rings (2, 4, 6, 8, 10) in `--border-soft`, spokes to each axis, a filled dot in the axis colour at the outer end, caps label outside it.

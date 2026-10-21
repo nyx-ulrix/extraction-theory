@@ -29,6 +29,33 @@ let token: string | null = null;
 let expires = 0;
 let pending: { resolve: () => void; reject: (e: Error) => void } | null = null;
 
+// Keep the access token across reloads until it expires (Google issues 1 hour tokens; no refresh
+// token exists without a server). The scope is drive.file only, so a leaked token can reach just
+// the app's own sheet. ponytail: localStorage, move to a backend refresh-token flow if that ever matters.
+const SESSION = "et.session";
+const KNOWN = "et.known";
+function saveSession() {
+  try {
+    localStorage.setItem(SESSION, JSON.stringify({ t: token, e: expires }));
+    localStorage.setItem(KNOWN, "1");
+  } catch { /* storage blocked: session lasts this tab only */ }
+}
+function clearSession() {
+  try { localStorage.removeItem(SESSION); } catch { /* storage blocked */ }
+}
+try {
+  const s = JSON.parse(localStorage.getItem(SESSION) ?? "null") as { t?: string; e?: number } | null;
+  if (s?.t && typeof s.e === "number" && Date.now() < s.e) {
+    token = s.t;
+    expires = s.e;
+  }
+} catch { /* bad or blocked storage: start signed out */ }
+
+/** True when this browser signed in before, so a single tap can bring the session back. */
+export function hadSession() {
+  try { return localStorage.getItem(KNOWN) === "1"; } catch { return false; }
+}
+
 async function gsi(): Promise<Gsi> {
   for (let i = 0; i < 100 && !window.google?.accounts?.oauth2; i++) await new Promise((r) => setTimeout(r, 100));
   if (!window.google?.accounts?.oauth2) throw new Error("Google sign-in script did not load. Check your connection.");
@@ -57,6 +84,7 @@ export function preload(): Promise<void> {
         if (r.error || !r.access_token) return p?.reject(new Error(r.error_description || r.error || "Sign-in failed"));
         token = r.access_token;
         expires = Date.now() + ((r.expires_in ?? 3600) - 60) * 1000;
+        saveSession();
         p?.resolve();
       },
       error_callback: (e) => {
@@ -86,7 +114,7 @@ export function signOut() {
   token = null;
   expires = 0;
   // Drop data tied to this account. AI keys stay: they are a per-device choice.
-  for (const k of ["et.draft", "et.sheetId"]) {
+  for (const k of ["et.draft", "et.sheetId", SESSION, KNOWN]) {
     try { localStorage.removeItem(k); } catch { /* storage blocked */ }
   }
 }
@@ -99,6 +127,7 @@ export async function api<T = unknown>(url: string, init: RequestInit = {}): Pro
   });
   if (r.status === 401) {
     token = null;
+    clearSession();
     throw new AuthError();
   }
   if (!r.ok) {

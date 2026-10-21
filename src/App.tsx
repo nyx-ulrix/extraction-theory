@@ -3,7 +3,7 @@ import {
   ArrowClockwise, ClockCounterClockwise, Coffee, GearSix, GoogleLogo, Moon, Plant, SignIn, Sun, Table, X, type Icon,
 } from "@phosphor-icons/react";
 import { Ctx, type AppCtx, type View } from "./ctx.ts";
-import { AuthError, hasToken, preload, signIn } from "./google.ts";
+import { AuthError, hadSession, hasToken, preload, signIn } from "./google.ts";
 import { sheetUrl } from "./sheets.ts";
 import { loadDb, type Db } from "./store.ts";
 import { Button, Dialog, IconButton, Msg } from "./ui.tsx";
@@ -138,6 +138,16 @@ export default function App() {
     } finally {
       setSigning(false);
     }
+    await load();
+  };
+
+  // A token saved from an earlier visit is still valid: skip the sign-in screen.
+  useEffect(() => {
+    if (hasToken()) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const load = async () => {
     setPhase("loading");
     try {
       const d = await loadDb();
@@ -155,6 +165,8 @@ export default function App() {
     if (!cur) return false;
     setBusy(true);
     try {
+      // Token ran out while the app was open: saves come from a click, so the popup is allowed here.
+      if (!hasToken()) await signIn();
       const next = await fn(cur);
       dbRef.current = next;
       setDb(next);
@@ -217,7 +229,7 @@ export default function App() {
             <Brand big />
             <p className="lede">Log every brew and dial in faster. Your data lives in your own Google Sheet.</p>
             <div>
-              <Button icon={GoogleLogo} onClick={start} disabled={signing || !gisReady}>Sign in with Google</Button>
+              <Button icon={GoogleLogo} onClick={start} disabled={signing || !gisReady}>{hadSession() ? "Continue with Google" : "Sign in with Google"}</Button>
             </div>
             {err && <Msg kind="error">{err}</Msg>}
             <nav className="row legal" aria-label="Legal">

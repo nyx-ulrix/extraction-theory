@@ -1,4 +1,4 @@
-import { cleanAxes, cleanLayers, num, profile, toSerial, type AxisDef } from "./calc.ts";
+import { DEFAULT_AXES, OLD_DEFAULT_COLOURS, cleanAxes, cleanLayers, num, profile, toSerial, type AxisDef } from "./calc.ts";
 import {
   DEFAULT_FIELDS, DEFAULT_GEAR, DEFAULT_SETTINGS,
   type Gear, type MethodField, type Phase, type Rec, type Settings,
@@ -73,6 +73,10 @@ function parseSettings(rows: Rec[]): Settings {
   }
   s.presets = s.presets.filter((p) => p && typeof p.name === "string" && typeof p.pattern === "string");
   s.axes = cleanAxes(s.axes);
+  // Untouched old default template: follow the current default colours.
+  const sig = s.axes.map((a) => `${a.key}${a.color.toUpperCase()}`).join();
+  const isOld = OLD_DEFAULT_COLOURS.some((c) => DEFAULT_AXES.map((a, i) => `${a.key}${c[i]}`).join() === sig);
+  if (isOld) s.axes = DEFAULT_AXES;
   if (!["claude", "openai", "gemini"].includes(s.ai_provider)) s.ai_provider = DEFAULT_SETTINGS.ai_provider;
   if (!["per_pour", "target"].includes(s.pour_style)) s.pour_style = DEFAULT_SETTINGS.pour_style;
   if (!["setting", "microns"].includes(s.grind_first)) s.grind_first = DEFAULT_SETTINGS.grind_first;

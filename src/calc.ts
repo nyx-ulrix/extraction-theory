@@ -10,12 +10,19 @@ export interface AxisDef {
 }
 // Default template, clockwise from the top.
 export const DEFAULT_AXES: AxisDef[] = [
+  // All from the 64-colour palette.
   { key: "sweetness", label: "Sweetness", color: "#E5A396" }, // Ember 200
-  { key: "aroma", label: "Aroma", color: "#D2B9CA" },
-  { key: "bitterness", label: "Bitterness", color: "#7F3F00" },
-  { key: "body", label: "Body", color: "#0A0A0A" },
-  { key: "acidity", label: "Acidity", color: "#E4F28C" },
-  { key: "finish", label: "Finish", color: "#2E3A87" },
+  { key: "aroma", label: "Aroma", color: "#CBAAC3" }, // Plum 200
+  { key: "bitterness", label: "Bitterness", color: "#7A4025" }, // Copper 600
+  { key: "body", label: "Body", color: "#0A0A0A" }, // Ink
+  { key: "acidity", label: "Acidity", color: "#FBE8A6" }, // Gold 100
+  { key: "finish", label: "Finish", color: "#3F6E8C" }, // Info
+];
+/** Earlier default templates; a saved template still equal to one of these follows the current default. */
+export const OLD_DEFAULT_COLOURS = [
+  ["#F0AE8E", "#D2B9CA", "#0A0A0A", "#E03A4E", "#E4F28C", "#2E3A87"],
+  ["#FF99FF", "#D2B9CA", "#7F3F00", "#0A0A0A", "#E4F28C", "#2E3A87"],
+  ["#E5A396", "#D2B9CA", "#7F3F00", "#0A0A0A", "#E4F28C", "#2E3A87"],
 ];
 export type Values = Record<string, number>;
 /** One tasting note drawn as its own radar layer. */
