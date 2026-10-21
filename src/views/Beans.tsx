@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowLeft, FloppyDisk, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, FloppyDisk, PencilSimple, Plus, Target, Trash } from "@phosphor-icons/react";
+import { dialedMethods } from "../group.ts";
 import Radar from "../components/Radar.tsx";
 import Shelf from "../components/Shelf.tsx";
 import { BagToggle, BrewList } from "./History.tsx";
 import { cleanAxes, cleanLayers, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
 import { useApp } from "../ctx.ts";
-import { PROCESSES, ROAST_LEVELS, type Cell, type Rec } from "../schema.ts";
+import { PROCESSES, ROAST_LEVELS, methodDefs, type Cell, type Rec } from "../schema.ts";
 import { deleteBean, newId, saveBean } from "../store.ts";
 import { Button, Dialog, Field, IconButton, Msg, NumField, SelectField, TextField } from "../ui.tsx";
 import FlavourEditor from "../components/FlavourEditor.tsx";
@@ -184,10 +185,34 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
         </dl>
       )}
       <BagToggle bean={bean} />
+      <DialedIn bean={bean} />
       <section className="section">
         <header><h2>Brew history</h2></header>
         <BrewList beanId={str(bean.id)} />
       </section>
+    </div>
+  );
+}
+
+/** Which brewing methods this coffee is dialed in for (stored on the bean as a comma list of method ids). */
+function DialedIn({ bean }: { bean: Rec }) {
+  const { db, update, busy } = useApp();
+  const on = dialedMethods(bean);
+  const toggle = (id: string) => {
+    const next = on.includes(id) ? on.filter((x) => x !== id) : [...on, id];
+    update((d) => saveBean(d, { id: bean.id, dialed: next.join(",") }));
+  };
+  return (
+    <div className="field">
+      <span className="label">Dialed in for</span>
+      <div className="row" role="group" aria-label="Dialed in for">
+        {methodDefs(db.fields).map((m) => (
+          <button key={m.id} type="button" className="chip" aria-pressed={on.includes(m.id)} disabled={busy} onClick={() => toggle(m.id)}>
+            {on.includes(m.id) && <Target size={16} weight="fill" aria-hidden />}
+            {m.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

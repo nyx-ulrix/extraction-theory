@@ -3,7 +3,7 @@ import {
   ArrowLeft, ArrowsClockwise, CheckSquare, Coffee, Plant, Square, Target, X, type Icon, type IconProps,
 } from "@phosphor-icons/react";
 import { fmtTime, fromSerial, num, parseFlavour, round } from "../calc.ts";
-import { isFinished } from "../group.ts";
+import { dialedMethods, isFinished } from "../group.ts";
 import { useApp } from "../ctx.ts";
 import { AGITATION_TIMING, methodDefs, type MethodDef, type Phase, type Rec } from "../schema.ts";
 import { patchBrew, saveBean, type Db } from "../store.ts";
@@ -256,7 +256,16 @@ function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
         <span className="spacer" />
         <IconButton
           icon={dialed ? TargetFill : Target} label={dialed ? "Unmark dialed in" : "Mark as dialed in"} pressed={dialed} disabled={busy}
-          onClick={() => update((d) => patchBrew(d, { id: brew.id, dialed_in: !dialed }), dialed ? "No longer dialed in" : "Marked as dialed in")}
+          onClick={() => update(async (d) => {
+            // Keep the coffee's per-method mark in step with this brew.
+            let next = await patchBrew(d, { id: brew.id, dialed_in: !dialed });
+            if (bean) {
+              const on = dialedMethods(bean);
+              const methods = !dialed ? [...new Set([...on, str(brew.method)])] : on.filter((x) => x !== str(brew.method));
+              next = await saveBean(next, { id: bean.id, dialed: methods.join(",") });
+            }
+            return next;
+          }, dialed ? "No longer dialed in" : "Marked as dialed in")}
         />
         <Button icon={ArrowsClockwise} onClick={() => go("brew", str(brew.id))}>Brew again</Button>
       </div>

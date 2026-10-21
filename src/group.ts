@@ -19,4 +19,8 @@ export function groups(values: unknown[], key: (v: unknown) => string = norm): [
     .sort((a, b) => a[1].localeCompare(b[1]));
 }
 
-export const isFinished = (v: unknown) => v === true || norm(v) === "true";
+/** Method ids a coffee is dialed in for. */
+export const dialedMethods = (bean: { dialed?: unknown } | undefined) =>
+  String(bean?.dialed ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
+export const isFinished =(v: unknown) => v === true || norm(v) === "true";

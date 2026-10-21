@@ -3,7 +3,7 @@ import { useId, useState } from "react";
 import { CheckCircle, Funnel, ListBullets, SquaresFour, Target } from "@phosphor-icons/react";
 import { parseFlavour, type AxisDef, type Layer } from "../calc.ts";
 import { useApp } from "../ctx.ts";
-import { groups, isFinished, norm, originKey } from "../group.ts";
+import { dialedMethods, groups, isFinished, norm, originKey } from "../group.ts";
 import type { Rec } from "../schema.ts";
 import { Marquee, SelectField } from "../ui.tsx";
 import { shapePath, sharp, type Pt } from "./shape.ts";
@@ -56,7 +56,8 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
 
   const lastBrew = (bean: Rec) => db.brews.filter((b) => b.bean_id === bean.id).sort((a, b) => when(b) - when(a))[0];
   const latest = (bean: Rec) => { const b = lastBrew(bean); return b ? when(b) : 0; };
-  const dialed = (bean: Rec) => db.brews.some((b) => b.bean_id === bean.id && (b.dialed_in === true || str(b.dialed_in).toLowerCase() === "true"));
+  const dialed = (bean: Rec) => dialedMethods(bean).length > 0
+    || db.brews.some((b) => b.bean_id === bean.id && (b.dialed_in === true || str(b.dialed_in).toLowerCase() === "true"));
   const shown = beans
     .filter((b) => (!roaster || norm(b.roastery) === roaster) && (!origin || originKey(b.origin) === origin) && (!process || norm(b.process) === process))
     .sort((a, b) => Number(isFinished(a.finished)) - Number(isFinished(b.finished)) || latest(b) - latest(a));

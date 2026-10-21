@@ -13,7 +13,7 @@ const F_COLS = [...DEFAULT_AXES.map((a) => `f_${a.key}`), "flavour"];
 export const TABS = {
   Beans: [
     "id", "created", "name", "product", "roastery", "origin", "farm", "altitude_low_m", "altitude_high_m",
-    "variety", "process", "roast_level", "roast_date", "roaster_notes", "finished", ...F_COLS,
+    "variety", "process", "roast_level", "roast_date", "roaster_notes", "finished", "dialed", ...F_COLS,
   ],
   Gear: ["id", "type", "brand", "name", "style", "dial_type", "clicks_per_number", "numbers_per_rotation", "um_per_step", "zero_um"],
   Methods: ["method", "key", "label", "type", "unit", "options", "show_if", "order"],
