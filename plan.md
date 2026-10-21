@@ -106,7 +106,7 @@ Method (Ice drip / Hyperchiller / Shaken / Other), ice (g) or "as much ice as po
   - Five concentric rings (2, 4, 6, 8, 10). Values 0 to 10 in half steps, so points can sit between rings.
   - Each layer's points can be dragged along the axes (mouse, touch, keyboard) to show which way a note leans.
   - Overlay roaster vs brew or brew vs brew.
-  - Shared axes (Bitterness and Body by default, toggled per axis with the link button): they describe the whole cup, so dragging one moves every note layer together, and new notes start at the shared value.
+  - Shared axes (Bitterness and Body by default, toggled per axis with the link button): they describe the whole cup, so dragging one moves every note layer together, and new notes start at the shared value. Toggling the link in Settings also updates every existing bean and brew that carries its own copy of that axis (a newly linked axis takes the first note's value); the link button in a coffee's own Edit axes changes only that coffee.
   - Chart style (Settings > Flavour chart), set separately for Home and Library cards, coffee pages, and brews and note editors: spider or blob (cards and coffee pages), sharp or rounded shape, chart lines on or off. Coffee pages can also switch these on the page itself. A chart with no notes always shows its empty rings and axis dots.
 - **Brew timeline**: lanes for water (bars per phase, colour by temp, running total line), agitation, valve, press, chilling, events. Two brews can be stacked on one time axis for comparison.
 - **Cup fingerprint**: once a brew's spider chart exists, its note layers are redrawn as small smooth see-through shapes, a visual fingerprint of that cup, at the top of the brew detail and beside each brew in History. No AI is involved. The sign-in screen has no hero image (logo only in the wordmark).
@@ -137,6 +137,7 @@ Runs automatically about 1.5 s after typing pauses, only for notes without a set
 
 ## 9. UI
 Swiss-brutalist Caffalyst tokens (see `style.md`). Icon-only buttons with tooltips wherever possible (Phosphor), one primary text button per view. Bottom tab bar on phones, top nav on tablet and laptop, two-column brew form with sticky preview on laptop. App icon is the coffee-flower line art (favicon, header logo, home-screen icon), not uploaded to the Google consent screen.
+Installable as an app (PWA): the service worker passes page loads through (network only, offline notice), so Chrome offers its install prompt; an Install app button shows on Home when it does. Startup screen follows the theme (logo on white, or white logo on black) before the app loads. The Android launch splash can only have one colour, so it is dark: #131312 with the white-flower icon.
 
 ## 10. Process
 - Each finished feature is audited by a Fable model agent (code).

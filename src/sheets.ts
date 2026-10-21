@@ -143,23 +143,29 @@ export async function append(id: string, headers: Headers, tab: Tab, recs: Rec[]
  * Update the row whose `idKey` matches, or append it. Only columns present in `rec`
  * are written, so values typed into other columns of the sheet are kept.
  */
-export async function upsert(id: string, headers: Headers, tab: Tab, rec: Rec, idKey = "id") {
-  if (rec[idKey] == null || rec[idKey] === "") throw new Error(`${tab} record has no ${idKey}`);
-  const header = await ensureColumns(id, headers, tab, Object.keys(rec));
+export const upsert = (id: string, headers: Headers, tab: Tab, rec: Rec, idKey = "id") => upsertMany(id, headers, tab, [rec], idKey);
+
+/** upsert for several records: one id-column read and one batch write. */
+export async function upsertMany(id: string, headers: Headers, tab: Tab, recs: Rec[], idKey = "id") {
+  if (!recs.length) return;
+  for (const r of recs) if (r[idKey] == null || r[idKey] === "") throw new Error(`${tab} record has no ${idKey}`);
+  const header = await ensureColumns(id, headers, tab, recs.flatMap(Object.keys));
   const c = header.indexOf(idKey);
   const ids = await api<{ values?: Cell[][] }>(
     `${SHEETS}/${id}/values/${range(tab, `${col(c)}:${col(c)}`)}?valueRenderOption=UNFORMATTED_VALUE`,
   );
-  const row = (ids.values ?? []).findIndex((v, i) => i > 0 && String(v[0] ?? "") === String(rec[idKey]));
-  if (row < 0) return append(id, headers, tab, [rec]);
-  const data = Object.keys(rec).map((k) => {
-    const a1 = `${col(header.indexOf(k))}${row + 1}`;
-    return { range: `${tab}!${a1}`, values: [[toCell(rec[k])]] };
-  });
-  await api(`${SHEETS}/${id}/values:batchUpdate`, {
-    method: "POST",
-    body: JSON.stringify({ valueInputOption: "RAW", data }),
-  });
+  const rowOf = (key: unknown) => (ids.values ?? []).findIndex((v, i) => i > 0 && String(v[0] ?? "") === String(key));
+  const fresh = recs.filter((r) => rowOf(r[idKey]) < 0);
+  const data = recs.filter((r) => rowOf(r[idKey]) >= 0).flatMap((r) => Object.keys(r).map((k) => ({
+    range: `${tab}!${col(header.indexOf(k))}${rowOf(r[idKey]) + 1}`, values: [[toCell(r[k])]],
+  })));
+  if (data.length) {
+    await api(`${SHEETS}/${id}/values:batchUpdate`, {
+      method: "POST",
+      body: JSON.stringify({ valueInputOption: "RAW", data }),
+    });
+  }
+  await append(id, headers, tab, fresh);
 }
 
 /** Delete every row whose `idKey` cell is one of `ids`. Rows are found fresh, so hand edits can't shift the target. */
