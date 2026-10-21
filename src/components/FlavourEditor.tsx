@@ -1,12 +1,12 @@
 // Tasting notes text plus the editable radar: one layer per note, optional per-coffee axes.
 // The user sets every value by dragging. AI only picks palette colours for the notes.
 import { useEffect, useRef, useState } from "react";
-import { Palette, PencilSimple, Trash } from "@phosphor-icons/react";
+import { Palette, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { cleanLayers, splitNotes, type AxisDef, type Flavour, type Layer, type Values } from "../calc.ts";
 import { getKey, pickColours } from "../ai.ts";
 import { noteColour } from "../palette.ts";
 import { useApp } from "../ctx.ts";
-import { IconButton, TextField } from "../ui.tsx";
+import { IconButton } from "../ui.tsx";
 import AxesEditor from "./AxesEditor.tsx";
 import ColourPicker from "./ColourPicker.tsx";
 import Radar from "./Radar.tsx";
@@ -57,10 +57,32 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
 
   const setLayers = (next: Layer[]) => onChange({ axes, layers: next });
   const setAxes = (next: AxisDef[]) => onChange({ axes: next, layers: cleanLayers(layers, next) });
-  const editNotes = (s: string) => {
-    onNotes(s);
-    onChange({ axes, layers: syncLayers(s, layers, axes) });
-    setSel(null);
+  // Notes are kept as layers; the plain-text notes column is derived from them.
+  const commit = (next: Layer[]) => {
+    onNotes(next.map((l) => l.note.trim()).filter(Boolean).join(", "));
+    onChange({ axes, layers: next });
+  };
+
+  // Older records stored notes as text only: turn them into layers once.
+  useEffect(() => {
+    if (!layers.length && notes.trim()) onChange({ axes, layers: syncLayers(notes, [], axes) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [draft, setDraft] = useState("");
+  const addDraft = () => {
+    const have = new Set(layers.map((l) => low(l.note)));
+    const fresh = splitNotes(draft).filter((n) => !have.has(low(n)) && have.add(low(n)));
+    setDraft("");
+    if (!fresh.length) return;
+    const next = [...layers, ...fresh.map((n) => starter(n, axes))].slice(0, 12);
+    if (layers.length + fresh.length > 12) notify("Up to 12 notes per coffee.", "info");
+    commit(next);
+    setSel(next.length - 1);
+  };
+  const rename = (at: number, text: string) => {
+    if (settled.current.has(low(layers[at].note))) settled.current.add(low(text));
+    commit(layers.map((l, i) => (i === at ? { ...l, note: text.slice(0, 40) } : l)));
   };
 
   const recolour = async (targets: string[], manual: boolean) => {
@@ -95,19 +117,40 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
     setLayers(layers.map((l, i) => (i === at ? { ...l, color } : l)));
   };
   const remove = (at: number) => {
-    const next = layers.filter((_, i) => i !== at);
-    onNotes(next.map((l) => l.note).join(", "));
-    setLayers(next);
+    commit(layers.filter((_, i) => i !== at));
     setSel(null);
   };
   const hasKey = !!getKey(provider);
 
   return (
     <div className="stack">
-      <TextField
-        label={label} value={notes} onChange={editNotes} multiline
-        hint={hasKey ? "Separate notes with commas. Each note becomes a layer, coloured automatically." : "Separate notes with commas. Each note becomes a layer."}
-      />
+      <div className="field">
+        <span className="label">{label}</span>
+        <div className="note-rows">
+          {layers.map((l, i) => (
+            <div key={i} className={`note-row${sel === i ? " on" : ""}`}>
+              <ColourPicker value={l.color} label={`${l.note || "Note"} colour`} onChange={(c) => setColour(i, c)} />
+              <input
+                className="input" value={l.note} maxLength={40} aria-label={`Note ${i + 1}`}
+                onFocus={() => setSel(i)} onChange={(e) => rename(i, e.target.value)}
+                onBlur={(e) => { if (!e.target.value.trim()) remove(i); }}
+              />
+              <IconButton icon={Trash} label={`Remove ${l.note || "note"}`} tipAlign="end" onClick={() => remove(i)} />
+            </div>
+          ))}
+          <div className="note-row">
+            <span className="note-new" aria-hidden />
+            <input
+              className="input" value={draft} aria-label="New note"
+              placeholder={layers.length ? "Add another note" : "Add a note, for example blueberry"}
+              onChange={(e) => setDraft(e.target.value)} onBlur={addDraft}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDraft(); } }}
+            />
+            <IconButton icon={Plus} label="Add note" tipAlign="end" disabled={!draft.trim()} onClick={addDraft} />
+          </div>
+        </div>
+        <span className="hint">{hasKey ? "One note per field. Each becomes a layer, coloured automatically." : "One note per field. Each becomes a layer."}</span>
+      </div>
       <div className="row">
         {hasKey && (
           <IconButton
@@ -121,32 +164,8 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
       {editAxes && <AxesEditor axes={axes} onChange={setAxes} template={template} />}
 
       <Radar axes={axes} layers={layers} onChange={setLayers} selected={cur ? sel : null} onSelect={setSel} title={`${label} radar`} legend={false} emptyText="" />
-      {layers.length > 0 && (
-        <div className="row" style={{ justifyContent: "center" }}>
-          {layers.map((l, i) => (
-            <div
-              key={l.note} className="chip"
-              style={{ padding: "0 0 0 6px", gap: 0, minHeight: 44, cursor: "default", ...(sel === i && { borderColor: "var(--border)", background: "var(--surface)" }) }}
-            >
-              <span style={{ marginRight: 6, display: "inline-flex" }}>
-                <ColourPicker value={l.color} label={`${l.note} colour`} size={32} onChange={(c) => setColour(i, c)} />
-              </span>
-              <button
-                type="button" aria-pressed={sel === i} onClick={() => setSel(sel === i ? null : i)}
-                style={{
-                  minHeight: 44, padding: "0 8px", background: "none", border: 0, borderLeft: "1px solid var(--border-soft)",
-                  color: "inherit", font: "inherit", cursor: "pointer",
-                }}
-              >
-                {l.note}
-              </button>
-              <IconButton icon={Trash} label={`Remove ${l.note}`} variant="bare" size={16} onClick={() => remove(i)} />
-            </div>
-          ))}
-        </div>
-      )}
       <p className="muted" aria-live="polite" style={{ fontSize: 12, textAlign: "center" }}>
-        {!layers.length ? "Type notes to draw layers." : cur ? "Drag the points along each axis." : "Tap a note to shape it."}
+        {!layers.length ? "Add notes to draw layers." : cur ? `Drag the points to shape ${cur.note || "this note"}.` : "Tap a note to shape it."}
       </p>
     </div>
   );

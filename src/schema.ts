@@ -243,7 +243,7 @@ export const AGITATION_TIMING = [
 ] as const;
 export const CHILL_METHODS = ["Ice drip", "Hyperchiller", "Shaken"];
 export const PROCESSES = ["Washed", "Natural", "Honey", "Anaerobic", "Carbonic maceration", "Wet hulled"];
-export const ROAST_LEVELS = ["Light", "Medium light", "Medium", "Medium dark", "Dark"];
+export const ROAST_LEVELS = ["Super light", "Light", "Medium light", "Medium", "Medium dark", "Dark"];
 
 export interface Phase {
   brew_id?: string;
