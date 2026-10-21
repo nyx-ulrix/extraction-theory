@@ -17,7 +17,7 @@ const ymd = (v: unknown) => {
 };
 // Only the columns this form edits are written, so other values typed into the sheet stay.
 const KEYS = [
-  "name", "roastery", "origin", "farm", "altitude_low_m", "altitude_high_m",
+  "name", "product", "roastery", "origin", "farm", "altitude_low_m", "altitude_high_m",
   "variety", "process", "roast_level", "roast_date", "roaster_notes",
 ];
 
@@ -123,7 +123,10 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
         <h1>{bean.id ? str(bean.name) || "Edit bean" : "New bean"}</h1>
       </div>
       <div className="stack">
-        <TextField label="Bean name" value={str(f.name)} onChange={set("name")} />
+        <div className="grid-2">
+          <TextField label="Bean name" value={str(f.name)} onChange={set("name")} hint="Usually the farm or producer" />
+          <TextField label="Roaster's name for it" value={str(f.product)} onChange={set("product")} hint="For example Halo or Nano" />
+        </div>
         <div className="grid-2">
           <TextField label="Roastery" value={str(f.roastery)} onChange={set("roastery")} />
           <TextField label="Origin" value={str(f.origin)} onChange={set("origin")} />

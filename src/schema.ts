@@ -12,7 +12,7 @@ const F_COLS = [...DEFAULT_AXES.map((a) => `f_${a.key}`), "flavour"];
 // Column order for a new sheet. Existing sheets are matched by header name.
 export const TABS = {
   Beans: [
-    "id", "created", "name", "roastery", "origin", "farm", "altitude_low_m", "altitude_high_m",
+    "id", "created", "name", "product", "roastery", "origin", "farm", "altitude_low_m", "altitude_high_m",
     "variety", "process", "roast_level", "roast_date", "roaster_notes", ...F_COLS,
   ],
   Gear: ["id", "type", "brand", "name", "style", "dial_type", "clicks_per_number", "numbers_per_rotation", "um_per_step", "zero_um"],

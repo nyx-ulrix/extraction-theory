@@ -24,14 +24,19 @@ export default function Home() {
           {brews.map((b) => {
             const m = methodOf(b.method, defs);
             const bean = db.beans.find((x) => x.id === b.bean_id);
-            const fl = parseFlavour(b.flavour, db.settings.axes);
+            // The brew's own tasting, else the roaster's notes for the bean.
+            const own = parseFlavour(b.flavour, db.settings.axes);
+            const fl = own.layers.length ? own : parseFlavour(bean?.flavour, db.settings.axes);
             const facts = [str(bean?.origin), str(bean?.process)].filter(Boolean);
             const dose = num(b.dose_g);
             return (
               <button key={str(b.id)} type="button" className="card" onClick={() => go("history", str(b.id))}>
                 <Radar axes={fl.axes} layers={fl.layers} size={240} legend={false} emptyText="No tasting notes yet" title={`${beanName(db, b.bean_id)} flavour`} />
                 <span className="card-title">{beanName(db, b.bean_id)}</span>
-                {bean?.roastery ? <span className="muted">{str(bean.roastery)}</span> : null}
+                {bean?.roastery || bean?.product ? (
+                  <span className="muted">{[str(bean.roastery), str(bean.product)].filter(Boolean).join(", ")}</span>
+                ) : null}
+                {!own.layers.length && fl.layers.length ? <span className="meta">Roaster's notes</span> : null}
                 <span className="card-facts">{facts.length ? facts.join(", ") : "Origin and process not set"}</span>
                 <span className="meta num">
                   {m.label} · {stamp(b.brew_date ?? b.created).slice(0, 10) || "-"}

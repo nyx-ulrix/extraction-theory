@@ -174,11 +174,24 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
 
   const refs = new Map<string, string>();
   const newBeans: Rec[] = [];
+  const updated: Rec[] = [];
   for (const b of beans as Record<string, unknown>[]) {
     if (!b || typeof b !== "object" || !str(b.name).trim()) continue;
-    const found = [...db.beans, ...newBeans].find((x) => low(x.name) === low(b.name) && low(x.roastery) === low(b.roastery));
+    // `match: {name, roastery}` updates an existing bean in place (e.g. renaming it to the farm).
+    const m = (b.match && typeof b.match === "object" ? b.match : b) as Record<string, unknown>;
+    const found = [...db.beans, ...newBeans].find((x) => low(x.name) === low(m.name) && low(x.roastery) === low(m.roastery));
     const id = found ? str(found.id) : newId();
     if (b.ref != null) refs.set(str(b.ref), id);
+    if (found && b.match) {
+      const patch: Rec = {
+        ...cells(b, ["ref", "id", "created", "roast_date", "flavour", "match"]), id,
+        ...(b.roast_date ? { roast_date: serial(b.roast_date, now) } : {}),
+        ...flavourCells(b.flavour, db.settings.axes),
+      };
+      await sh.upsert(db.id, db.headers, "Beans", patch);
+      updated.push(patch);
+      continue;
+    }
     if (found) continue;
     newBeans.push({
       ...cells(b, ["ref", "id", "created", "roast_date", "flavour"]),
@@ -211,9 +224,10 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
   if (newBeans.length) await sh.append(db.id, db.headers, "Beans", newBeans);
   if (newPhases.length) await sh.append(db.id, db.headers, "Phases", newPhases as unknown as Rec[]);
   if (newBrews.length) await sh.append(db.id, db.headers, "Brews", newBrews);
+  const merged = db.beans.map((x) => ({ ...x, ...updated.find((u) => u.id === x.id) }));
   return {
-    db: { ...db, beans: [...db.beans, ...newBeans], brews: [...db.brews, ...newBrews], phases: [...db.phases, ...newPhases] },
-    beans: newBeans.length, brews: newBrews.length, skipped,
+    db: { ...db, beans: [...merged, ...newBeans], brews: [...db.brews, ...newBrews], phases: [...db.phases, ...newPhases] },
+    beans: newBeans.length + updated.length, brews: newBrews.length, skipped,
   };
 }
 
