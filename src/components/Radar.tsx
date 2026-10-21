@@ -4,7 +4,7 @@ import { clamp10, type AxisDef, type Layer } from "../calc.ts";
 import { Ctx } from "../ctx.ts";
 import { shapePath } from "./shape.ts";
 import { ink } from "../palette.ts";
-import { InkShape } from "./Fingerprint.tsx";
+import { InkShape, growDelay } from "./Fingerprint.tsx";
 
 const R = 150; // radius of value 10
 const DOT_R = R + 16; // axis dot at the outer end of each spoke
@@ -60,6 +60,7 @@ export default function Radar({
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ axis: number | null; id: number } | null>(null);
   const handles = useRef<(SVGGElement | null)[]>([]);
+  const delays = useRef<string[]>([]); // one random grow-in delay per note layer, kept for the chart's life
   const [focus, setFocus] = useState<number | null>(null);
   const sel = selected != null && layers[selected] ? selected : null;
   const editable = !!onChange && sel != null;
@@ -153,18 +154,19 @@ export default function Radar({
           </text>
         )}
 
-        <g className="grow">
+        <g>
         {order.map((li) => {
           const l = layers[li];
           const d = shapePath(axes.map((a, i) => xy(i, n, rad(l.v[a.key] ?? 0))), rounded);
           return (
             <g
               key={li}
+              className="grow"
               opacity={sel != null && li !== sel ? 0.4 : 1}
               onClick={onSelect ? () => onSelect(li) : undefined}
-              style={{ cursor: onSelect ? "pointer" : undefined }}
+              style={{ cursor: onSelect ? "pointer" : undefined, animationDelay: (delays.current[li] ??= growDelay()) }}
             >
-              <InkShape d={d} color={l.color} pitch={pitch} />
+              <InkShape d={d} color={l.color} pitch={pitch} grow={false} />
               {axes.map((a, i) => {
                 if (rounded && sel !== li) return null; // the art style shows clean shapes; points only on the note being edited
                 const [x, y] = xy(i, n, rad(l.v[a.key] ?? 0));
