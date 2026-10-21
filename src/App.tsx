@@ -346,10 +346,10 @@ const CSS = `
 .nav-top button:hover, .tabbar button:hover { color: var(--text-strong); }
 .nav-top button[aria-current="page"] { color: var(--text-strong); border-bottom-color: var(--border); }
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(4, 1fr);
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
   background: var(--bg); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom);
 }
-.tabbar button { height: var(--nav-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.tabbar button { min-width: 0; letter-spacing: 0.06em; height: var(--nav-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 .tabbar button[aria-current="page"] { color: var(--text-strong); background: var(--surface); }
 @media (max-width: 767px) { body:has(.tabbar) { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); } }
 @media (min-width: 768px) { .nav-top { display: flex; } .tabbar { display: none; } }
