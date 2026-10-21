@@ -1,6 +1,6 @@
 // A set of coffees as cards (with a small spider chart) or as a list, with roaster / origin / process filters.
 import { useState } from "react";
-import { CheckCircle, ListBullets, SquaresFour } from "@phosphor-icons/react";
+import { CheckCircle, ListBullets, SquaresFour, Target } from "@phosphor-icons/react";
 import { parseFlavour, type AxisDef, type Layer } from "../calc.ts";
 import { useApp } from "../ctx.ts";
 import { groups, isFinished, norm, originKey } from "../group.ts";
@@ -48,6 +48,7 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
 
   const lastBrew = (bean: Rec) => db.brews.filter((b) => b.bean_id === bean.id).sort((a, b) => when(b) - when(a))[0];
   const latest = (bean: Rec) => { const b = lastBrew(bean); return b ? when(b) : 0; };
+  const dialed = (bean: Rec) => db.brews.some((b) => b.bean_id === bean.id && (b.dialed_in === true || str(b.dialed_in).toLowerCase() === "true"));
   const shown = beans
     .filter((b) => (!roaster || norm(b.roastery) === roaster) && (!origin || originKey(b.origin) === origin) && (!process || norm(b.process) === process))
     .sort((a, b) => Number(isFinished(a.finished)) - Number(isFinished(b.finished)) || latest(b) - latest(a));
@@ -79,6 +80,9 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
             return (
               <button key={str(bean.id)} type="button" className={`card${isFinished(bean.finished) ? " done" : ""}`}
                 onClick={() => go("beans", str(bean.id))} aria-label={`${name}${sub ? `, ${sub}` : ""}. Open coffee`}>
+                {dialed(bean) && (
+                  <span className="card-badge left" title="Dialed in"><Target size={18} weight="fill" aria-hidden /><span className="sr-only">Dialed in</span></span>
+                )}
                 {isFinished(bean.finished) && (
                   <span className="card-badge" title="Bag finished"><CheckCircle size={18} weight="fill" aria-hidden /><span className="sr-only">Finished</span></span>
                 )}
@@ -98,6 +102,7 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
             return (
               <div className={`item${isFinished(bean.finished) ? " done" : ""}`} key={str(bean.id)}>
                 {isFinished(bean.finished) && <CheckCircle size={20} weight="fill" aria-label="Finished" style={{ flex: "none" }} />}
+                {dialed(bean) && <Target size={20} weight="fill" aria-label="Dialed in" style={{ flex: "none" }} />}
                 <button type="button" className="item-main" onClick={() => go("beans", str(bean.id))}>
                   <Marquee className="item-title">{str(bean.name) || "Unnamed"}</Marquee>
                   <span className="meta">

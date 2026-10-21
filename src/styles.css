@@ -143,6 +143,7 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
 .card { position: relative; }
 .card.done, .item.done { filter: grayscale(1); opacity: 0.5; }
 .card-badge { position: absolute; top: 6px; right: 6px; color: var(--text-strong); line-height: 0; }
+.card-badge.left { right: auto; left: 6px; }
 @media (min-width: 768px) { .card { padding: 12px; } .card-title { font-size: 14px; } }
 .card-facts { color: var(--text-strong); }
 
