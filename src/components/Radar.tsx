@@ -174,7 +174,6 @@ export default function Radar({
               aria-valuemin={0}
               aria-valuemax={10}
               aria-valuenow={v}
-              // Only handles block panning, so the page still scrolls when a touch starts elsewhere.
               style={{ cursor: "grab", outline: "none", touchAction: "none" }}
               onKeyDown={key}
               onFocus={() => setFocus(i)}
