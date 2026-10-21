@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import {
-  ArrowCounterClockwise, ArrowDown, ArrowUp, CaretDown, FloppyDisk, GithubLogo, Globe, LinkedinLogo, Plus, SignOut, Table, Trash,
+  ArrowCounterClockwise, ArrowDown, ArrowUp, CaretDown, FloppyDisk, GithubLogo, Globe, LinkedinLogo, Plus, SignOut, Table, Trash, UploadSimple,
 } from "@phosphor-icons/react";
 import { DEFAULT_AXES, cleanAxes, parsePattern, type DialType } from "../calc.ts";
 import { PROVIDERS, getKey, setKey, type Provider } from "../ai.ts";
@@ -10,7 +10,7 @@ import {
   SECTIONS, availableKeys, layoutFor, methodDefs, type DripperStyle, type Gear, type Preset, type Settings as S,
 } from "../schema.ts";
 import { sheetUrl } from "../sheets.ts";
-import { saveGear, saveSettings } from "../store.ts";
+import { importData, saveGear, saveSettings } from "../store.ts";
 import { Button, Field, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../ui.tsx";
 import AxesEditor from "../components/AxesEditor.tsx";
 import { DripperDialog } from "../components/brew/Dripper.tsx";
@@ -47,6 +47,7 @@ export default function Settings() {
       <Drippers />
       <Grinders />
       <Ai s={s} patch={patch} />
+      <ImportData />
       <Account />
       {dirty && (
         <div className="savebar">
@@ -314,6 +315,34 @@ function KeyField({ p }: { p: (typeof PROVIDERS)[number] }) {
       </Field>
       <a href={p.keyUrl} target="_blank" rel="noopener noreferrer" className="meta">Get a {p.label} key</a>
     </div>
+  );
+}
+
+/** Paste a JSON export (beans and brews) to add it to the sheet. Re-running skips rows already imported. */
+function ImportData() {
+  const { update, busy, notify } = useApp();
+  const [text, setText] = useState("");
+  const run = async () => {
+    let raw: unknown;
+    try { raw = JSON.parse(text); } catch { return notify("That is not valid JSON.", "error"); }
+    let msg = "";
+    const ok = await update(async (db) => {
+      const r = await importData(db, raw);
+      msg = `Imported ${r.beans} beans and ${r.brews} brews${r.skipped ? `, skipped ${r.skipped} already imported` : ""}.`;
+      return r.db;
+    });
+    if (ok) { notify(msg, "success"); setText(""); }
+  };
+  return (
+    <section className="section">
+      <Fold title="Import" level="section">
+        <TextField label="Import data (JSON)" multiline value={text} onChange={setText} placeholder='{"beans": [], "brews": []}'
+          hint="Beans match existing ones by name and roastery. Brews already imported are skipped." />
+        <div className="row" style={{ justifyContent: "flex-end" }}>
+          <IconButton icon={UploadSimple} label="Import into my sheet" variant="solid" tipAlign="end" disabled={busy || !text.trim()} onClick={run} />
+        </div>
+      </Fold>
+    </section>
   );
 }
 

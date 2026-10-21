@@ -1,4 +1,4 @@
-import { cleanAxes, num } from "./calc.ts";
+import { cleanAxes, cleanLayers, num, profile, toSerial, type AxisDef } from "./calc.ts";
 import {
   DEFAULT_FIELDS, DEFAULT_GEAR, DEFAULT_SETTINGS,
   type Gear, type MethodField, type Phase, type Rec, type Settings,
@@ -126,6 +126,91 @@ export async function saveGear(db: Db, g: Gear): Promise<Db> {
   await sh.upsert(db.id, db.headers, "Gear", g as unknown as Rec);
   const exists = db.gear.some((x) => x.id === g.id);
   return { ...db, gear: exists ? db.gear.map((x) => (x.id === g.id ? g : x)) : [...db.gear, g] };
+}
+
+// ---------- Import ----------
+// Shape: { beans: [{ ref, name, roastery, ... }], brews: [{ import_key, bean_ref, brew_date, method, ..., phases: [...] , flavour: { axes?, layers } }] }
+// Beans match existing ones by name + roastery; brews with an import_key already in the sheet are skipped,
+// so running the same import twice adds nothing.
+
+const KEY = /^[a-z][a-z0-9_]{0,40}$/;
+const low = (v: unknown) => str(v).trim().toLowerCase();
+
+function cells(o: Record<string, unknown>, skip: string[]): Rec {
+  const r: Rec = {};
+  for (const [k, v] of Object.entries(o)) {
+    if (skip.includes(k) || !KEY.test(k)) continue;
+    if (v == null || typeof v === "string" || typeof v === "number" || typeof v === "boolean") r[k] = typeof v === "string" ? v.slice(0, 2000) : v;
+  }
+  return r;
+}
+const serial = (v: unknown, fallback: number) => {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const d = typeof v === "string" ? new Date(v) : null;
+  return d && !Number.isNaN(d.getTime()) ? toSerial(d) : fallback;
+};
+function flavourCells(raw: unknown, template: AxisDef[]): Rec {
+  if (!raw || typeof raw !== "object") return {};
+  const o = raw as { axes?: unknown; layers?: unknown };
+  const axes = o.axes ? cleanAxes(o.axes) : template;
+  const layers = cleanLayers(Array.isArray(o.layers) ? o.layers : [], axes);
+  if (!layers.length) return {};
+  const prof = profile(layers, axes);
+  return { flavour: JSON.stringify({ axes, layers }), ...Object.fromEntries(axes.map((a) => [`f_${a.key}`, prof[a.key]])) };
+}
+
+export interface ImportResult { db: Db; beans: number; brews: number; skipped: number }
+
+export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
+  if (!raw || typeof raw !== "object") throw new Error("Import must be a JSON object with beans and brews.");
+  const { beans = [], brews = [] } = raw as { beans?: unknown[]; brews?: unknown[] };
+  if (!Array.isArray(beans) || !Array.isArray(brews)) throw new Error("beans and brews must be lists.");
+  if (beans.length > 500 || brews.length > 2000) throw new Error("Import is too large.");
+  const now = toSerial(new Date());
+
+  const refs = new Map<string, string>();
+  const newBeans: Rec[] = [];
+  for (const b of beans as Record<string, unknown>[]) {
+    if (!b || typeof b !== "object" || !str(b.name).trim()) continue;
+    const found = [...db.beans, ...newBeans].find((x) => low(x.name) === low(b.name) && low(x.roastery) === low(b.roastery));
+    const id = found ? str(found.id) : newId();
+    if (b.ref != null) refs.set(str(b.ref), id);
+    if (found) continue;
+    newBeans.push({
+      ...cells(b, ["ref", "id", "created", "roast_date", "flavour"]),
+      id, created: now,
+      ...(b.roast_date ? { roast_date: serial(b.roast_date, now) } : {}),
+      ...flavourCells(b.flavour, db.settings.axes),
+    });
+  }
+
+  const done = new Set(db.brews.map((x) => str(x.import_key)).filter(Boolean));
+  const newBrews: Rec[] = [];
+  const newPhases: Phase[] = [];
+  let skipped = 0;
+  for (const b of brews as Record<string, unknown>[]) {
+    if (!b || typeof b !== "object") continue;
+    const key = str(b.import_key);
+    if (key && done.has(key)) { skipped++; continue; }
+    if (key) done.add(key);
+    const id = newId();
+    const beanId = b.bean_ref != null ? refs.get(str(b.bean_ref)) : str(b.bean_id) || undefined;
+    newBrews.push({
+      ...cells(b, ["id", "created", "brew_date", "bean_ref", "bean_id", "phases", "flavour"]),
+      id, created: now, brew_date: serial(b.brew_date, now), bean_id: beanId ?? null,
+      ...flavourCells(b.flavour, db.settings.axes),
+    });
+    const ph = Array.isArray(b.phases) ? (b.phases as Record<string, unknown>[]) : [];
+    ph.forEach((p, i) => newPhases.push({ ...toPhase({ ...cells(p ?? {}, []), n: num(p?.n) ?? i + 1 }), brew_id: id }));
+  }
+
+  if (newBeans.length) await sh.append(db.id, db.headers, "Beans", newBeans);
+  if (newPhases.length) await sh.append(db.id, db.headers, "Phases", newPhases as unknown as Rec[]);
+  if (newBrews.length) await sh.append(db.id, db.headers, "Brews", newBrews);
+  return {
+    db: { ...db, beans: [...db.beans, ...newBeans], brews: [...db.brews, ...newBrews], phases: [...db.phases, ...newPhases] },
+    beans: newBeans.length, brews: newBrews.length, skipped,
+  };
 }
 
 export async function saveSettings(db: Db, next: Settings): Promise<Db> {
