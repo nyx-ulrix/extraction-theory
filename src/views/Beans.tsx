@@ -11,6 +11,7 @@ import { PROCESSES, ROAST_LEVELS, methodDefs, type Cell, type Rec } from "../sch
 import { deleteBean, newId, saveBean, saveSettings } from "../store.ts";
 import { Button, Dialog, Field, IconButton, Msg, NumField, Segmented, SelectField, TextField } from "../ui.tsx";
 import FlavourEditor from "../components/FlavourEditor.tsx";
+import { ink } from "../palette.ts";
 
 const str = (v: unknown) => (v == null ? "" : String(v));
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -216,7 +217,7 @@ function PageArt({ fl, title }: { fl: Flavour; title: string }) {
             <Fingerprint axes={fl.axes} layers={fl.layers} size={280} />
           </div>
           <div className="row" style={{ justifyContent: "center" }}>
-            {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch fl" style={{ background: l.color }} />{l.note}</span>)}
+            {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch" style={{ background: ink(l.color) }} />{l.note}</span>)}
           </div>
         </>
       ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} />}

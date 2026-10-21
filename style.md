@@ -86,14 +86,16 @@ Reference: coloured dots per axis with labels set around the ring.
 | Sweetness | `#E5A396` (Ember 200) |
 | Aroma | `#CBAAC3` (Plum 200) |
 | Bitterness | `#7A4025` (Copper 600) |
-| Body | `#0A0A0A` (outlined in dark) |
+| Body | `#0A0A0A` (light grey ink on dark) |
 | Acidity | `#FBE8A6` (Gold 100) |
 | Finish | `#3F6E8C` (Info) |
 
 - 3 to 12 axes. The template is set in Settings; each bean and brew can carry its own labels, colours and count.
 - Five concentric rings (2, 4, 6, 8, 10) in `--border-soft`, spokes to each axis, a filled dot in the axis colour at the outer end, caps label outside it.
 - Values 0 to 10 in half steps, so points sit between rings.
-- Each tasting note is its own layer: fill at 0.35 opacity, 2px solid stroke, in a colour from the 64-colour palette (AI picked, or a stable palette colour from the note name), overridable per note.
+- Each tasting note is its own layer, in a colour from the 64-colour palette (AI picked, or a stable palette colour from the note name), overridable per note.
+- **Risograph print.** Charts (radar, card spider charts, cup fingerprints, legend swatches, palette picker) draw every colour as a vivid riso ink: same hue, saturation pushed to 0.72 + 0.45 x s (max 1), lightness held to 0.45 to 0.60 on paper and 0.60 to 0.72 (neon) on the dark theme; greys and black stay neutral, black becomes light grey `#E8E6E1` on dark. Stored colours never change (`ink()` in `src/palette.ts`).
+- Each layer is a dense, regular halftone dot screen in its ink (dots 0.34 x pitch radius on a 45 degree grid, about 3px pitch on screen), no outline. Layers overprint: `mix-blend-mode: multiply` on paper, `screen` on dark, so overlaps read like stacked ink.
 - Layer points are draggable along their axis by mouse, touch and keyboard (arrow keys move half a step), with a visible focus ring on the active point.
 - Legend below: square swatch and note name per layer.
 
@@ -101,7 +103,7 @@ Reference: coloured dots per axis with labels set around the ring.
 Horizontal time axis from 0 to total (hours for cold brew) with tick labels in mono. Lanes top to bottom, each with a caps label: Water, Agitation, Valve, Press, Chill, Events. Water bars width = time to next pour, height = grams, fill by temperature (Plum cool to Ember hot), running total as a line. Approximate positions (espresso chill by yield) show a `~` prefix. Compare stacks two timelines on the same axis.
 
 ## 8. Cup fingerprint
-Each logged cup's own small shape, drawn from its spider chart once it exists: every note layer as a smooth closed curve through its axis values (minimum radius so flat notes still show), fill at 35% in the note colour, 1.5px stroke, no grid or labels. 96px at the top of a brew's detail, 40px beside each brew in History. Nothing is drawn for a brew without layers.
+Each logged cup's own small shape, drawn from its spider chart once it exists: every note layer as a smooth closed curve through its axis values (minimum radius so flat notes still show), printed in the same risograph halftone ink as the radar (no outline), no grid or labels. 96px at the top of a brew's detail, 40px beside each brew in History. Nothing is drawn for a brew without layers.
 
 ## 9. App icon
 The user's coffee-flower line art: two coffee blossoms, black line drawing. Used as favicon, header logo and home-screen icon. Inverted in dark mode. Not uploaded to the Google consent screen (a logo there would trigger Google verification).

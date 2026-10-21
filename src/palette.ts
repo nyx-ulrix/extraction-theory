@@ -36,3 +36,36 @@ export function noteColour(note: string): string {
   for (const ch of note.trim().toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return DEFAULTS[h % DEFAULTS.length];
 }
+
+const hsl = (hex: string): [number, number, number] | null => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+  if (!d) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+};
+const hex = (h: number, s: number, l: number) => {
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const v = l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(v * 255).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+};
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/**
+ * Chart ink: the stored colour as a vivid risograph-style ink (same hue, near full saturation),
+ * brighter and neon on the dark theme. Stored colours never change; this is display only.
+ */
+export function ink(c: string): string {
+  const v = hsl(c);
+  if (!v) return c;
+  const [h, s, l] = v;
+  const dark = document.documentElement.dataset.theme === "dark";
+  if (s < 0.12) return dark ? "#E8E6E1" : c; // black and grey inks stay neutral; lifted to read on dark paper
+  return hex(h, Math.min(1, 0.72 + s * 0.45), dark ? clamp(l, 0.6, 0.72) : clamp(l, 0.45, 0.6));
+}

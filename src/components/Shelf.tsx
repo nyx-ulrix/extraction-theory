@@ -7,8 +7,9 @@ import { dialedMethods, groups, isFinished, norm, originKey } from "../group.ts"
 import type { Rec } from "../schema.ts";
 import { Marquee, SelectField } from "../ui.tsx";
 import { shapePath, sharp, type Pt } from "./shape.ts";
-import Fingerprint from "./Fingerprint.tsx";
+import Fingerprint, { InkShape } from "./Fingerprint.tsx";
 import { str, when } from "../views/History.tsx";
+import { ink } from "../palette.ts";
 
 /** Label-free spider chart for small cards: five rings, axis dots in their colours, see-through layers. */
 function MiniRadar({ axes, layers, rounded, grid }: { axes: AxisDef[]; layers: Layer[]; rounded: boolean; grid: boolean }) {
@@ -27,10 +28,10 @@ function MiniRadar({ axes, layers, rounded, grid }: { axes: AxisDef[]; layers: L
       {axes.map((a, i) => {
         const [x, y] = pt(i, 40);
         // Lines off hides the axis dots too, leaving only the note shapes.
-        return grid ? <g key={a.key}><line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={0.6} /><circle className="fl" cx={x} cy={y} r={2.4} fill={a.color} stroke="var(--text)" strokeWidth={0.4} /></g> : null;
+        return grid ? <g key={a.key}><line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={0.6} /><circle cx={x} cy={y} r={2.4} fill={ink(a.color)} stroke="var(--text)" strokeWidth={0.4} /></g> : null;
       })}
       {layers.map((l, k) => (
-        <path className="fl" key={k} d={shapePath(axes.map((a, i) => pt(i, rad(l.v[a.key] ?? 0))), rounded)} fill={l.color} fillOpacity={0.35} stroke={l.color} strokeWidth={1.2} />
+        <InkShape key={k} d={shapePath(axes.map((a, i) => pt(i, rad(l.v[a.key] ?? 0))), rounded)} color={l.color} pitch={2.4} />
       ))}
     </svg>
   );

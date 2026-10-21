@@ -3,6 +3,8 @@ import { useContext, useRef, useState, type KeyboardEvent, type PointerEvent } f
 import { clamp10, type AxisDef, type Layer } from "../calc.ts";
 import { Ctx } from "../ctx.ts";
 import { shapePath } from "./shape.ts";
+import { ink } from "../palette.ts";
+import { InkShape } from "./Fingerprint.tsx";
 
 const R = 150; // radius of value 10
 const DOT_R = R + 16; // axis dot at the outer end of each spoke
@@ -130,7 +132,7 @@ export default function Radar({
           return (
             <g key={a.key}>
               {grid && <line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={1} />}
-              {grid && <circle className="fl" cx={x} cy={y} r={5} fill={a.color} stroke={extreme(a.color) ? "var(--text)" : "none"} strokeWidth={1} />}
+              {grid && <circle cx={x} cy={y} r={5} fill={ink(a.color)} stroke={extreme(ink(a.color)) ? "var(--text)" : "none"} strokeWidth={1} />}
               <text
                 transform={`translate(${lx.toFixed(2)} ${ly.toFixed(2)}) rotate(${((i / n) * 360).toFixed(2)})`}
                 textAnchor="middle" fontSize={fs} letterSpacing="0.2em" fill="var(--text)"
@@ -149,11 +151,10 @@ export default function Radar({
           </text>
         )}
 
-        <g className="fl">
+        <g>
         {order.map((li) => {
           const l = layers[li];
           const d = shapePath(axes.map((a, i) => xy(i, n, rad(l.v[a.key] ?? 0))), rounded);
-          const outline = extreme(l.color);
           return (
             <g
               key={li}
@@ -161,12 +162,11 @@ export default function Radar({
               onClick={onSelect ? () => onSelect(li) : undefined}
               style={{ cursor: onSelect ? "pointer" : undefined }}
             >
-              {outline && <path d={d} fill="none" stroke="var(--text)" strokeWidth={4} strokeLinejoin="round" />}
-              <path d={d} fill={l.color} fillOpacity={0.35} stroke={l.color} strokeWidth={2} strokeLinejoin="round" />
+              <InkShape d={d} color={l.color} pitch={3.4} />
               {axes.map((a, i) => {
                 if (rounded && sel !== li) return null; // the art style shows clean shapes; points only on the note being edited
                 const [x, y] = xy(i, n, rad(l.v[a.key] ?? 0));
-                return <circle key={a.key} cx={x} cy={y} r={3} fill={l.color} stroke={outline ? "var(--text)" : "none"} strokeWidth={1} />;
+                return <circle key={a.key} cx={x} cy={y} r={3} fill={ink(l.color)} />;
               })}
             </g>
           );
@@ -213,7 +213,7 @@ export default function Radar({
               }}
             >
               <circle cx={x} cy={y} r={hitR} fill="transparent" />
-              <circle className="fl" cx={x} cy={y} r={7} fill={l.color} stroke="var(--text-strong)" strokeWidth={1.5} />
+              <circle cx={x} cy={y} r={7} fill={ink(l.color)} stroke="var(--text-strong)" strokeWidth={1.5} />
               {focus === i && <rect x={x - 11} y={y - 11} width={22} height={22} fill="none" stroke="var(--focus)" strokeWidth={2} />}
             </g>
           );
@@ -225,12 +225,12 @@ export default function Radar({
           {layers.map((l, i) =>
             onSelect ? (
               <button key={i} type="button" className="chip" style={{ minHeight: 44 }} aria-pressed={sel === i} onClick={() => onSelect(sel === i ? null : i)}>
-                <span className="swatch fl" style={{ background: l.color }} />
+                <span className="swatch" style={{ background: ink(l.color) }} />
                 {l.note}
               </button>
             ) : (
               <span key={i} className="chip" style={{ cursor: "default" }}>
-                <span className="swatch fl" style={{ background: l.color }} />
+                <span className="swatch" style={{ background: ink(l.color) }} />
                 {l.note}
               </span>
             ),

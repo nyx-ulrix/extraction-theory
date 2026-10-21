@@ -1,7 +1,7 @@
 // Swatch button that opens the 64 approved palette colours as an 8 x 8 grid (8 families x 8 shades).
 import { useState } from "react";
 import { Check } from "@phosphor-icons/react";
-import { PALETTE } from "../palette.ts";
+import { PALETTE, ink } from "../palette.ts";
 import { Dialog } from "../ui.tsx";
 
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
@@ -16,7 +16,7 @@ export default function ColourPicker({ value, onChange, label, size = 44 }: {
       <button
         type="button" aria-label={`${label}: ${current ?? value}. Change colour`} data-tip={label}
         className="swatch-btn" onClick={() => setOpen(true)}
-        style={{ width: size, height: size, background: value }}
+        style={{ width: size, height: size, background: ink(value) }}
       />
       <Dialog open={open} onClose={() => setOpen(false)} title={label}>
         <div className="palette-grid" role="listbox" aria-label="Approved colours">
@@ -25,10 +25,10 @@ export default function ColourPicker({ value, onChange, label, size = 44 }: {
             return (
               <button
                 key={name} type="button" role="option" aria-selected={on} aria-label={name} title={name}
-                className="palette-cell" style={{ background: hex }}
+                className="palette-cell" style={{ background: ink(hex) }}
                 onClick={() => { onChange(hex); setOpen(false); }}
               >
-                {on && <Check size={16} weight="bold" aria-hidden style={{ color: luminance(hex) > 0.5 ? "#0A0A0A" : "#FFFFFF" }} />}
+                {on && <Check size={16} weight="bold" aria-hidden style={{ color: luminance(ink(hex)) > 0.5 ? "#0A0A0A" : "#FFFFFF" }} />}
               </button>
             );
           })}
