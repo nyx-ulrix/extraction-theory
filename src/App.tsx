@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
-  ArrowClockwise, ClockCounterClockwise, Coffee, GearSix, GoogleLogo, Moon, Plant, SignIn, Sun, Table, X, type Icon,
+  ArrowClockwise, ClockCounterClockwise, Coffee, GearSix, GoogleLogo, House, Moon, Plant, SignIn, Sun, Table, X, type Icon,
 } from "@phosphor-icons/react";
 import { Ctx, type AppCtx, type View } from "./ctx.ts";
 import { AuthError, hadSession, hasToken, preload, signIn } from "./google.ts";
 import { sheetUrl } from "./sheets.ts";
 import { loadDb, type Db } from "./store.ts";
 import { Button, Dialog, IconButton, Msg } from "./ui.tsx";
+import Home from "./views/Home.tsx";
 import Brew from "./views/Brew.tsx";
 import History from "./views/History.tsx";
 import Beans from "./views/Beans.tsx";
@@ -62,6 +63,7 @@ export function IconLink({ href, icon: I, label, tipAlign }: { href: string; ico
 }
 
 const NAV: [View, string, Icon][] = [
+  ["home", "Home", House],
   ["brew", "Brew", Coffee],
   ["history", "History", ClockCounterClockwise],
   ["beans", "Beans", Plant],
@@ -73,7 +75,7 @@ function initialView(): View {
     const v = sessionStorage.getItem(VIEW_KEY);
     if (NAV.some(([n]) => n === v)) return v as View;
   } catch { /* storage blocked */ }
-  return "brew";
+  return "home";
 }
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -298,7 +300,7 @@ export default function App() {
     );
   }
 
-  const Page = { brew: Brew, history: History, beans: Beans, settings: Settings }[view];
+  const Page = { home: Home, brew: Brew, history: History, beans: Beans, settings: Settings }[view];
   return (
     <Ctx.Provider value={ctx}>
       <style>{CSS}</style>

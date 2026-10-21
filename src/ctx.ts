@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 import type { Db } from "./store.ts";
 
-export type View = "brew" | "history" | "beans" | "settings";
+export type View = "home" | "brew" | "history" | "beans" | "settings";
 
 export interface AppCtx {
   db: Db;

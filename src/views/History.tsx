@@ -14,21 +14,21 @@ import Timeline from "../components/Timeline.tsx";
 /** "Dialed in" marker. Stars are kept for rating only. */
 const TargetFill = ((p: IconProps) => <Target {...p} weight="fill" />) as unknown as Icon;
 
-const str = (v: unknown) => (v == null ? "" : String(v));
-const cap = (v: unknown) => str(v).charAt(0).toUpperCase() + str(v).slice(1);
+export const str = (v: unknown) => (v == null ? "" : String(v));
+export const cap = (v: unknown) => str(v).charAt(0).toUpperCase() + str(v).slice(1);
 const yes = (v: unknown) => v === true || str(v).toLowerCase() === "true";
 const pad = (n: number) => String(n).padStart(2, "0");
-function stamp(v: unknown): string {
+export function stamp(v: unknown): string {
   const n = num(v);
   if (n == null) return "";
   const d = fromSerial(n);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-const when = (b: Rec) => num(b.brew_date) ?? num(b.created) ?? 0;
-const methodOf = (id: unknown, defs: MethodDef[]): MethodDef =>
+export const when = (b: Rec) => num(b.brew_date) ?? num(b.created) ?? 0;
+export const methodOf = (id: unknown, defs: MethodDef[]): MethodDef =>
   defs.find((m) => m.id === id) ?? { id: str(id), label: str(id) || "-", liquid: "water", tempLabel: "Water temp", time: "total" };
-const liquidOf = (b: Rec, m: MethodDef) => num(m.liquid === "yield" ? b.yield_g : b.water_g);
-function ratioOf(b: Rec, m: MethodDef): string {
+export const liquidOf = (b: Rec, m: MethodDef) => num(m.liquid === "yield" ? b.yield_g : b.water_g);
+export function ratioOf(b: Rec, m: MethodDef): string {
   const dose = num(b.dose_g);
   const liq = liquidOf(b, m);
   const r = num(b.ratio) ?? (dose && liq != null ? liq / dose : null);
@@ -36,7 +36,7 @@ function ratioOf(b: Rec, m: MethodDef): string {
 }
 const phasesOf = (db: Db, id: unknown): Phase[] =>
   db.phases.filter((p) => p.brew_id === id).sort((a, b) => (a.kind === b.kind ? a.n - b.n : a.kind === "pour" ? -1 : 1));
-const beanName = (db: Db, id: unknown) => str(db.beans.find((x) => x.id === id)?.name) || "Unknown bean";
+export const beanName = (db: Db, id: unknown) => str(db.beans.find((x) => x.id === id)?.name) || "Unknown bean";
 
 function stage(v: unknown): string {
   const s = str(v);
