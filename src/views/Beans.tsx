@@ -162,7 +162,7 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
         <IconButton icon={ArrowLeft} label="Back" onClick={back} />
         <h1 style={{ flex: 1, minWidth: 0 }}>{str(bean.name) || "Unnamed"}</h1>
         <IconButton icon={PencilSimple} label="Edit coffee" onClick={onEdit} />
-        <IconButton icon={Trash} label="Delete coffee" tipAlign="end" disabled={busy} onClick={() => setConfirm(true)} />
+        <IconButton icon={Trash} label="Delete coffee" variant="danger" tipAlign="end" disabled={busy} onClick={() => setConfirm(true)} />
       </div>
       <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Delete ${str(bean.name) || "this coffee"}?`}>
         <p>
@@ -171,7 +171,7 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
         </p>
         <div className="row" style={{ justifyContent: "flex-end" }}>
           <Button ghost onClick={() => setConfirm(false)}>Keep</Button>
-          <Button icon={Trash} disabled={busy} onClick={async () => {
+          <Button icon={Trash} danger disabled={busy} onClick={async () => {
             const ok = await update((d) => deleteBean(d, str(bean.id)), `${str(bean.name) || "Coffee"} deleted`);
             if (ok) { setConfirm(false); back(); }
           }}>Delete</Button>

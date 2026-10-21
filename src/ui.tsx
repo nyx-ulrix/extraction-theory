@@ -146,7 +146,7 @@ export function Toggle({ label, checked, onChange }: { label: string; checked: b
 
 /** Icon-only button. `label` is the tooltip and the accessible name. `tipAlign="end"` near the right screen edge. */
 export function IconButton({ icon: I, label, onClick, variant, disabled, pressed, type = "button", size = 20, tipAlign }: {
-  icon: Icon; label: string; onClick?: () => void; variant?: "solid" | "bare"; disabled?: boolean;
+  icon: Icon; label: string; onClick?: () => void; variant?: "solid" | "bare" | "danger"; disabled?: boolean;
   pressed?: boolean; type?: "button" | "submit"; size?: number; tipAlign?: "end";
 }) {
   return (
@@ -160,11 +160,11 @@ export function IconButton({ icon: I, label, onClick, variant, disabled, pressed
 }
 
 /** Primary action: one per view. Icon plus a short label. */
-export function Button({ icon: I, children, onClick, ghost, disabled, type = "button" }: {
-  icon?: Icon; children: ReactNode; onClick?: () => void; ghost?: boolean; disabled?: boolean; type?: "button" | "submit";
+export function Button({ icon: I, children, onClick, ghost, danger, disabled, type = "button" }: {
+  icon?: Icon; children: ReactNode; onClick?: () => void; ghost?: boolean; danger?: boolean; disabled?: boolean; type?: "button" | "submit";
 }) {
   return (
-    <button type={type} className={`btn${ghost ? " ghost" : ""}`} onClick={onClick} disabled={disabled}>
+    <button type={type} className={`btn${ghost ? " ghost" : ""}${danger ? " danger" : ""}`} onClick={onClick} disabled={disabled}>
       {I && <I size={18} aria-hidden />}
       {children}
     </button>

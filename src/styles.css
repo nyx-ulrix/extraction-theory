@@ -208,6 +208,9 @@ input[type="range"] { accent-color: var(--text-strong); width: 100%; }
 .icon-btn.solid { background: var(--btn-bg); color: var(--btn-text); border-color: var(--btn-bg); }
 .icon-btn.solid:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--btn-hover); color: #fff; }
 .icon-btn.bare { border-color: transparent; }
+/* Destructive actions: red outline, red icon */
+.icon-btn.danger, .btn.danger { background: transparent; color: var(--error); border-color: var(--error); }
+.icon-btn.danger:hover:not(:disabled), .btn.danger:hover:not(:disabled) { background: var(--error-tint); border-color: var(--error); color: var(--error); }
 .icon-btn[aria-pressed="true"] { background: var(--text-strong); color: var(--bg); border-color: var(--text-strong); }
 
 /* Tooltip: ink box, paper caps, on hover (pointer devices) and keyboard focus. */
