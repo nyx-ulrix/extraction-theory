@@ -15,11 +15,13 @@ const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w
 const low = (s: string) => s.trim().toLowerCase();
 
 /** Starter layer: 5 on an axis whose label matches the note, 2 elsewhere; no match = 3 everywhere. */
-function starter(note: string, axes: AxisDef[]): Layer {
+function starter(note: string, axes: AxisDef[], first?: Layer): Layer {
   const nw = words(note);
   const hit = axes.find((a) => words(a.label).some((w) => nw.some((x) => x.includes(w) || w.includes(x))));
   const v: Values = {};
   for (const a of axes) v[a.key] = hit ? (a === hit ? 5 : 2) : 3;
+  // Shared (cup-wide) axes start where the other notes already are.
+  if (first) for (const a of axes) if (a.shared) v[a.key] = first.v[a.key] ?? v[a.key];
   return { note: note.slice(0, 40), color: noteColour(note), v };
 }
 
@@ -75,7 +77,7 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
     const fresh = splitNotes(draft).filter((n) => !have.has(low(n)) && have.add(low(n)));
     setDraft("");
     if (!fresh.length) return;
-    const next = [...layers, ...fresh.map((n) => starter(n, axes))].slice(0, 12);
+    const next = [...layers, ...fresh.map((n) => starter(n, axes, layers[0]))].slice(0, 12);
     if (layers.length + fresh.length > 12) notify("Up to 12 notes per coffee.", "info");
     commit(next);
     setSel(next.length - 1);

@@ -82,6 +82,7 @@ function parseSettings(rows: Rec[]): Settings {
   if (!["setting", "microns"].includes(s.grind_first)) s.grind_first = DEFAULT_SETTINGS.grind_first;
   if (!["sharp", "rounded"].includes(s.radar_shape)) s.radar_shape = DEFAULT_SETTINGS.radar_shape;
   if (!["radar", "blob"].includes(s.card_art)) s.card_art = DEFAULT_SETTINGS.card_art;
+  if (!["radar", "blob"].includes(s.page_art)) s.page_art = DEFAULT_SETTINGS.page_art;
   if (!s.layout || typeof s.layout !== "object" || Array.isArray(s.layout)) s.layout = {};
   return s;
 }

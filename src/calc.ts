@@ -7,14 +7,17 @@ export interface AxisDef {
   key: string;
   label: string;
   color: string;
+  /** Cup-wide attribute (e.g. body, bitterness): every note layer shares one value, moving together. */
+  shared?: boolean;
 }
+const SHARED_BY_DEFAULT = new Set(["bitterness", "body"]);
 // Default template, clockwise from the top.
 export const DEFAULT_AXES: AxisDef[] = [
   // All from the 64-colour palette.
   { key: "sweetness", label: "Sweetness", color: "#E5A396" }, // Ember 200
   { key: "aroma", label: "Aroma", color: "#CBAAC3" }, // Plum 200
-  { key: "bitterness", label: "Bitterness", color: "#7A4025" }, // Copper 600
-  { key: "body", label: "Body", color: "#0A0A0A" }, // Ink
+  { key: "bitterness", label: "Bitterness", color: "#7A4025", shared: true }, // Copper 600
+  { key: "body", label: "Body", color: "#0A0A0A", shared: true }, // Ink
   { key: "acidity", label: "Acidity", color: "#FBE8A6" }, // Gold 100
   { key: "finish", label: "Finish", color: "#3F6E8C" }, // Info
 ];
@@ -49,7 +52,8 @@ export function cleanAxes(raw: unknown): AxisDef[] {
     if (!label || !key || seen.has(key)) continue;
     seen.add(key);
     const color = HEX.test(String((a as AxisDef).color)) ? String((a as AxisDef).color) : "#7A766E";
-    out.push({ key, label, color });
+    const s = (a as AxisDef).shared;
+    out.push({ key, label, color, shared: typeof s === "boolean" ? s : SHARED_BY_DEFAULT.has(key) });
   }
   return out.length >= MIN_AXES ? out.slice(0, MAX_AXES) : DEFAULT_AXES;
 }

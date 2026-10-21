@@ -1,6 +1,6 @@
 // Ordered radar axes (clockwise from the top) with colour, label, move and delete.
 import { useId, useRef } from "react";
-import { ArrowCounterClockwise, ArrowDown, ArrowUp, Plus, Trash } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, ArrowDown, ArrowUp, LinkSimple, Plus, Trash } from "@phosphor-icons/react";
 import { MAX_AXES, MIN_AXES, axisKey, type AxisDef } from "../calc.ts";
 import { IconButton } from "../ui.tsx";
 import ColourPicker from "./ColourPicker.tsx";
@@ -72,6 +72,10 @@ export default function AxesEditor({ axes, onChange, template }: { axes: AxisDef
                   className="input" style={{ minWidth: 0, flex: 1 }} value={a.label} maxLength={24} placeholder="Name this axis"
                   aria-label={`Axis ${i + 1} label`} aria-invalid={blank} aria-describedby={blank ? `${uid}-${id}` : undefined}
                   onChange={(e) => rename(i, e.target.value)}
+                />
+                <IconButton
+                  icon={LinkSimple} label={a.shared ? "Shared by all notes" : "Share across all notes"} pressed={!!a.shared}
+                  onClick={() => onChange(axes.map((x, j) => (j === i ? { ...x, shared: !x.shared } : x)))}
                 />
                 <IconButton icon={ArrowUp} label="Move up" onClick={() => move(i, -1)} disabled={i === 0} />
                 <IconButton icon={ArrowDown} label="Move down" onClick={() => move(i, 1)} disabled={i === axes.length - 1} />

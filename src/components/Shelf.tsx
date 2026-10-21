@@ -107,10 +107,10 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
                 {isFinished(bean.finished) && (
                   <span className="card-badge" title="Bag finished"><CheckCircle size={18} weight="fill" aria-hidden /><span className="sr-only">Finished</span></span>
                 )}
-                {db.settings.card_art === "blob" ? (
+                {db.settings.card_art === "blob" && fl.layers.length ? (
                   <span className="card-blob"><Fingerprint axes={fl.axes} layers={fl.layers} size={200} /></span>
                 ) : (
-                  <MiniRadar axes={fl.axes} layers={fl.layers} rounded={db.settings.radar_shape === "rounded"} grid={db.settings.radar_grid !== false} />
+                  <MiniRadar axes={fl.axes} layers={fl.layers} rounded={db.settings.radar_shape === "rounded"} grid={!fl.layers.length || db.settings.radar_grid !== false} />
                 )}
                 <Marquee className="card-title">{name}</Marquee>
                 {sub && <Marquee className="card-sub">{sub}</Marquee>}

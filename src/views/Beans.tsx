@@ -2,13 +2,14 @@ import { useEffect, useId, useState } from "react";
 import { ArrowLeft, FloppyDisk, PencilSimple, Plus, Target, Trash } from "@phosphor-icons/react";
 import { dialedMethods } from "../group.ts";
 import Radar from "../components/Radar.tsx";
+import Fingerprint from "../components/Fingerprint.tsx";
 import Shelf from "../components/Shelf.tsx";
 import { BagToggle, BrewList } from "./History.tsx";
 import { cleanAxes, cleanLayers, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
 import { useApp } from "../ctx.ts";
 import { PROCESSES, ROAST_LEVELS, methodDefs, type Cell, type Rec } from "../schema.ts";
-import { deleteBean, newId, saveBean } from "../store.ts";
-import { Button, Dialog, Field, IconButton, Msg, NumField, SelectField, TextField } from "../ui.tsx";
+import { deleteBean, newId, saveBean, saveSettings } from "../store.ts";
+import { Button, Dialog, Field, IconButton, Msg, NumField, Segmented, SelectField, TextField } from "../ui.tsx";
 import FlavourEditor from "../components/FlavourEditor.tsx";
 
 const str = (v: unknown) => (v == null ? "" : String(v));
@@ -178,7 +179,7 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
           }}>Delete</Button>
         </div>
       </Dialog>
-      {fl.layers.length > 0 && <Radar axes={fl.axes} layers={fl.layers} size={360} title={`${str(bean.name)} roaster notes`} />}
+      {fl.layers.length > 0 && <PageArt fl={fl} title={`${str(bean.name)} roaster notes`} />}
       {facts.length > 0 && (
         <dl className="kv">
           {facts.map(([k, v]) => <div key={k}><dt className="label">{k}</dt><dd>{v}</dd></div>)}
@@ -190,6 +191,28 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
         <header><h2>Brew history</h2></header>
         <BrewList beanId={str(bean.id)} />
       </section>
+    </div>
+  );
+}
+
+/** The coffee's chart as a spider chart or blob, switchable here (saved as the coffee page setting, apart from card art). */
+function PageArt({ fl, title }: { fl: Flavour; title: string }) {
+  const { db, update, busy } = useApp();
+  const art = db.settings.page_art;
+  return (
+    <div className="stack">
+      <Segmented label="Chart view" value={art} options={[["radar", "Spider chart"], ["blob", "Blob"]]}
+        onChange={(page_art) => { if (!busy && page_art !== art) update((d) => saveSettings(d, { ...d.settings, page_art })); }} />
+      {art === "blob" ? (
+        <>
+          <div style={{ display: "grid", placeItems: "center" }} role="img" aria-label={title}>
+            <Fingerprint axes={fl.axes} layers={fl.layers} size={280} />
+          </div>
+          <div className="row" style={{ justifyContent: "center" }}>
+            {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch" style={{ background: l.color }} />{l.note}</span>)}
+          </div>
+        </>
+      ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} />}
     </div>
   );
 }

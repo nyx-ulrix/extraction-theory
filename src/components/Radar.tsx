@@ -46,7 +46,8 @@ export default function Radar({
   const n = axes.length;
   const s = useContext(Ctx)?.db.settings;
   const rounded = roundedProp ?? s?.radar_shape === "rounded";
-  const grid = gridProp ?? s?.radar_grid !== false;
+  // No notes yet: always draw the empty rings and dots, so the chart is not a blank square.
+  const grid = !layers.length || (gridProp ?? s?.radar_grid !== false);
   // Rounded style matches the cup fingerprint art: values start a little out from the centre,
   // so every note reads as a soft shape. Dragging uses the inverse, so points stay under the finger.
   const MIN = rounded ? 0.16 : 0;
@@ -72,7 +73,9 @@ export default function Radar({
     const key = axes[axis].key;
     const v = clamp10(value);
     if (layers[sel].v[key] === v) return;
-    onChange(layers.map((l, i) => (i === sel ? { ...l, v: { ...l.v, [key]: v } } : l)));
+    // Shared axes (body, bitterness) describe the whole cup: every note moves with the one being dragged.
+    const all = !!axes[axis]?.shared;
+    onChange(layers.map((l, i) => (i === sel || all ? { ...l, v: { ...l.v, [key]: v } } : l)));
   };
 
   const toSvg = (e: PointerEvent) => {

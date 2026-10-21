@@ -106,7 +106,7 @@ export default function Settings() {
 const CATS: [string, string, string, Icon][] = [
   ["brewing", "Brewing", "Pour entry, grind input, split presets", Drop],
   ["form", "Brew form", "Which sections each method shows, in what order", Rows],
-  ["chart", "Flavour chart", "Chart shape, chart lines, card art, radar axes", ChartPolar],
+  ["chart", "Flavour chart", "Chart shape, chart lines, card and page art, radar axes", ChartPolar],
   ["gear", "Gear", "Drippers and grinders", Wrench],
   ["ai", "Note colours", "AI colour picking for tasting notes", Palette],
   ["data", "Import", "Add beans and brews from JSON", Database],
@@ -126,6 +126,8 @@ function ChartStyle({ s, patch }: { s: S; patch: Patch }) {
       <Segmented label="Chart lines" value={s.radar_grid ? "show" : "hide"} onChange={(v) => patch({ radar_grid: v === "show" })}
         options={[["show", "Show"], ["hide", "Hide"]]} />
       <Segmented label="Card art on Home and Library" value={s.card_art} onChange={(card_art) => patch({ card_art })}
+        options={[["radar", "Spider chart"], ["blob", "Blob"]]} />
+      <Segmented label="Chart on coffee pages" value={s.page_art} onChange={(page_art) => patch({ page_art })}
         options={[["radar", "Spider chart"], ["blob", "Blob"]]} />
       <div className="grid-2" style={{ alignItems: "center" }}>
         <Radar axes={DEFAULT_AXES} layers={SAMPLE} size={280} legend={false} title="Chart preview"

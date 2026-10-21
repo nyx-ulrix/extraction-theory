@@ -185,6 +185,8 @@ export interface Settings {
   radar_grid: boolean;
   /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
   card_art: "radar" | "blob";
+  /** Chart on a coffee's own page, chosen apart from the card art. */
+  page_art: "radar" | "blob";
 }
 export const DEFAULT_SETTINGS: Settings = {
   pour_style: "per_pour",
@@ -201,6 +203,7 @@ export const DEFAULT_SETTINGS: Settings = {
   radar_shape: "sharp",
   radar_grid: true,
   card_art: "radar",
+  page_art: "radar",
 };
 
 /**
