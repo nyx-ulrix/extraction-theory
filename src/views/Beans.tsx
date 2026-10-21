@@ -1,13 +1,13 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowLeft, FloppyDisk, PencilSimple, Plus } from "@phosphor-icons/react";
+import { ArrowLeft, FloppyDisk, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import Radar from "../components/Radar.tsx";
 import Shelf from "../components/Shelf.tsx";
 import { BagToggle, BrewList } from "./History.tsx";
 import { cleanAxes, cleanLayers, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
 import { useApp } from "../ctx.ts";
 import { PROCESSES, ROAST_LEVELS, type Cell, type Rec } from "../schema.ts";
-import { newId, saveBean } from "../store.ts";
-import { Button, Field, IconButton, Msg, NumField, SelectField, TextField } from "../ui.tsx";
+import { deleteBean, newId, saveBean } from "../store.ts";
+import { Button, Dialog, Field, IconButton, Msg, NumField, SelectField, TextField } from "../ui.tsx";
 import FlavourEditor from "../components/FlavourEditor.tsx";
 
 const str = (v: unknown) => (v == null ? "" : String(v));
@@ -145,7 +145,9 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
 
 /** One coffee: its facts, roaster's radar, bag status and full brew history. */
 function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
-  const { db, back } = useApp();
+  const { db, back, update, busy } = useApp();
+  const [confirm, setConfirm] = useState(false);
+  const brewCount = db.brews.filter((b) => b.bean_id === bean.id).length;
   const fl = parseFlavour(bean.flavour, db.settings.axes);
   const facts: [string, string][] = ([
     ["Roastery", str(bean.roastery)], ["Roaster's name", str(bean.product)], ["Origin", str(bean.origin)],
@@ -159,8 +161,22 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
       <div className="page-head">
         <IconButton icon={ArrowLeft} label="Back" onClick={back} />
         <h1 style={{ flex: 1, minWidth: 0 }}>{str(bean.name) || "Unnamed"}</h1>
-        <IconButton icon={PencilSimple} label="Edit coffee" tipAlign="end" onClick={onEdit} />
+        <IconButton icon={PencilSimple} label="Edit coffee" onClick={onEdit} />
+        <IconButton icon={Trash} label="Delete coffee" tipAlign="end" disabled={busy} onClick={() => setConfirm(true)} />
       </div>
+      <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Delete ${str(bean.name) || "this coffee"}?`}>
+        <p>
+          This removes the coffee{brewCount ? ` and its ${brewCount} ${brewCount === 1 ? "brew" : "brews"}` : ""} from your Google Sheet.
+          It cannot be undone here (the sheet's version history still has it).
+        </p>
+        <div className="row" style={{ justifyContent: "flex-end" }}>
+          <Button ghost onClick={() => setConfirm(false)}>Keep</Button>
+          <Button icon={Trash} disabled={busy} onClick={async () => {
+            const ok = await update((d) => deleteBean(d, str(bean.id)), `${str(bean.name) || "Coffee"} deleted`);
+            if (ok) { setConfirm(false); back(); }
+          }}>Delete</Button>
+        </div>
+      </Dialog>
       {fl.layers.length > 0 && <Radar axes={fl.axes} layers={fl.layers} size={360} title={`${str(bean.name)} roaster notes`} />}
       {facts.length > 0 && (
         <dl className="kv">

@@ -162,4 +162,26 @@ export async function upsert(id: string, headers: Headers, tab: Tab, rec: Rec, i
   });
 }
 
-export const sheetUrl = (id: string) => `https://docs.google.com/spreadsheets/d/${id}/edit`;
+/** Delete every row whose `idKey` cell is one of `ids`. Rows are found fresh, so hand edits can't shift the target. */
+export async function deleteRows(id: string, _headers: Headers, tab: Tab, idKey: string, ids: string[]) {
+  if (!ids.length) return;
+  const head = await api<{ values?: Cell[][] }>(`${SHEETS}/${id}/values/${range(tab, "1:1")}`);
+  const c = (head.values?.[0] ?? []).map(String).indexOf(idKey);
+  if (c < 0) return;
+  const colVals = await api<{ values?: Cell[][] }>(
+    `${SHEETS}/${id}/values/${range(tab, `${col(c)}:${col(c)}`)}?valueRenderOption=UNFORMATTED_VALUE`,
+  );
+  const want = new Set(ids);
+  const rows = (colVals.values ?? []).map((v, i) => (i > 0 && want.has(String(v[0] ?? "")) ? i : -1)).filter((i) => i > 0);
+  if (!rows.length) return;
+  const meta = await api<{ sheets: { properties: { sheetId: number; title: string } }[] }>(`${SHEETS}/${id}?fields=sheets.properties(sheetId,title)`);
+  const sheetId = meta.sheets.find((s) => s.properties.title === tab)?.properties.sheetId;
+  if (sheetId == null) return;
+  // Bottom up, so earlier deletions don't move the rows still to delete.
+  const requests = rows.sort((a, b) => b - a).map((i) => ({
+    deleteDimension: { range: { sheetId, dimension: "ROWS", startIndex: i, endIndex: i + 1 } },
+  }));
+  await api(`${SHEETS}/${id}:batchUpdate`, { method: "POST", body: JSON.stringify({ requests }) });
+}
+
+export const sheetUrl =(id: string) => `https://docs.google.com/spreadsheets/d/${id}/edit`;

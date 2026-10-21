@@ -237,9 +237,10 @@ export default function Brew() {
             <Segmented label="Method" value={m.id} onChange={pickMethod}
               options={methods.map((x): [string, string, Icon] => [x.id, x.label, ICONS[x.id] ?? Flask])} />
           </div>
-          {d.prefilled && !hideNote && (
+          {/* Only "Brew again" says where the recipe came from; the usual last-brew prefill is silent. */}
+          {d.prefilled && d.from && !hideNote && (
             <Msg>
-              <span className="spacer">{d.from ? `Loaded the brew from ${d.from}.` : "Loaded your last brew of this coffee."}</span>
+              <span className="spacer">{`Loaded the brew from ${d.from}.`}</span>
               <IconButton icon={Eraser} label="Start blank" variant="bare" onClick={clearLoaded} />
               <IconButton icon={X} label="Dismiss" variant="bare" onClick={() => setHideNote(true)} />
             </Msg>

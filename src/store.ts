@@ -126,6 +126,21 @@ export async function saveBean(db: Db, bean: Rec): Promise<Db> {
   return { ...db, beans: exists ? db.beans.map((b) => (b.id === bean.id ? { ...b, ...bean } : b)) : [...db.beans, bean] };
 }
 
+/** Delete a coffee with its brews and their phases. Bean last, so a failure part way leaves it visible to retry. */
+export async function deleteBean(db: Db, beanId: string): Promise<Db> {
+  const brewIds = db.brews.filter((b) => b.bean_id === beanId).map((b) => String(b.id));
+  await sh.deleteRows(db.id, db.headers, "Phases", "brew_id", brewIds);
+  await sh.deleteRows(db.id, db.headers, "Brews", "id", brewIds);
+  await sh.deleteRows(db.id, db.headers, "Beans", "id", [beanId]);
+  const gone = new Set(brewIds);
+  return {
+    ...db,
+    beans: db.beans.filter((b) => b.id !== beanId),
+    brews: db.brews.filter((b) => !gone.has(String(b.id))),
+    phases: db.phases.filter((p) => !gone.has(String(p.brew_id))),
+  };
+}
+
 export async function saveGear(db: Db, g: Gear): Promise<Db> {
   await sh.upsert(db.id, db.headers, "Gear", g as unknown as Rec);
   const exists = db.gear.some((x) => x.id === g.id);
