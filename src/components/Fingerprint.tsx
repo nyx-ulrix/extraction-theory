@@ -5,7 +5,7 @@ import { smooth } from "./shape.ts";
 import { useId } from "react";
 import { ink } from "../palette.ts";
 
-export default function Fingerprint({ axes, layers, size = 96 }: { axes: AxisDef[]; layers: Layer[]; size?: number }) {
+export default function Fingerprint({ axes, layers, size = 96, dense = false }: { axes: AxisDef[]; layers: Layer[]; size?: number; dense?: boolean }) {
   if (!layers.length) return null;
   const n = axes.length;
   return (
@@ -16,7 +16,7 @@ export default function Fingerprint({ axes, layers, size = 96 }: { axes: AxisDef
           const r = 8 + ((l.v[a.key] ?? 0) / 10) * 40; // minimum radius keeps flat notes visible
           return [Math.cos(ang) * r, Math.sin(ang) * r];
         });
-        return <InkShape key={li} d={smooth(pts)} color={l.color} pitch={300 / size} />;
+        return <InkShape key={li} d={smooth(pts)} color={l.color} pitch={(dense ? 200 : 300) / size} />;
       })}
     </svg>
   );

@@ -290,13 +290,13 @@ function PageArt({ fl, title }: { fl: Flavour; title: string }) {
       {art === "blob" ? (
         <>
           <div style={{ display: "grid", placeItems: "center" }} role="img" aria-label={title}>
-            <Fingerprint axes={fl.axes} layers={fl.layers} size={280} />
+            <Fingerprint axes={fl.axes} layers={fl.layers} size={280} dense />
           </div>
           <div className="row" style={{ justifyContent: "center" }}>
             {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch" style={{ background: ink(l.color) }} />{l.note}</span>)}
           </div>
         </>
-      ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} />}
+      ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} pitch={2.3} />}
     </div>
   );
 }

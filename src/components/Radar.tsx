@@ -29,8 +29,10 @@ function extreme(hex: string) {
 
 export default function Radar({
   axes, layers, onChange, selected = null, onSelect, size = 420, legend = true, title = "Flavour radar",
-  emptyText = "Add tasting notes to draw layers.", rounded: roundedProp, grid: gridProp,
+  emptyText = "Add tasting notes to draw layers.", rounded: roundedProp, grid: gridProp, pitch = 3.4,
 }: {
+  /** Halftone dot spacing in chart units; smaller is denser. */
+  pitch?: number;
   /** Chart style; defaults to the user's Settings. Passed explicitly for the Settings preview. */
   rounded?: boolean;
   grid?: boolean;
@@ -162,7 +164,7 @@ export default function Radar({
               onClick={onSelect ? () => onSelect(li) : undefined}
               style={{ cursor: onSelect ? "pointer" : undefined }}
             >
-              <InkShape d={d} color={l.color} pitch={3.4} />
+              <InkShape d={d} color={l.color} pitch={pitch} />
               {axes.map((a, i) => {
                 if (rounded && sel !== li) return null; // the art style shows clean shapes; points only on the note being edited
                 const [x, y] = xy(i, n, rad(l.v[a.key] ?? 0));
