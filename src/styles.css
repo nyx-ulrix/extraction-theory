@@ -194,6 +194,17 @@ html { overflow-x: clip; }
 .chip[aria-pressed="true"] { border-color: var(--border); background: var(--surface); }
 .swatch { width: 12px; height: 12px; border: 1px solid var(--border-soft); flex: none; }
 
+/* Disclosure rows: settings set once, folded away */
+details.disclosure { border-bottom: 1px solid var(--border-soft); }
+details.disclosure > summary {
+  display: flex; align-items: center; gap: 12px; min-height: 52px; cursor: pointer; list-style: none;
+}
+details.disclosure > summary::-webkit-details-marker { display: none; }
+details.disclosure > summary .strong { flex: 1; min-width: 0; }
+details.disclosure > summary .caret { transition: transform 150ms ease; flex: none; color: var(--text-strong); }
+details.disclosure[open] > summary .caret { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { details.disclosure > summary .caret { transition: none; } }
+
 /* Messages */
 .msg { padding: 12px 14px; border: 1px solid; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
 .msg.error { background: var(--error-tint); border-color: var(--error); color: var(--text-strong); }

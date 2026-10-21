@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import {
-  ArrowCounterClockwise, ArrowDown, ArrowUp, FloppyDisk, GithubLogo, Globe, LinkedinLogo, Plus, SignOut, Table, Trash,
+  ArrowCounterClockwise, ArrowDown, ArrowUp, CaretDown, FloppyDisk, GithubLogo, Globe, LinkedinLogo, Plus, SignOut, Table, Trash,
 } from "@phosphor-icons/react";
 import { DEFAULT_AXES, cleanAxes, parsePattern, type DialType } from "../calc.ts";
 import { PROVIDERS, getKey, setKey, type Provider } from "../ai.ts";
@@ -189,10 +189,15 @@ function DripperRow({ g }: { g: Gear }) {
     setI(n);
     if (n !== saved) update((d) => saveGear(d, { ...g, style: STYLES[n][0] }), `${g.name} saved`);
   };
+  // Set once, so the slider stays folded away until the row is opened.
   return (
-    <div className="gear dripper">
-      <span className="strong">{g.name}</span>
-      <div className="field">
+    <details className="disclosure">
+      <summary>
+        <span className="strong">{g.name}</span>
+        <span className="label">{i < 0 ? "Not set" : STYLES[i][1]}</span>
+        <CaretDown size={16} aria-hidden className="caret" />
+      </summary>
+      <div className="field" style={{ paddingBottom: 12 }}>
         <input
           type="range" min={0} max={2} step={1} value={i < 0 ? 1 : i} aria-label={`${g.name} style`}
           aria-valuetext={i < 0 ? "Not set" : STYLES[i][1]} className={i < 0 ? "unset" : undefined}
@@ -200,7 +205,7 @@ function DripperRow({ g }: { g: Gear }) {
         />
         <div className="stops label"><span>Immersion</span><span>Hybrid</span><span>Percolation</span></div>
       </div>
-    </div>
+    </details>
   );
 }
 
