@@ -37,8 +37,12 @@ function MiniRadar({ axes, layers, rounded, grid }: { axes: AxisDef[]; layers: L
   );
 }
 
-/** Stand-in for a coffee with no notes yet: two random shapes seeded by its id, so each card keeps its own. Drawn greyed out. */
-function ghost(axes: AxisDef[], seed: string): Layer[] {
+// New on every page load; steady while the app is open, so cards don't change shape on each re-render.
+const LOAD_SALT = String(Math.random());
+
+/** Stand-in for a coffee with no notes yet: two random shapes, new each load, drawn greyed out. */
+function ghost(axes: AxisDef[], id: string): Layer[] {
+  const seed = id + LOAD_SALT;
   let h = 2166136261;
   for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
   const rnd = () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909)) >>> 0) / 4294967296;
