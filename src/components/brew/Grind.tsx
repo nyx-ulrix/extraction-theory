@@ -83,7 +83,7 @@ function GrinderForm({ onSaved }: { onSaved: (g: Gear) => void }) {
           <NumField label="Numbers per rotation" value={npr} onChange={setNpr} min={1} step={1} />
         </div>
       )}
-      {dialType !== "stepless" && <NumField label="µm per step" unit="µm" value={um} onChange={setUm} hint="Optional, for the size estimate" />}
+      {dialType !== "stepless" && <NumField label="Microns per step" unit="µm" value={um} onChange={setUm} hint="Optional, for the size estimate" />}
       <div className="row">
         <span className="spacer" />
         <IconButton icon={FloppyDisk} label="Save grinder" variant="solid" disabled={!ok || busy} onClick={save} />

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import {
   ArrowCounterClockwise, ArrowDown, ArrowUp, CaretDown, FloppyDisk, GithubLogo, Globe, LinkedinLogo, Plus, SignOut, Table, Trash,
 } from "@phosphor-icons/react";
@@ -166,16 +166,35 @@ function Layout({ s, patch }: { s: S; patch: Patch }) {
 
 const STYLES: [DripperStyle, string][] = [["immersion", "Immersion"], ["hybrid", "Hybrid"], ["percolation", "Percolation"]];
 
+/** Collapsible row. `level` "section" renders a section-sized heading in the summary. */
+function Fold({ title, meta, level, children }: { title: string; meta?: string; level?: "section" | "group"; children: ReactNode }) {
+  return (
+    <details className={`disclosure${level ? ` fold-${level}` : ""}`}>
+      <summary>
+        {level === "section" ? <h2 className="strong">{title}</h2> : <span className="strong">{title}</span>}
+        {meta && <span className="label">{meta}</span>}
+        <CaretDown size={16} aria-hidden className="caret" />
+      </summary>
+      <div className="fold-body">{children}</div>
+    </details>
+  );
+}
+
 function Drippers() {
   const { db } = useApp();
   const [adding, setAdding] = useState(false);
   const list = db.gear.filter((g) => g.type === "dripper");
   return (
-    <Section title="Drippers" actions={<IconButton icon={Plus} label="Add dripper" onClick={() => setAdding(true)} />}>
-      <p className="meta">Saved as you change it.</p>
-      {list.length ? <div className="list">{list.map((g) => <DripperRow key={g.id} g={g} />)}</div> : <p>No drippers yet.</p>}
+    <section className="section">
+      <Fold title="Drippers" meta={`${list.length}`} level="section">
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <p className="meta">Saved as you change it.</p>
+          <IconButton icon={Plus} label="Add dripper" tipAlign="end" onClick={() => setAdding(true)} />
+        </div>
+        {list.length ? <div className="list">{list.map((g) => <DripperRow key={g.id} g={g} />)}</div> : <p>No drippers yet.</p>}
+      </Fold>
       <DripperDialog open={adding} onClose={() => setAdding(false)} />
-    </Section>
+    </section>
   );
 }
 
@@ -215,12 +234,29 @@ function Grinders() {
   const { db } = useApp();
   const [adding, setAdding] = useState(false);
   const list = db.gear.filter((g) => g.type === "grinder");
+  const brands = [...new Set(list.map((g) => g.brand || "Other"))];
   return (
-    <Section title="Grinders" actions={<IconButton icon={Plus} label="Add grinder" onClick={() => setAdding(true)} />}>
-      <p className="meta">Saved as you change it.</p>
-      {list.length ? <div className="list">{list.map((g) => <GrinderRow key={g.id} g={g} />)}</div> : <p>No grinders yet.</p>}
+    <section className="section">
+      <Fold title="Grinders" meta={`${list.length}`} level="section">
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <p className="meta">Saved as you change it.</p>
+          <IconButton icon={Plus} label="Add grinder" tipAlign="end" onClick={() => setAdding(true)} />
+        </div>
+        {list.length ? (
+          <div className="list">
+            {brands.map((b) => {
+              const own = list.filter((g) => (g.brand || "Other") === b);
+              return (
+                <Fold key={b} title={b} meta={`${own.length}`} level="group">
+                  {own.map((g) => <GrinderRow key={g.id} g={g} />)}
+                </Fold>
+              );
+            })}
+          </div>
+        ) : <p>No grinders yet.</p>}
+      </Fold>
       <GrinderDialog open={adding} onClose={() => setAdding(false)} />
-    </Section>
+    </section>
   );
 }
 
@@ -234,14 +270,16 @@ function GrinderRow({ g }: { g: Gear }) {
     update((db) => saveGear(db, d), `${name} saved`);
   };
   return (
-    <div className="gear grinder" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && commit()}>
-      <div className="stack" style={{ gap: 2 }}>
-        <span className="strong">{name}</span>
-        <span className="meta">{DIALS.find(([k]) => k === g.dial_type)?.[1] ?? "Clicks"}</span>
+    <Fold title={g.name || name} meta={DIALS.find(([k]) => k === g.dial_type)?.[1] ?? "Clicks"}>
+      <div className="grid-2" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && commit()}>
+        {/* Labels avoid the µ sign: uppercase styling turns it into a Greek capital that reads as M. */}
+        <NumField label="Microns per step" unit="µm" min={0} value={d.um_per_step} onChange={(um_per_step) => setD({ ...d, um_per_step })} />
+        <NumField
+          label="Zero point (microns)" unit="µm" placeholder="0" value={d.zero_um} onChange={(zero_um) => setD({ ...d, zero_um })}
+          hint="Setting 0 = burrs touching, so 0 unless your burrs were re-zeroed."
+        />
       </div>
-      <NumField label="µm per step" unit="µm" min={0} value={d.um_per_step} onChange={(um_per_step) => setD({ ...d, um_per_step })} />
-      <NumField label="Zero point" unit="µm" value={d.zero_um} onChange={(zero_um) => setD({ ...d, zero_um })} />
-    </div>
+    </Fold>
   );
 }
 

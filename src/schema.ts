@@ -130,7 +130,8 @@ export const DEFAULT_FIELDS: MethodField[] = [
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 const grinder = (brand: string, name: string, dial_type: DialType, um: number | null, cpn: number | null = null, npr: number | null = null): Gear => ({
   id: `g-${slug(brand + " " + name)}`, type: "grinder", brand, name, dial_type,
-  clicks_per_number: cpn, numbers_per_rotation: npr, um_per_step: um, zero_um: null,
+  // Every seeded dial counts from burrs touching, so setting 0 is 0 microns.
+  clicks_per_number: cpn, numbers_per_rotation: npr, um_per_step: um, zero_um: dial_type === "stepless" ? null : 0,
 });
 const dripper = (name: string, style: DripperStyle): Gear => ({ id: `d-${slug(name)}`, type: "dripper", name, style });
 const paper = (name: string): Gear => ({ id: `p-${slug(name)}`, type: "paper", name });

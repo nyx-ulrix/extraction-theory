@@ -10,7 +10,7 @@ export interface AxisDef {
 }
 // Default template, clockwise from the top.
 export const DEFAULT_AXES: AxisDef[] = [
-  { key: "sweetness", label: "Sweetness", color: "#FF99FF" },
+  { key: "sweetness", label: "Sweetness", color: "#E5A396" }, // Ember 200
   { key: "aroma", label: "Aroma", color: "#D2B9CA" },
   { key: "bitterness", label: "Bitterness", color: "#7F3F00" },
   { key: "body", label: "Body", color: "#0A0A0A" },

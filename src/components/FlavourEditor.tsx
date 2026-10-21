@@ -8,6 +8,7 @@ import { noteColour } from "../palette.ts";
 import { useApp } from "../ctx.ts";
 import { IconButton, TextField } from "../ui.tsx";
 import AxesEditor from "./AxesEditor.tsx";
+import ColourPicker from "./ColourPicker.tsx";
 import Radar from "./Radar.tsx";
 
 const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
@@ -127,11 +128,9 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
               key={l.note} className="chip"
               style={{ padding: "0 0 0 6px", gap: 0, minHeight: 44, cursor: "default", ...(sel === i && { borderColor: "var(--border)", background: "var(--surface)" }) }}
             >
-              <input
-                type="color" value={l.color} aria-label={`${l.note} colour`} title={`${l.note} colour`}
-                style={{ width: 32, height: 32, padding: 0, marginRight: 6, border: "1px solid var(--border-soft)", flex: "none" }}
-                onChange={(e) => setColour(i, e.target.value)}
-              />
+              <span style={{ marginRight: 6, display: "inline-flex" }}>
+                <ColourPicker value={l.color} label={`${l.note} colour`} size={32} onChange={(c) => setColour(i, c)} />
+              </span>
               <button
                 type="button" aria-pressed={sel === i} onClick={() => setSel(sel === i ? null : i)}
                 style={{

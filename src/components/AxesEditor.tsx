@@ -3,6 +3,7 @@ import { useId, useRef } from "react";
 import { ArrowCounterClockwise, ArrowDown, ArrowUp, Plus, Trash } from "@phosphor-icons/react";
 import { MAX_AXES, MIN_AXES, axisKey, type AxisDef } from "../calc.ts";
 import { IconButton } from "../ui.tsx";
+import ColourPicker from "./ColourPicker.tsx";
 import Radar from "./Radar.tsx";
 
 const unique = (base: string, taken: Set<string>) => {
@@ -66,7 +67,7 @@ export default function AxesEditor({ axes, onChange, template }: { axes: AxisDef
           return (
             <li key={id} style={{ display: "grid", gap: 4 }}>
               <div className="row" style={{ flexWrap: "nowrap" }}>
-                <input type="color" value={a.color} aria-label={`${a.label || "Axis"} colour`} onChange={(e) => set(i, { color: e.target.value })} />
+                <ColourPicker value={a.color} label={`${a.label || "Axis"} colour`} onChange={(color) => set(i, { color })} />
                 <input
                   className="input" style={{ minWidth: 0, flex: 1 }} value={a.label} maxLength={24} placeholder="Name this axis"
                   aria-label={`Axis ${i + 1} label`} aria-invalid={blank} aria-describedby={blank ? `${uid}-${id}` : undefined}

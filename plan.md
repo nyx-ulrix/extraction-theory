@@ -100,7 +100,7 @@ Method (Ice drip / Hyperchiller / Shaken / Other), ice (g) or "as much ice as po
 
 ## 6. Visuals
 - **Flavour radar**:
-  - Default axis template, clockwise from the top: Sweetness `#FF99FF`, Aroma `#D2B9CA`, Bitterness `#7F3F00`, Body `#0A0A0A`, Acidity `#E4F28C`, Finish `#2E3A87`. Coloured dot per axis, labels set around the ring.
+  - Default axis template, clockwise from the top: Sweetness `#E5A396` (Ember 200), Aroma `#D2B9CA`, Bitterness `#7F3F00`, Body `#0A0A0A`, Acidity `#E4F28C`, Finish `#2E3A87`. Coloured dot per axis, labels set around the ring.
   - Template editable in Settings (labels, colours, 3 to 12 axes). Each bean and each brew can carry its own axes (different labels and count per coffee).
   - Every tasting note typed becomes its own see-through layer automatically (fill 35% opacity, solid stroke). Starter values: 5 on an axis whose label matches the note, 2 elsewhere, else 3 everywhere. The user sets the real shape by dragging. Colour comes from the 64-colour Caffalyst palette: AI picked when a key is set, otherwise a stable palette colour from the note name. The user can override any colour; a hand-picked colour is never auto-replaced.
   - Five concentric rings (2, 4, 6, 8, 10). Values 0 to 10 in half steps, so points can sit between rings.
