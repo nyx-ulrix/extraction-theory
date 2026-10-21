@@ -83,7 +83,7 @@ assert.equal(layers.length, 2);
 assert.deepEqual(layers[0], {
   note: "Blueberry", color: "#5b4b9e", v: { sweetness: 6, aroma: 0, bitterness: 0, body: 0, acidity: 10, finish: 0 },
 });
-assert.equal(layers[1].color, "#0A0A0A");
+assert.equal(layers[1].color, c.DEFAULT_AXES.find((a) => a.key === "bitterness")!.color);
 assert.equal(layers[1].v.bitterness, 7.5);
 assert.deepEqual(c.profile(layers, ax), { sweetness: 6, aroma: 0, bitterness: 7.5, body: 6, acidity: 10, finish: 0 });
 assert.throws(() => c.cleanLayers("text", ax));

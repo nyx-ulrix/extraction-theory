@@ -83,10 +83,10 @@ Reference: coloured dots per axis with labels set around the ring.
 
 | Axis (clockwise from the top) | Colour |
 |---|---|
-| Sweetness | `#F0AE8E` |
+| Sweetness | `#FF99FF` |
 | Aroma | `#D2B9CA` |
-| Bitterness | `#0A0A0A` (Bone in dark) |
-| Body | `#E03A4E` |
+| Bitterness | `#7F3F00` |
+| Body | `#0A0A0A` (outlined in dark) |
 | Acidity | `#E4F28C` |
 | Finish | `#2E3A87` |
 
