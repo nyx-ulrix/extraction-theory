@@ -209,8 +209,11 @@ export function buildRecord(d: Draft, db: Db, m: MethodDef, template: AxisDef[])
       ? pressTimes(presses.map((p) => ({ start: p.start_s, duration: p.duration_s }))).total
       : m.time === "none" ? null : n("total_s"),
     water_type: s("water_type"),
-    milk_drink: s("milk_drink"),
-    milk_g: s("milk_drink") ? n("milk_g") : null,
+    serve: s("serve") ?? (s("milk_drink") ? "milk" : null),
+    serve_iced: s("serve") === "black" ? !!f.serve_iced : null,
+    serve_water_g: s("serve") === "black" ? n("serve_water_g") : null,
+    milk_drink: s("serve") === "milk" || (!s("serve") && s("milk_drink")) ? s("milk_drink") : null,
+    milk_g: s("serve") === "milk" || (!s("serve") && s("milk_drink")) ? n("milk_g") : null,
     days_off_roast: daysOffRoast(num(bean?.roast_date), serial),
     dripper_id: dripper ? dripper.id : null,
     paper: m.dripper ? s("paper") : null,

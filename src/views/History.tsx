@@ -37,7 +37,15 @@ export function ratioOf(b: Rec, m: MethodDef): string {
 }
 const phasesOf = (db: Db, id: unknown): Phase[] =>
   db.phases.filter((p) => p.brew_id === id).sort((a, b) => (a.kind === b.kind ? a.n - b.n : a.kind === "pour" ? -1 : 1));
-export const beanName = (db: Db, id: unknown) => str(db.beans.find((x) => x.id === id)?.name) || "Unknown bean";
+/** "Espresso", "Black (iced)", or the milk drink name. */
+export function served(b: Rec): string {
+  const s = str(b.serve) || (str(b.milk_drink) ? "milk" : "");
+  if (s === "espresso") return "Espresso";
+  if (s === "black") return yes(b.serve_iced) ? "Black (iced)" : "Black (hot)";
+  if (s === "milk") return str(b.milk_drink) || "Milk drink";
+  return "";
+}
+export const beanName =(db: Db, id: unknown) => str(db.beans.find((x) => x.id === id)?.name) || "Unknown bean";
 
 function stage(v: unknown): string {
   const s = str(v);
@@ -96,6 +104,8 @@ function params(b: Rec, db: Db, m: MethodDef): P[] {
     ["Recipe", m.tempLabel, n(b.temp_c, "°C")],
     ["Recipe", m.time === "shot" ? "Shot time" : "Total time", t(b.total_s)],
     ["Recipe", "Water used", str(b.water_type)],
+    ["Recipe", "Served as", served(b)],
+    ["Recipe", "Water added", n(b.serve_water_g, "g")],
     ["Recipe", "Milk drink", str(b.milk_drink)],
     ["Recipe", "Milk", n(b.milk_g, "g")],
     ["Recipe", "Dripper", b.dripper_id ? gear(b.dripper_id) : ""],
@@ -192,7 +202,7 @@ export function BrewList({ beanId }: { beanId: string }) {
                 </span>
                 <button type="button" className="item-main" onClick={() => go("history", id)}>
                   <span className="item-title">
-                    {[m.label, str(b.milk_drink)].filter(Boolean).join(", ")}
+                    {[m.label, served(b)].filter(Boolean).join(", ")}
                     {yes(b.dialed_in) && <><TargetFill size={16} aria-hidden /><span className="sr-only">Dialed in</span></>}
                   </span>
                   <span className="meta num">

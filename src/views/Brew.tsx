@@ -161,12 +161,23 @@ export default function Brew() {
         </Section>
       );
       case "milk": {
-        const on = !!str(d.f.milk_drink);
+        // How the cup was served: straight, black (hot or iced, with water) or as a milk drink.
+        const serve = str(d.f.serve) || (str(d.f.milk_drink) ? "milk" : "");
         return (
-          <Section key={b} title="Milk">
-            <Toggle label="Milk drink" checked={on}
-              onChange={(v) => up(withF(v ? { milk_drink: MILK_DRINKS[0], milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[MILK_DRINKS[0]] ?? null } : { milk_drink: "", milk_g: null }))} />
-            {on && (
+          <Section key={b} title="Serve">
+            <Segmented label="Served as" value={serve || "none"} full
+              options={[["none", "Not set"], ["espresso", "Espresso"], ["black", "Black"], ["milk", "Milk drink"]]}
+              onChange={(v) => up(withF(v === "milk"
+                ? { serve: v, milk_drink: str(d.f.milk_drink) || MILK_DRINKS[0], milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[MILK_DRINKS[0]] ?? null }
+                : { serve: v === "none" ? "" : v, milk_drink: "", milk_g: null }))} />
+            {serve === "black" && (
+              <div className="grid-2">
+                <Segmented label="Temperature" value={d.f.serve_iced ? "iced" : "hot"} options={[["hot", "Hot"], ["iced", "Iced"]]}
+                  onChange={(v) => up(withF({ serve_iced: v === "iced" }))} />
+                <NumField label="Water" unit="g" min={0} value={num(d.f.serve_water_g)} onChange={(v) => up(withF({ serve_water_g: v }))} />
+              </div>
+            )}
+            {serve === "milk" && (
               <div className="grid-2">
                 <SelectField label="Drink" value={str(d.f.milk_drink)} options={MILK_DRINKS} other
                   onChange={(v) => {
