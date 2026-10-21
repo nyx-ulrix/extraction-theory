@@ -26,7 +26,8 @@ function MiniRadar({ axes, layers, rounded, grid }: { axes: AxisDef[]; layers: L
         : <path key={v} d={sharp(axes.map((_, i) => pt(i, rad(v))))} fill="none" stroke="var(--border-soft)" strokeWidth={0.6} />)}
       {axes.map((a, i) => {
         const [x, y] = pt(i, 40);
-        return <g key={a.key}>{grid && <line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={0.6} />}<circle cx={x} cy={y} r={2.4} fill={a.color} stroke="var(--text)" strokeWidth={0.4} /></g>;
+        // Lines off hides the axis dots too, leaving only the note shapes.
+        return grid ? <g key={a.key}><line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={0.6} /><circle cx={x} cy={y} r={2.4} fill={a.color} stroke="var(--text)" strokeWidth={0.4} /></g> : null;
       })}
       {layers.map((l, k) => (
         <path key={k} d={shapePath(axes.map((a, i) => pt(i, rad(l.v[a.key] ?? 0))), rounded)} fill={l.color} fillOpacity={0.35} stroke={l.color} strokeWidth={1.2} />

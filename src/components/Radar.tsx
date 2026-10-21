@@ -127,7 +127,7 @@ export default function Radar({
           return (
             <g key={a.key}>
               {grid && <line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={1} />}
-              <circle cx={x} cy={y} r={5} fill={a.color} stroke={extreme(a.color) ? "var(--text)" : "none"} strokeWidth={1} />
+              {grid && <circle cx={x} cy={y} r={5} fill={a.color} stroke={extreme(a.color) ? "var(--text)" : "none"} strokeWidth={1} />}
               <text
                 transform={`translate(${lx.toFixed(2)} ${ly.toFixed(2)}) rotate(${((i / n) * 360).toFixed(2)})`}
                 textAnchor="middle" fontSize={fs} letterSpacing="0.2em" fill="var(--text)"
