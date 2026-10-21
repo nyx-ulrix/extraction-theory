@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowLeft, FloppyDisk, Plus } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, ArrowLeft, CheckCircle, FloppyDisk, Plus } from "@phosphor-icons/react";
+import { isFinished } from "../group.ts";
 import { cleanAxes, cleanLayers, daysOffRoast, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
 import { useApp } from "../ctx.ts";
 import { PROCESSES, ROAST_LEVELS, type Cell, type Rec } from "../schema.ts";
@@ -22,7 +23,7 @@ const KEYS = [
 ];
 
 export default function Beans() {
-  const { db, arg, go } = useApp();
+  const { db, arg, go, update, busy } = useApp();
   // arg "new" (first run, from the brew form) opens a blank bean and returns to Brew once it is saved.
   const [toBrew, setToBrew] = useState(arg === "new");
   const [editing, setEditing] = useState<Rec | null>(() =>
@@ -36,7 +37,9 @@ export default function Beans() {
   if (editing) return <BeanForm bean={editing} onDone={() => open(null)} onSaved={() => (toBrew ? go("brew") : open(null))} />;
 
   const today = toSerial(new Date());
-  const beans = [...db.beans].sort((a, b) => (num(b.created) ?? 0) - (num(a.created) ?? 0));
+  // Bags still in use first, finished ones after; newest first within each.
+  const beans = [...db.beans].sort((a, b) =>
+    Number(isFinished(a.finished)) - Number(isFinished(b.finished)) || (num(b.created) ?? 0) - (num(a.created) ?? 0));
 
   return (
     <div className="page">
@@ -62,8 +65,15 @@ export default function Beans() {
                     <span>Roasted {ymd(b.roast_date) || "-"}</span>
                     <span>{days == null ? "-" : `${days} d off roast`}</span>
                     <span>{brews} {brews === 1 ? "brew" : "brews"}</span>
+                    {isFinished(b.finished) && <span>Finished</span>}
                   </span>
                 </button>
+                <IconButton
+                  icon={isFinished(b.finished) ? ArrowCounterClockwise : CheckCircle} tipAlign="end" disabled={busy}
+                  label={isFinished(b.finished) ? "Still have some" : "Mark bag as finished"}
+                  onClick={() => update((d) => saveBean(d, { id: b.id, finished: !isFinished(b.finished) }),
+                    isFinished(b.finished) ? "Back in your bean list" : "Marked as finished")}
+                />
               </div>
             );
           })}

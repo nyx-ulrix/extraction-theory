@@ -3,10 +3,11 @@ import {
   ArrowLeft, ArrowsClockwise, CheckSquare, Coffee, Plant, Square, Target, X, type Icon, type IconProps,
 } from "@phosphor-icons/react";
 import { fmtTime, fromSerial, num, parseFlavour, round } from "../calc.ts";
+import { groups, isFinished, norm, originKey } from "../group.ts";
 import { useApp } from "../ctx.ts";
 import { AGITATION_TIMING, methodDefs, type MethodDef, type Phase, type Rec } from "../schema.ts";
-import { patchBrew, type Db } from "../store.ts";
-import { Button, IconButton, Msg, Section, SelectField } from "../ui.tsx";
+import { patchBrew, saveBean, type Db } from "../store.ts";
+import { Button, IconButton, Msg, Section, Segmented, SelectField } from "../ui.tsx";
 import Fingerprint from "../components/Fingerprint.tsx";
 import Radar from "../components/Radar.tsx";
 import Timeline from "../components/Timeline.tsx";
@@ -133,6 +134,9 @@ export default function History() {
   const defs = useMemo(() => methodDefs(db.fields), [db.fields]);
   const [bean, setBean] = useState("");
   const [method, setMethod] = useState("");
+  const [roaster, setRoaster] = useState("");
+  const [origin, setOrigin] = useState("");
+  const [process, setProcess] = useState("");
   const [sel, setSel] = useState<string[]>([]);
 
   if (arg) {
@@ -158,9 +162,17 @@ export default function History() {
     );
   }
 
+  const beanOf = (b: Rec) => db.beans.find((x) => x.id === b.bean_id);
   const rows = db.brews
-    .filter((b) => (!bean || b.bean_id === bean) && (!method || b.method === method))
+    .filter((b) => {
+      const bn = beanOf(b);
+      return (!bean || b.bean_id === bean) && (!method || b.method === method)
+        && (!roaster || norm(bn?.roastery) === roaster)
+        && (!origin || originKey(bn?.origin) === origin)
+        && (!process || norm(bn?.process) === process);
+    })
     .sort((a, b) => when(b) - when(a));
+  const filter = (set: (v: string) => void) => (v: string) => { set(v); setSel([]); };
   const picked = sel.map((id) => db.brews.find((b) => b.id === id)).filter((b): b is Rec => !!b);
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < 2 ? [...s, id] : s));
 
@@ -172,6 +184,12 @@ export default function History() {
           options={db.beans.map((b): [string, string] => [str(b.id), str(b.name) || "Unnamed"])} />
         <SelectField label="Method" value={method} placeholder="All methods" onChange={(v) => { setMethod(v); setSel([]); }}
           options={defs.map((m): [string, string] => [m.id, m.label])} />
+        <SelectField label="Roaster" value={roaster} placeholder="All roasters" onChange={filter(setRoaster)}
+          options={groups(db.beans.map((b) => b.roastery))} />
+        <SelectField label="Origin" value={origin} placeholder="All origins" onChange={filter(setOrigin)}
+          options={groups(db.beans.map((b) => b.origin), originKey)} />
+        <SelectField label="Process" value={process} placeholder="All processes" onChange={filter(setProcess)}
+          options={groups(db.beans.map((b) => b.process))} />
       </div>
 
       {picked.length === 2 && <Compare pair={picked} defs={defs} onClear={() => setSel([])} />}
@@ -258,6 +276,7 @@ function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
           <p className="meta num"><span>{m.label}</span><span>{stamp(brew.brew_date ?? brew.created)}</span></p>
         </div>
       </div>
+      {bean && <BagToggle bean={bean} />}
 
       <Section
         title="Flavour"
@@ -342,5 +361,21 @@ function Compare({ pair, defs, onClear }: { pair: Rec[]; defs: MethodDef[]; onCl
         )}
       </Section>
     </div>
+  );
+}
+
+/** Mark the bag as finished (hidden from the Brew form's bean list) or still in use. */
+export function BagToggle({ bean }: { bean: Rec }) {
+  const { update, busy } = useApp();
+  const done = isFinished(bean.finished);
+  return (
+    <Segmented
+      label={`Bag of ${str(bean.name) || "this bean"}`} value={done ? "done" : "left"}
+      options={[["left", "Still have some"], ["done", "Finished"]]}
+      onChange={(v) => {
+        if (busy || (v === "done") === done) return;
+        update((d) => saveBean(d, { id: bean.id, finished: v === "done" }), v === "done" ? "Marked as finished" : "Back in your bean list");
+      }}
+    />
   );
 }

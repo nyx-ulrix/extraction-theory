@@ -4,6 +4,7 @@ import {
 } from "@phosphor-icons/react";
 import { fromSerial, num, parseFlavour, toSerial } from "../calc.ts";
 import { useApp } from "../ctx.ts";
+import { isFinished } from "../group.ts";
 import {
   buildRecord, DRAFT_KEY, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
@@ -44,8 +45,9 @@ export default function Brew() {
     // A touched draft is not replaced without asking.
     if (b && saved?.touched) return { d: saved, pending: b };
     let d = b ? again(db, b, methods[0].id) : saved ?? emptyDraft(methods[0].id);
-    if (!d.f.bean_id && db.beans.length) {
-      const newest = db.beans.reduce((a, x) => ((num(x.created) ?? 0) > (num(a.created) ?? 0) ? x : a));
+    const open = db.beans.filter((x) => !isFinished(x.finished));
+    if (!d.f.bean_id && open.length) {
+      const newest = open.reduce((a, x) => ((num(x.created) ?? 0) > (num(a.created) ?? 0) ? x : a));
       d = prefill(db, withF({ bean_id: newest.id })(d));
     }
     return { d, pending: undefined };
@@ -136,7 +138,10 @@ export default function Brew() {
       case "bean": return (
         <Section key={b} title="Bean and date">
           <SelectField label="Bean" value={str(d.f.bean_id)} onChange={pickBean}
-            options={db.beans.map((x) => [str(x.id), [x.name, x.roastery].map(str).filter(Boolean).join(" - ")])} />
+            options={db.beans
+              .filter((x) => !isFinished(x.finished) || x.id === d.f.bean_id) // finished bags drop out
+              .map((x) => [str(x.id), [x.name, x.roastery].map(str).filter(Boolean).join(" - ")])}
+            hint="Finished bags are hidden. Mark a bag as finished in History or Beans." />
           {errBean && <p className="brew-err" role="alert">{errBean}</p>}
           <div className="grid-2">
             <div className="field">
