@@ -242,7 +242,9 @@ export const AGITATION_TIMING = [
   ["after", "After pour"],
   ["at", "At time"],
 ] as const;
-export const MILK_DRINKS = ["Cold milk", "Cold milk with ice", "Flat white", "Latte", "Cappuccino"];
+// "Dirty" = espresso over cold milk, no ice.
+export const MILK_DRINKS = ["Dirty", "Cold milk", "Cold milk with ice", "Flat white", "Latte", "Cappuccino"];
+export const MILK_DEFAULT_G: Record<string, number> = { Dirty: 75 };
 export const CHILL_METHODS =["Ice drip", "Hyperchiller", "Shaken"];
 export const PROCESSES = ["Washed", "Natural", "Honey", "Anaerobic", "Carbonic maceration", "Wet hulled"];
 export const ROAST_LEVELS = ["Super light", "Light", "Medium light", "Medium", "Medium dark", "Dark"];

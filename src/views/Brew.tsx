@@ -8,7 +8,7 @@ import { isFinished } from "../group.ts";
 import {
   buildRecord, DRAFT_KEY, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
-import { MILK_DRINKS, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
+import { MILK_DEFAULT_G, MILK_DRINKS, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
 import { addBrew, newId, type Db } from "../store.ts";
 import { Button, Dialog, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import FlavourEditor from "../components/FlavourEditor.tsx";
@@ -165,11 +165,14 @@ export default function Brew() {
         return (
           <Section key={b} title="Milk">
             <Toggle label="Milk drink" checked={on}
-              onChange={(v) => up(withF(v ? { milk_drink: MILK_DRINKS[2] } : { milk_drink: "", milk_g: null }))} />
+              onChange={(v) => up(withF(v ? { milk_drink: MILK_DRINKS[0], milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[MILK_DRINKS[0]] ?? null } : { milk_drink: "", milk_g: null }))} />
             {on && (
               <div className="grid-2">
                 <SelectField label="Drink" value={str(d.f.milk_drink)} options={MILK_DRINKS} other
-                  onChange={(v) => up(withF({ milk_drink: v || MILK_DRINKS[2] }))} />
+                  onChange={(v) => {
+                    const drink = v || MILK_DRINKS[0];
+                    up(withF({ milk_drink: drink, milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[drink] ?? null }));
+                  }} />
                 <NumField label="Milk" unit="g" min={0} value={num(d.f.milk_g)} onChange={(v) => up(withF({ milk_g: v }))} />
               </div>
             )}
