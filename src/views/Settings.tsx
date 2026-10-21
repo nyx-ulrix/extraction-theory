@@ -1,11 +1,12 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import {
-  ArrowCounterClockwise, ArrowDown, ArrowUp, CaretDown, FloppyDisk, GithubLogo, Globe, LinkedinLogo, Plus, SignOut, Table, Trash, UploadSimple,
+  ArrowCounterClockwise, ArrowDown, ArrowUp, CaretDown, DownloadSimple, FloppyDisk, GithubLogo, Globe, LinkedinLogo, Plus, SignOut, Table, Trash, UploadSimple,
 } from "@phosphor-icons/react";
 import { DEFAULT_AXES, cleanAxes, parsePattern, type DialType } from "../calc.ts";
 import { PROVIDERS, getKey, setKey, type Provider } from "../ai.ts";
 import { useApp } from "../ctx.ts";
 import { signOut } from "../google.ts";
+import { useInstall } from "../install.ts";
 import {
   SECTIONS, availableKeys, layoutFor, methodDefs, type DripperStyle, type Gear, type Preset, type Settings as S,
 } from "../schema.ts";
@@ -359,6 +360,15 @@ function Account() {
       </a>
       <Segmented label="Theme" value={choice} onChange={setTheme}
         options={[["system", "System"], ["light", "Light"], ["dark", "Dark"]]} />
+      <InstallApp />
     </Section>
   );
+}
+
+function InstallApp() {
+  const { installed, canPrompt, ios, install } = useInstall();
+  if (installed) return <p className="meta">Installed as an app on this device.</p>;
+  if (canPrompt) return <div><Button ghost icon={DownloadSimple} onClick={install}>Install app</Button></div>;
+  if (ios) return <p className="meta">To install on iPhone or iPad: tap Share, then Add to Home Screen.</p>;
+  return <p className="meta">To install: open the browser menu and choose Install app or Add to Home Screen.</p>;
 }

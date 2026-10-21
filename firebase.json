@@ -12,7 +12,7 @@
         ]
       },
       {
-        "source": "**/*.@(html|webmanifest)",
+        "source": "@(**/*.@(html|webmanifest)|sw.js)",
         "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
       },
       {
