@@ -103,6 +103,12 @@ const SEED = {
 export async function loadDb(): Promise<Db> {
   const id = await sh.findOrCreate(SEED);
   const { headers, rows } = await sh.loadAll(id);
+  const settings = parseSettings(rows.Settings);
+  // Per-page chart styles inherited from an older sheet are written once, so they stop following radar_shape.
+  const have = new Set(rows.Settings.map((r) => str(r.key)));
+  for (const key of ["card_shape", "card_grid", "page_shape", "page_grid"] as const) {
+    if (!have.has(key)) await sh.upsert(id, headers, "Settings", { key, value: JSON.stringify(settings[key]) }, "key");
+  }
   return {
     id,
     headers,
@@ -111,7 +117,7 @@ export async function loadDb(): Promise<Db> {
     fields: rows.Methods.map(toField).filter((f) => f.method && f.key).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     brews: rows.Brews.filter((b) => b.id),
     phases: rows.Phases.map(toPhase).filter((p) => p.brew_id),
-    settings: parseSettings(rows.Settings),
+    settings,
   };
 }
 

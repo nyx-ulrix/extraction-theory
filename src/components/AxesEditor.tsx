@@ -66,15 +66,15 @@ export default function AxesEditor({ axes, onChange, template }: { axes: AxisDef
           const blank = !a.label.trim();
           return (
             <li key={id} style={{ display: "grid", gap: 4 }}>
-              <div className="row" style={{ flexWrap: "nowrap" }}>
+              <div className="row">
                 <ColourPicker value={a.color} label={`${a.label || "Axis"} colour`} onChange={(color) => set(i, { color })} />
                 <input
-                  className="input" style={{ minWidth: 0, flex: 1 }} value={a.label} maxLength={24} placeholder="Name this axis"
+                  className="input" style={{ minWidth: 0, flex: "1 1 120px" }} value={a.label} maxLength={24} placeholder="Name this axis"
                   aria-label={`Axis ${i + 1} label`} aria-invalid={blank} aria-describedby={blank ? `${uid}-${id}` : undefined}
                   onChange={(e) => rename(i, e.target.value)}
                 />
                 <IconButton
-                  icon={LinkSimple} label={a.shared ? "Shared by all notes" : "Share across all notes"} pressed={!!a.shared}
+                  icon={LinkSimple} label="Share across all notes" pressed={!!a.shared}
                   onClick={() => onChange(axes.map((x, j) => (j === i ? { ...x, shared: !x.shared } : x)))}
                 />
                 <IconButton icon={ArrowUp} label="Move up" onClick={() => move(i, -1)} disabled={i === 0} />

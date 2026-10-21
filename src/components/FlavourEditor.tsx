@@ -28,7 +28,7 @@ function starter(note: string, axes: AxisDef[], first?: Layer): Layer {
 /** One layer per note in the text, keeping the values and colour of notes that already had a layer. */
 function syncLayers(text: string, layers: Layer[], axes: AxisDef[]): Layer[] {
   const have = new Map(layers.map((l) => [low(l.note), l]));
-  return splitNotes(text).map((n) => have.get(low(n)) ?? starter(n, axes));
+  return splitNotes(text).reduce<Layer[]>((acc, n) => [...acc, have.get(low(n)) ?? starter(n, axes, acc[0] ?? layers[0])], []);
 }
 
 export default function FlavourEditor({ notes, onNotes, value, onChange, template, label = "Tasting notes" }: {
@@ -58,7 +58,13 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
   }, [layers.length]);
 
   const setLayers = (next: Layer[]) => onChange({ axes, layers: next });
-  const setAxes = (next: AxisDef[]) => onChange({ axes: next, layers: cleanLayers(layers, next) });
+  const setAxes = (next: AxisDef[]) => {
+    // An axis just linked takes the first note's value on every note, so the layers agree.
+    const linked = next.filter((a) => a.shared && !axes.find((b) => b.key === a.key)?.shared).map((a) => a.key);
+    const base = cleanLayers(layers, next);
+    if (!linked.length || !base.length) return onChange({ axes: next, layers: base });
+    onChange({ axes: next, layers: base.map((l) => ({ ...l, v: { ...l.v, ...Object.fromEntries(linked.map((k) => [k, base[0].v[k]])) } })) });
+  };
   // Notes are kept as layers; the plain-text notes column is derived from them.
   const commit = (next: Layer[]) => {
     onNotes(next.map((l) => l.note.trim()).filter(Boolean).join(", "));
@@ -77,7 +83,7 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
     const fresh = splitNotes(draft).filter((n) => !have.has(low(n)) && have.add(low(n)));
     setDraft("");
     if (!fresh.length) return;
-    const next = [...layers, ...fresh.map((n) => starter(n, axes, layers[0]))].slice(0, 12);
+    const next = fresh.reduce((acc, n) => [...acc, starter(n, axes, acc[0])], layers).slice(0, 12);
     if (layers.length + fresh.length > 12) notify("Up to 12 notes per coffee.", "info");
     commit(next);
     setSel(next.length - 1);

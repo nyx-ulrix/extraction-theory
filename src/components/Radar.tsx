@@ -72,9 +72,9 @@ export default function Radar({
     if (sel == null || !onChange) return;
     const key = axes[axis].key;
     const v = clamp10(value);
-    if (layers[sel].v[key] === v) return;
     // Shared axes (body, bitterness) describe the whole cup: every note moves with the one being dragged.
     const all = !!axes[axis]?.shared;
+    if ((all ? layers : [layers[sel]]).every((l) => l.v[key] === v)) return;
     onChange(layers.map((l, i) => (i === sel || all ? { ...l, v: { ...l.v, [key]: v } } : l)));
   };
 
@@ -187,7 +187,7 @@ export default function Radar({
               ref={(el) => { handles.current[i] = el; }}
               tabIndex={0}
               role="slider"
-              aria-label={`${l.note} ${a.label}`}
+              aria-label={`${l.note} ${a.label}${a.shared ? ", all notes" : ""}`}
               aria-valuemin={0}
               aria-valuemax={10}
               aria-valuenow={v}

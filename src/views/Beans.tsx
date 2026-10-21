@@ -204,10 +204,10 @@ function PageArt({ fl, title }: { fl: Flavour; title: string }) {
   return (
     <div className="stack">
       <div className="grid-3">
-        <Segmented label="Chart view" value={art} options={[["radar", "Spider"], ["blob", "Blob"]]} onChange={(page_art) => set({ page_art })} />
+        <Segmented full disabled={busy} label="Chart view" value={art} options={[["radar", "Spider"], ["blob", "Blob"]]} onChange={(page_art) => set({ page_art })} />
         {art === "radar" && <>
-          <Segmented label="Shape" value={s.page_shape} options={[["sharp", "Sharp"], ["rounded", "Rounded"]]} onChange={(page_shape) => set({ page_shape })} />
-          <Segmented label="Chart lines" value={s.page_grid ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ page_grid: v === "show" })} />
+          <Segmented full disabled={busy} label="Shape" value={s.page_shape} options={[["sharp", "Sharp"], ["rounded", "Rounded"]]} onChange={(page_shape) => set({ page_shape })} />
+          <Segmented full disabled={busy} label="Chart lines" value={s.page_grid ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ page_grid: v === "show" })} />
         </>}
       </div>
       {art === "blob" ? (

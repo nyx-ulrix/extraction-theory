@@ -120,15 +120,15 @@ export function SelectField({ label, value, options, onChange, placeholder = "Ch
   );
 }
 
-export function Segmented<T extends string>({ value, options, onChange, label, full }: {
-  value: T; options: [T, string, Icon?][]; onChange: (v: T) => void; label: string; full?: boolean;
+export function Segmented<T extends string>({ value, options, onChange, label, full, disabled }: {
+  value: T; options: [T, string, Icon?][]; onChange: (v: T) => void; label: string; full?: boolean; disabled?: boolean;
 }) {
   return (
     <div className="field">
       <span className="label">{label}</span>
       <div className={`seg${full ? " full" : ""}`} role="group" aria-label={label}>
         {options.map(([v, lab, I]) => (
-          <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)}>
+          <button key={v} type="button" aria-pressed={value === v} disabled={disabled} onClick={() => { if (v !== value) onChange(v); }}>
             {I && <I size={16} aria-hidden />}
             {lab}
           </button>

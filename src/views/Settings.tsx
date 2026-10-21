@@ -126,20 +126,20 @@ function ChartStyle({ s, patch }: { s: S; patch: Patch }) {
     <Section title="Chart style">
       <h3 className="label">Home and Library cards</h3>
       <div className="grid-3">
-        <Segmented label="Art" value={s.card_art} onChange={(card_art) => patch({ card_art })} options={[["radar", "Spider"], ["blob", "Blob"]]} />
-        <Segmented label="Shape" value={s.card_shape} onChange={(card_shape) => patch({ card_shape })} options={SHAPES} />
-        <Segmented label="Chart lines" value={s.card_grid ? "show" : "hide"} onChange={(v) => patch({ card_grid: v === "show" })} options={LINES} />
+        <Segmented full label="Art" value={s.card_art} onChange={(card_art) => patch({ card_art })} options={[["radar", "Spider"], ["blob", "Blob"]]} />
+        <Segmented full label="Shape" value={s.card_shape} onChange={(card_shape) => patch({ card_shape })} options={SHAPES} />
+        <Segmented full label="Chart lines" value={s.card_grid ? "show" : "hide"} onChange={(v) => patch({ card_grid: v === "show" })} options={LINES} />
       </div>
       <h3 className="label">Coffee pages</h3>
       <div className="grid-3">
-        <Segmented label="Chart" value={s.page_art} onChange={(page_art) => patch({ page_art })} options={[["radar", "Spider"], ["blob", "Blob"]]} />
-        <Segmented label="Shape" value={s.page_shape} onChange={(page_shape) => patch({ page_shape })} options={SHAPES} />
-        <Segmented label="Chart lines" value={s.page_grid ? "show" : "hide"} onChange={(v) => patch({ page_grid: v === "show" })} options={LINES} />
+        <Segmented full label="Chart" value={s.page_art} onChange={(page_art) => patch({ page_art })} options={[["radar", "Spider"], ["blob", "Blob"]]} />
+        <Segmented full label="Shape" value={s.page_shape} onChange={(page_shape) => patch({ page_shape })} options={SHAPES} />
+        <Segmented full label="Chart lines" value={s.page_grid ? "show" : "hide"} onChange={(v) => patch({ page_grid: v === "show" })} options={LINES} />
       </div>
       <h3 className="label">Brews and note editors</h3>
       <div className="grid-3">
-        <Segmented label="Shape" value={s.radar_shape} onChange={(radar_shape) => patch({ radar_shape })} options={SHAPES} />
-        <Segmented label="Chart lines" value={s.radar_grid ? "show" : "hide"} onChange={(v) => patch({ radar_grid: v === "show" })} options={LINES} />
+        <Segmented full label="Shape" value={s.radar_shape} onChange={(radar_shape) => patch({ radar_shape })} options={SHAPES} />
+        <Segmented full label="Chart lines" value={s.radar_grid ? "show" : "hide"} onChange={(v) => patch({ radar_grid: v === "show" })} options={LINES} />
       </div>
       <p className="muted" style={{ fontSize: 12 }}>Preview shows the brews and note editors style.</p>
       <div className="grid-2" style={{ alignItems: "center" }}>
