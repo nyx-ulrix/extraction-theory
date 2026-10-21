@@ -283,21 +283,21 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
 }
 
 export async function saveSettings(db: Db, next: Settings): Promise<Db> {
+  // Linking or unlinking an axis in the template also applies to every bean and brew with its own copy of that axis.
+  // Written before the settings, so a failure leaves the toggle unsaved and a retry redoes it all.
+  const was = new Map(db.settings.axes.map((a) => [a.key, !!a.shared]));
+  const flips = new Map(next.axes.filter((a) => was.has(a.key) && was.get(a.key) !== !!a.shared).map((a) => [a.key, !!a.shared]));
+  const beans = flips.size ? relink(db.beans, flips, next.axes) : [];
+  const brews = flips.size ? relink(db.brews, flips, next.axes) : [];
+  await sh.upsertMany(db.id, db.headers, "Beans", beans);
+  await sh.upsertMany(db.id, db.headers, "Brews", brews);
   const prev = db.settings as unknown as Record<string, unknown>;
   for (const [key, value] of Object.entries(next)) {
     if (JSON.stringify(value) !== JSON.stringify(prev[key])) {
       await sh.upsert(db.id, db.headers, "Settings", { key, value: JSON.stringify(value) }, "key");
     }
   }
-  // Linking or unlinking an axis in the template also applies to every bean and brew with its own copy of that axis.
-  const was = new Map(db.settings.axes.map((a) => [a.key, !!a.shared]));
-  const flips = new Map(next.axes.filter((a) => was.has(a.key) && was.get(a.key) !== !!a.shared).map((a) => [a.key, !!a.shared]));
-  if (!flips.size) return { ...db, settings: next };
-  const beans = relink(db.beans, flips, next.axes);
-  const brews = relink(db.brews, flips, next.axes);
-  await sh.upsertMany(db.id, db.headers, "Beans", beans);
-  await sh.upsertMany(db.id, db.headers, "Brews", brews);
-  const merge = (all: Rec[], ps: Rec[]) => all.map((r) => ({ ...r, ...ps.find((p) => p.id === r.id) }));
+  const merge = (all: Rec[], ps: Rec[]) => (ps.length ? all.map((r) => ({ ...r, ...ps.find((p) => p.id === r.id) })) : all);
   return { ...db, settings: next, beans: merge(db.beans, beans), brews: merge(db.brews, brews) };
 }
 
@@ -305,17 +305,18 @@ export async function saveSettings(db: Db, next: Settings): Promise<Db> {
 function relink(recs: Rec[], flips: Map<string, boolean>, template: AxisDef[]): Rec[] {
   const out: Rec[] = [];
   for (const r of recs) {
-    let o: { axes?: unknown; layers?: unknown };
-    try { o = JSON.parse(str(r.flavour)); } catch { continue; }
-    if (!o?.axes) continue; // no own axes: already follows the template
-    const own = cleanAxes(o.axes);
-    if (!own.some((a) => flips.has(a.key) && flips.get(a.key) !== !!a.shared)) continue;
-    const axes = own.map((a) => (flips.has(a.key) ? { ...a, shared: flips.get(a.key) } : a));
-    const layers = cleanLayers(o.layers ?? [], axes);
-    const on = [...flips].filter(([k, s]) => s && axes.some((a) => a.key === k)).map(([k]) => k);
-    const v0 = layers[0]?.v ?? {};
-    const cells = flavourCells({ axes, layers: layers.map((l) => ({ ...l, v: { ...l.v, ...Object.fromEntries(on.map((k) => [k, v0[k] ?? l.v[k]])) } })) }, template);
-    if (cells.flavour) out.push({ id: r.id, ...cells });
+    try {
+      const o = JSON.parse(str(r.flavour)) as { axes?: unknown; layers?: unknown };
+      if (!o?.axes) continue; // no own axes: already follows the template
+      const own = cleanAxes(o.axes);
+      if (!own.some((a) => flips.has(a.key) && flips.get(a.key) !== !!a.shared)) continue;
+      const axes = own.map((a) => (flips.has(a.key) ? { ...a, shared: flips.get(a.key) } : a));
+      const layers = cleanLayers(o.layers ?? [], axes);
+      if (!layers.length) { out.push({ id: r.id, flavour: JSON.stringify({ axes, layers }) }); continue; }
+      const on = [...flips].filter(([k, s]) => s && axes.some((a) => a.key === k)).map(([k]) => k);
+      const v0 = layers[0].v;
+      out.push({ id: r.id, ...flavourCells({ axes, layers: layers.map((l) => ({ ...l, v: { ...l.v, ...Object.fromEntries(on.map((k) => [k, v0[k] ?? l.v[k]])) } })) }, template) });
+    } catch { /* hand-edited cell that won't parse: leave it as it is */ }
   }
   return out;
 }

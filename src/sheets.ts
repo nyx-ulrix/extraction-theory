@@ -154,8 +154,10 @@ export async function upsertMany(id: string, headers: Headers, tab: Tab, recs: R
   const ids = await api<{ values?: Cell[][] }>(
     `${SHEETS}/${id}/values/${range(tab, `${col(c)}:${col(c)}`)}?valueRenderOption=UNFORMATTED_VALUE`,
   );
-  const rowOf = (key: unknown) => (ids.values ?? []).findIndex((v, i) => i > 0 && String(v[0] ?? "") === String(key));
-  const fresh = recs.filter((r) => rowOf(r[idKey]) < 0);
+  const rows = new Map<string, number>();
+  (ids.values ?? []).forEach((v, i) => { const k = String(v[0] ?? ""); if (i > 0 && k && !rows.has(k)) rows.set(k, i); });
+  const rowOf = (key: unknown) => rows.get(String(key)) ?? -1;
+  const fresh = recs.filter((r, i) => rowOf(r[idKey]) < 0 && recs.findIndex((x) => String(x[idKey]) === String(r[idKey])) === i);
   const data = recs.filter((r) => rowOf(r[idKey]) >= 0).flatMap((r) => Object.keys(r).map((k) => ({
     range: `${tab}!${col(header.indexOf(k))}${rowOf(r[idKey]) + 1}`, values: [[toCell(r[k])]],
   })));
