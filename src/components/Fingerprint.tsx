@@ -10,6 +10,7 @@ export default function Fingerprint({ axes, layers, size = 96, dense = false }: 
   const n = axes.length;
   return (
     <svg viewBox="-50 -50 100 100" width={size} height={size} aria-hidden style={{ display: "block", flex: "none", maxWidth: "100%", height: "auto" }}>
+      <g className="grow">
       {layers.map((l, li) => {
         const pts = axes.map((a, i): [number, number] => {
           const ang = (i / n) * Math.PI * 2 - Math.PI / 2;
@@ -18,6 +19,7 @@ export default function Fingerprint({ axes, layers, size = 96, dense = false }: 
         });
         return <InkShape key={li} d={smooth(pts)} color={l.color} pitch={(dense ? 200 : 300) / size} />;
       })}
+      </g>
     </svg>
   );
 }

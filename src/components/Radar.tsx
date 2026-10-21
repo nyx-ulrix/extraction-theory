@@ -153,7 +153,7 @@ export default function Radar({
           </text>
         )}
 
-        <g>
+        <g className="grow">
         {order.map((li) => {
           const l = layers[li];
           const d = shapePath(axes.map((a, i) => xy(i, n, rad(l.v[a.key] ?? 0))), rounded);
