@@ -26,7 +26,7 @@ function starter(note: string, axes: AxisDef[], first?: Layer): Layer {
 }
 
 /** One layer per note in the text, keeping the values and colour of notes that already had a layer. */
-function syncLayers(text: string, layers: Layer[], axes: AxisDef[]): Layer[] {
+export function syncLayers(text: string, layers: Layer[], axes: AxisDef[]): Layer[] {
   const have = new Map(layers.map((l) => [low(l.note), l]));
   return splitNotes(text).reduce<Layer[]>((acc, n) => [...acc, have.get(low(n)) ?? starter(n, axes, acc[0] ?? layers[0])], []);
 }

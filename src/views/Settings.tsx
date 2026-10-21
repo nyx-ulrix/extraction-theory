@@ -108,7 +108,7 @@ const CATS: [string, string, string, Icon][] = [
   ["form", "Brew form", "Which sections each method shows, in what order", Rows],
   ["chart", "Flavour chart", "Chart shape, chart lines, card and page art, radar axes", ChartPolar],
   ["gear", "Gear", "Drippers and grinders", Wrench],
-  ["ai", "Note colours", "AI colour picking for tasting notes", Palette],
+  ["ai", "AI", "Your API key: note colours and bag photo auto-fill", Palette],
   ["data", "Import", "Add beans and brews from JSON", Database],
   ["account", "Account", "Your sheet, theme, install app, sign out", UserCircle],
 ];
@@ -414,7 +414,7 @@ function ImportData() {
     let msg = "";
     const ok = await update(async (db) => {
       const r = await importData(db, raw);
-      msg = `Imported ${r.beans} beans and ${r.brews} brews${r.skipped ? `, skipped ${r.skipped} already imported` : ""}.`;
+      msg = `Imported ${r.beans} beans and ${r.brews} brews${r.skipped ? `, skipped ${r.skipped} already imported` : ""}${r.deleted ? `, deleted ${r.deleted}` : ""}.`;
       return r.db;
     });
     if (ok) { notify(msg, "success"); setText(""); }
@@ -423,8 +423,13 @@ function ImportData() {
     <section className="section">
       <Fold title="Import" level="section">
         <TextField label="Import data (JSON)" multiline value={text} onChange={setText} placeholder='{"beans": [], "brews": []}'
-          hint="Beans match existing ones by name and roastery. Brews already imported are skipped." />
+          hint='Beans match existing ones by name and roastery. Brews already imported are skipped; add "update": true to change one or "delete": true to remove it.' />
         <div className="row" style={{ justifyContent: "flex-end" }}>
+          <label className="btn ghost">
+            Choose file
+            <input type="file" accept=".json,application/json" className="sr-only"
+              onChange={async (e) => { const file = e.target.files?.[0]; if (file) setText(await file.text()); e.target.value = ""; }} />
+          </label>
           <IconButton icon={UploadSimple} label="Import into my sheet" variant="solid" tipAlign="end" disabled={busy || !text.trim()} onClick={run} />
         </div>
       </Fold>

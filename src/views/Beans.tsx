@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowLeft, FloppyDisk, PencilSimple, Plus, Target, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, Camera, FloppyDisk, MagicWand, PencilSimple, Plus, Target, Trash, X } from "@phosphor-icons/react";
 import { dialedMethods } from "../group.ts";
 import Radar from "../components/Radar.tsx";
 import Fingerprint from "../components/Fingerprint.tsx";
@@ -10,7 +10,8 @@ import { useApp } from "../ctx.ts";
 import { PROCESSES, ROAST_LEVELS, methodDefs, type Cell, type Rec } from "../schema.ts";
 import { deleteBean, newId, saveBean, saveSettings } from "../store.ts";
 import { Button, Dialog, Field, IconButton, Msg, NumField, Segmented, SelectField, TextField } from "../ui.tsx";
-import FlavourEditor from "../components/FlavourEditor.tsx";
+import FlavourEditor, { syncLayers } from "../components/FlavourEditor.tsx";
+import { MAX_BAG_PHOTOS, getKey, photo, readBag, type BagInfo, type Img } from "../ai.ts";
 import { ink } from "../palette.ts";
 
 const str = (v: unknown) => (v == null ? "" : String(v));
@@ -74,6 +75,19 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
     if (dirty && !window.confirm("Discard changes to this bean?")) return;
     onDone();
   };
+  // Auto-fill only fills empty fields, so nothing already typed is overwritten.
+  const fill = (info: BagInfo) => {
+    const { tasting_notes: notes, roast_date: date, ...rest } = info;
+    const next: Rec = { ...f };
+    for (const [k, v] of Object.entries(rest)) if (KEYS.includes(k) && (next[k] == null || next[k] === "")) next[k] = v as Cell;
+    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date ?? ""));
+    if (d && next.roast_date == null) next.roast_date = toSerial(new Date(+d[1], +d[2] - 1, +d[3]));
+    if (notes?.length && !str(next.roaster_notes).trim()) {
+      next.roaster_notes = notes.join(", ");
+      if (!flav.layers.length) setFlav({ axes: flav.axes, layers: syncLayers(next.roaster_notes as string, [], flav.axes) });
+    }
+    setF(next);
+  };
 
   const save = async () => {
     const name = str(f.name).trim();
@@ -102,6 +116,7 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
         <h1>{bean.id ? str(bean.name) || "Edit bean" : "New bean"}</h1>
       </div>
       <div className="stack">
+        <BagFill onFill={fill} />
         <div className="grid-2">
           <TextField label="Bean name" value={str(f.name)} onChange={set("name")} hint="Usually the farm or producer" />
           <TextField label="Roaster's name for it" value={str(f.product)} onChange={set("product")} hint="For example Halo or Nano" />
@@ -143,6 +158,67 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
         <Button icon={FloppyDisk} onClick={save} disabled={busy}>Save bean</Button>
       </div>
     </div>
+  );
+}
+
+/** Up to two photos of the bag (front and back), read with the user's own AI key to fill the form. */
+function BagFill({ onFill }: { onFill: (info: BagInfo) => void }) {
+  const { db, notify, go } = useApp();
+  const { ai_provider: provider, ai_model: model } = db.settings;
+  const [shots, setShots] = useState<(Img & { url: string })[]>([]);
+  const [reading, setReading] = useState(false);
+  const inputId = useId();
+  if (!getKey(provider)) {
+    return (
+      <p className="meta">
+        Add an AI key in <button type="button" className="linkish" onClick={() => go("settings", "ai")}>Settings, AI</button> to fill this form from photos of the bag.
+      </p>
+    );
+  }
+  const add = async (files: FileList | null) => {
+    const room = MAX_BAG_PHOTOS - shots.length;
+    const picked = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, room);
+    try {
+      const imgs = await Promise.all(picked.map(photo));
+      setShots((s) => [...s, ...imgs.map((i) => ({ ...i, url: `data:${i.type};base64,${i.data}` }))].slice(0, MAX_BAG_PHOTOS));
+    } catch {
+      notify("Could not read that photo.", "error");
+    }
+  };
+  const run = async () => {
+    setReading(true);
+    try {
+      onFill(await readBag(shots, provider, model));
+      notify("Filled from the bag. Check the details before saving.", "success");
+    } catch (e) {
+      notify(e instanceof Error ? e.message : String(e), "error");
+    } finally {
+      setReading(false);
+    }
+  };
+  return (
+    <section className="bagfill">
+      <span className="label">Auto-fill from the bag</span>
+      <div className="row">
+        {shots.map((s, i) => (
+          <span key={i} className="bag-thumb">
+            <img src={s.url} alt={`Bag photo ${i + 1}`} />
+            <IconButton icon={X} label={`Remove photo ${i + 1}`} onClick={() => setShots(shots.filter((_, j) => j !== i))} />
+          </span>
+        ))}
+        {shots.length < MAX_BAG_PHOTOS && (
+          <label className="btn ghost" htmlFor={inputId}>
+            <Camera size={18} aria-hidden />{shots.length ? "Add back of bag" : "Add photo"}
+            <input
+              id={inputId} type="file" accept="image/*" multiple className="sr-only"
+              onChange={(e) => { add(e.target.files); e.target.value = ""; }}
+            />
+          </label>
+        )}
+        <Button icon={MagicWand} onClick={run} disabled={!shots.length || reading}>{reading ? "Reading..." : "Fill details"}</Button>
+      </div>
+      <span className="meta">Up to {MAX_BAG_PHOTOS} photos, for example the front and back. Only empty fields are filled.</span>
+    </section>
   );
 }
 

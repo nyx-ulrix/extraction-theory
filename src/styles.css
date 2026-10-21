@@ -307,3 +307,9 @@ dialog .dialog-body { padding: 20px; display: grid; gap: 16px; }
 /* Risograph overprint: chart inks multiply on paper, glow (screen) on the dark theme. */
 .ink { mix-blend-mode: multiply; }
 :root[data-theme="dark"] .ink { mix-blend-mode: screen; }
+/* Bean form: auto-fill from bag photos. */
+.bagfill { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--border); }
+.bag-thumb { display: inline-flex; align-items: flex-start; gap: 4px; }
+.bag-thumb img { width: 64px; height: 64px; object-fit: cover; display: block; border: 1px solid var(--border); }
+label.btn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--text-strong); text-decoration: underline; cursor: pointer; }

@@ -111,8 +111,8 @@ Method (Ice drip / Hyperchiller / Shaken / Other), ice (g) or "as much ice as po
 - **Brew timeline**: lanes for water (bars per phase, colour by temp, running total line), agitation, valve, press, chilling, events. Two brews can be stacked on one time axis for comparison.
 - **Cup fingerprint**: once a brew's spider chart exists, its note layers are redrawn as small smooth see-through shapes, a visual fingerprint of that cup, at the top of the brew detail and beside each brew in History. No AI is involved. The sign-in screen has no hero image (logo only in the wordmark).
 
-## 7. Flavour AI (colours only)
-AI is used for one thing: picking a colour for each tasting note from the 64-colour palette. It never sets radar values or draws any graphic. Defaults are each provider's cheapest model:
+## 7. AI (your own key)
+AI does two small jobs: picking a colour for each tasting note from the 64-colour palette, and reading a bean bag's label from up to two photos (front and back) to fill the bean form. It never sets radar values or draws any graphic. Defaults are each provider's cheapest model:
 
 | Provider | Default model | Notes |
 |---|---|---|
@@ -121,6 +121,8 @@ AI is used for one thing: picking a colour for each tasting note from the 64-col
 | Gemini | `gemini-2.5-flash-lite` | JSON response |
 
 Runs automatically about 1.5 s after typing pauses, only for notes without a settled colour, as one small call; a palette button re-picks all on demand. Uses your own key, stored only in browser local storage; model editable. Unknown colour names are dropped. Colours are saved with the layers, so old radars never change.
+
+Bag auto-fill: "Auto-fill from the bag" at the top of the bean form takes up to 2 photos (shrunk to 1568 px JPEG on the device), sends them in one structured-JSON call, and fills only empty fields: name, roaster's name, roastery, origin, farm, variety, process, roast level, roast date, altitude and tasting notes (which become note layers with starter values). Only what is printed is used; anything not shown comes back empty.
 
 ## 8. Settings
 - Pour entry style (per pour / target weight; stored per pour either way).

@@ -194,7 +194,7 @@ function flavourCells(raw: unknown, template: AxisDef[]): Rec {
   return { flavour: JSON.stringify({ axes, layers }), ...Object.fromEntries(axes.map((a) => [`f_${a.key}`, prof[a.key]])) };
 }
 
-export interface ImportResult { db: Db; beans: number; brews: number; skipped: number }
+export interface ImportResult { db: Db; beans: number; brews: number; skipped: number; deleted: number }
 
 export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
   if (!raw || typeof raw !== "object") throw new Error("Import must be a JSON object with beans and brews.");
@@ -236,10 +236,17 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
   const newBrews: Rec[] = [];
   const newPhases: Phase[] = [];
   const patchedBrews: Rec[] = [];
+  const gone: string[] = [];
   let skipped = 0;
   for (const b of brews as Record<string, unknown>[]) {
     if (!b || typeof b !== "object") continue;
     const key = str(b.import_key);
+    // `delete: true` removes an imported brew (found by import_key) and its phases.
+    if (b.delete) {
+      const cur = key ? db.brews.find((x) => str(x.import_key) === key) : undefined;
+      if (cur) gone.push(str(cur.id));
+      continue;
+    }
     // `update: true` patches an already imported brew (found by import_key) instead of skipping it.
     if (key && done.has(key) && b.update) {
       const cur = [...db.brews, ...newBrews].find((x) => str(x.import_key) === key);
@@ -267,6 +274,10 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
     ph.forEach((p, i) => newPhases.push({ ...toPhase({ ...cells(p ?? {}, []), n: num(p?.n) ?? i + 1 }), brew_id: id }));
   }
 
+  if (gone.length) {
+    await sh.deleteRows(db.id, db.headers, "Phases", "brew_id", gone);
+    await sh.deleteRows(db.id, db.headers, "Brews", "id", gone);
+  }
   if (newBeans.length) await sh.append(db.id, db.headers, "Beans", newBeans);
   if (newPhases.length) await sh.append(db.id, db.headers, "Phases", newPhases as unknown as Rec[]);
   if (newBrews.length) await sh.append(db.id, db.headers, "Brews", newBrews);
@@ -275,10 +286,10 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
     db: {
       ...db,
       beans: [...merged, ...newBeans],
-      brews: [...db.brews.map((x) => ({ ...x, ...patchedBrews.find((p) => p.id === x.id) })), ...newBrews],
-      phases: [...db.phases, ...newPhases],
+      brews: [...db.brews.filter((x) => !gone.includes(str(x.id))).map((x) => ({ ...x, ...patchedBrews.find((p) => p.id === x.id) })), ...newBrews],
+      phases: [...db.phases.filter((p) => !gone.includes(str(p.brew_id))), ...newPhases],
     },
-    beans: newBeans.length + updated.length, brews: newBrews.length + patchedBrews.length, skipped,
+    beans: newBeans.length + updated.length, brews: newBrews.length + patchedBrews.length, skipped, deleted: gone.length,
   };
 }
 
