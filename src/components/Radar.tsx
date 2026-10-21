@@ -95,7 +95,11 @@ export default function Radar({
         viewBox={`${-vb} ${-vb} ${vb * 2} ${vb * 2}`}
         role="group"
         aria-label={title}
-        style={{ width: "100%", height: "auto", display: "block", overflow: "visible", fontFamily: "var(--mono)" }}
+        // Editable: a finger anywhere on the chart shapes it instead of scrolling the page.
+        style={{
+          width: "100%", height: "auto", display: "block", overflow: "visible", fontFamily: "var(--mono)",
+          ...(onChange ? { touchAction: "none", overscrollBehavior: "contain", userSelect: "none", WebkitUserSelect: "none" } : {}),
+        }}
         onPointerMove={onMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
