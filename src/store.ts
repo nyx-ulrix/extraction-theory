@@ -214,7 +214,10 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
       const cur = [...db.brews, ...newBrews].find((x) => str(x.import_key) === key);
       if (cur) {
         const beanId = b.bean_ref != null ? refs.get(str(b.bean_ref)) : undefined;
-        const patch: Rec = { ...cells(b, ["id", "created", "bean_ref", "bean_id", "phases", "flavour", "update", "import_key"]), id: cur.id, ...(beanId ? { bean_id: beanId } : {}) };
+        const patch: Rec = {
+          ...cells(b, ["id", "created", "bean_ref", "bean_id", "phases", "flavour", "update", "import_key"]), id: cur.id,
+          ...(beanId ? { bean_id: beanId } : {}), ...flavourCells(b.flavour, db.settings.axes),
+        };
         await sh.upsert(db.id, db.headers, "Brews", patch);
         patchedBrews.push(patch);
       }
