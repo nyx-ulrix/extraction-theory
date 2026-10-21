@@ -245,11 +245,12 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
     if (b.delete) {
       const cur = key ? db.brews.find((x) => str(x.import_key) === key) : undefined;
       if (cur) gone.push(str(cur.id));
+      done.delete(key); // a later entry with this key may add it back fresh
       continue;
     }
     // `update: true` patches an already imported brew (found by import_key) instead of skipping it.
     if (key && done.has(key) && b.update) {
-      const cur = [...db.brews, ...newBrews].find((x) => str(x.import_key) === key);
+      const cur = [...db.brews, ...newBrews].find((x) => str(x.import_key) === key && !gone.includes(str(x.id)));
       if (cur) {
         const beanId = b.bean_ref != null ? refs.get(str(b.bean_ref)) : undefined;
         const patch: Rec = {
@@ -266,7 +267,7 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
     const id = newId();
     const beanId = b.bean_ref != null ? refs.get(str(b.bean_ref)) : str(b.bean_id) || undefined;
     newBrews.push({
-      ...cells(b, ["id", "created", "brew_date", "bean_ref", "bean_id", "phases", "flavour"]),
+      ...cells(b, ["id", "created", "brew_date", "bean_ref", "bean_id", "phases", "flavour", "update", "delete"]),
       id, created: now, brew_date: serial(b.brew_date, now), bean_id: beanId ?? null,
       ...flavourCells(b.flavour, db.settings.axes),
     });

@@ -100,17 +100,20 @@ const openai: Call = async (model, key, { system, schema, name, text: input, ima
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`OpenAI error: ${j.error?.message ?? r.status}`);
-  return j.choices?.[0]?.message?.content ?? "";
+  const c = j.choices?.[0];
+  if (c?.message?.refusal) throw new Error(`OpenAI declined: ${c.message.refusal}`);
+  if (c?.finish_reason === "length") throw new Error("OpenAI's reply was cut off. Try again.");
+  return c?.message?.content ?? "";
 };
 
-const gemini: Call = async (model, key, { system, text: input, images = [] }) => {
+const gemini: Call = async (model, key, { system, schema, text: input, images = [] }) => {
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [...images.map((i) => ({ inline_data: { mime_type: i.type, data: i.data } })), { text: input }] }],
-      generationConfig: { responseMimeType: "application/json" },
+      generationConfig: { responseMimeType: "application/json", responseJsonSchema: schema },
     }),
   });
   const j = await r.json().catch(() => ({}));

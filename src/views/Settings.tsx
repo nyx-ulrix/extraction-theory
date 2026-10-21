@@ -427,7 +427,7 @@ function ImportData() {
         <div className="row" style={{ justifyContent: "flex-end" }}>
           <label className="btn ghost">
             Choose file
-            <input type="file" accept=".json,application/json" className="sr-only"
+            <input type="file" accept=".json,application/json,text/plain" className="sr-only"
               onChange={async (e) => { const file = e.target.files?.[0]; if (file) setText(await file.text()); e.target.value = ""; }} />
           </label>
           <IconButton icon={UploadSimple} label="Import into my sheet" variant="solid" tipAlign="end" disabled={busy || !text.trim()} onClick={run} />

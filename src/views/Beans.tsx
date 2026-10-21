@@ -76,17 +76,23 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
     onDone();
   };
   // Auto-fill only fills empty fields, so nothing already typed is overwritten.
+  // Functional updates: whatever was typed while the photos were being read is kept.
   const fill = (info: BagInfo) => {
-    const { tasting_notes: notes, roast_date: date, ...rest } = info;
-    const next: Rec = { ...f };
-    for (const [k, v] of Object.entries(rest)) if (KEYS.includes(k) && (next[k] == null || next[k] === "")) next[k] = v as Cell;
-    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date ?? ""));
-    if (d && next.roast_date == null) next.roast_date = toSerial(new Date(+d[1], +d[2] - 1, +d[3]));
-    if (notes?.length && !str(next.roaster_notes).trim()) {
-      next.roaster_notes = notes.join(", ");
-      if (!flav.layers.length) setFlav({ axes: flav.axes, layers: syncLayers(next.roaster_notes as string, [], flav.axes) });
-    }
-    setF(next);
+    const { tasting_notes: notes, roast_date: date, roast_level: level, ...rest } = info;
+    const text = notes?.join(", ") ?? "";
+    setF((p) => {
+      const next: Rec = { ...p };
+      const empty = (k: string) => next[k] == null || next[k] === "";
+      for (const [k, v] of Object.entries(rest)) if (KEYS.includes(k) && empty(k)) next[k] = v as Cell;
+      const lv = ROAST_LEVELS.find((r) => r.toLowerCase() === String(level ?? "").trim().toLowerCase());
+      if (lv && empty("roast_level")) next.roast_level = lv;
+      const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date ?? ""));
+      if (d && empty("roast_date")) next.roast_date = toSerial(new Date(+d[1], +d[2] - 1, +d[3]));
+      if (text && !str(next.roaster_notes).trim()) next.roaster_notes = text;
+      return next;
+    });
+    // Notes become layers only when the coffee has none yet.
+    if (text) setFlav((p) => (p.layers.length ? p : { axes: p.axes, layers: syncLayers(text, [], p.axes) }));
   };
 
   const save = async () => {
@@ -177,7 +183,7 @@ function BagFill({ onFill }: { onFill: (info: BagInfo) => void }) {
   }
   const add = async (files: FileList | null) => {
     const room = MAX_BAG_PHOTOS - shots.length;
-    const picked = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, room);
+    const picked = [...(files ?? [])].slice(0, room); // some Android pickers give no MIME type: let decoding decide
     try {
       const imgs = await Promise.all(picked.map(photo));
       setShots((s) => [...s, ...imgs.map((i) => ({ ...i, url: `data:${i.type};base64,${i.data}` }))].slice(0, MAX_BAG_PHOTOS));
@@ -188,7 +194,9 @@ function BagFill({ onFill }: { onFill: (info: BagInfo) => void }) {
   const run = async () => {
     setReading(true);
     try {
-      onFill(await readBag(shots, provider, model));
+      const info = await readBag(shots, provider, model);
+      if (!Object.keys(info).length) return notify("Nothing readable on that label. Try a closer, sharper photo.", "info");
+      onFill(info);
       notify("Filled from the bag. Check the details before saving.", "success");
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e), "error");
