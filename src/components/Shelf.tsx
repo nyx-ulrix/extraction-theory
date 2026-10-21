@@ -37,6 +37,14 @@ function MiniRadar({ axes, layers, rounded, grid }: { axes: AxisDef[]; layers: L
   );
 }
 
+/** Stand-in for a coffee with no notes yet: two random shapes seeded by its id, so each card keeps its own. Drawn greyed out. */
+function ghost(axes: AxisDef[], seed: string): Layer[] {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const rnd = () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909)) >>> 0) / 4294967296;
+  return [0, 1].map(() => ({ note: "", color: "#9A968D", v: Object.fromEntries(axes.map((a) => [a.key, Math.round((2 + rnd() * 7) * 2) / 2])) }));
+}
+
 type Mode = "cards" | "list";
 function savedMode(key: string): Mode {
   try { return localStorage.getItem(`et.shelf.${key}`) === "list" ? "list" : "cards"; } catch { return "cards"; }
@@ -96,11 +104,13 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
           {shown.map((bean) => {
             // The roaster's notes, else the latest brew's tasting.
             const own = parseFlavour(bean.flavour, db.settings.axes);
-            const fl = own.layers.length ? own : parseFlavour(lastBrew(bean)?.flavour, db.settings.axes);
+            const real = own.layers.length ? own : parseFlavour(lastBrew(bean)?.flavour, db.settings.axes);
+            const empty = !real.layers.length;
+            const fl = empty ? { axes: real.axes, layers: ghost(real.axes, str(bean.id)) } : real;
             const sub = [str(bean.roastery), str(bean.process)].filter(Boolean).join(", ");
             const name = str(bean.name) || "Unnamed";
             return (
-              <button key={str(bean.id)} type="button" className={`card${isFinished(bean.finished) ? " done" : ""}`}
+              <button key={str(bean.id)} type="button" className={`card${isFinished(bean.finished) ? " done" : ""}${empty ? " ghost" : ""}`}
                 onClick={() => go("beans", str(bean.id))} aria-label={`${name}${sub ? `, ${sub}` : ""}. Open coffee`}>
                 {dialed(bean) && (
                   <span className="card-badge left" title="Dialed in"><Target size={18} weight="fill" aria-hidden /><span className="sr-only">Dialed in</span></span>
@@ -108,10 +118,10 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
                 {isFinished(bean.finished) && (
                   <span className="card-badge" title="Bag finished"><CheckCircle size={18} weight="fill" aria-hidden /><span className="sr-only">Finished</span></span>
                 )}
-                {db.settings.card_art === "blob" && fl.layers.length ? (
+                {db.settings.card_art === "blob" ? (
                   <span className="card-blob"><Fingerprint axes={fl.axes} layers={fl.layers} size={200} /></span>
                 ) : (
-                  <MiniRadar axes={fl.axes} layers={fl.layers} rounded={db.settings.card_shape === "rounded"} grid={!fl.layers.length || db.settings.card_grid} />
+                  <MiniRadar axes={fl.axes} layers={fl.layers} rounded={db.settings.card_shape === "rounded"} grid={db.settings.card_grid} />
                 )}
                 <Marquee className="card-title">{name}</Marquee>
                 {sub && <Marquee className="card-sub">{sub}</Marquee>}
