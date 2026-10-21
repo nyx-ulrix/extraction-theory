@@ -1,5 +1,6 @@
 // Home: the coffees you still have. Finished bags live in the Library.
-import { Plant } from "@phosphor-icons/react";
+import { DownloadSimple, Plant } from "@phosphor-icons/react";
+import { useInstall } from "../install.ts";
 import { useApp } from "../ctx.ts";
 import { isFinished } from "../group.ts";
 import { Button } from "../ui.tsx";
@@ -7,11 +8,15 @@ import Shelf from "../components/Shelf.tsx";
 
 export default function Home() {
   const { db, go } = useApp();
+  const app = useInstall();
   return (
     <div className="page stack-lg">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Home</h1>
-        <Button icon={Plant} onClick={() => go("beans", "new")}>Add bean</Button>
+        <div className="row">
+          {app.canPrompt && !app.installed && <Button ghost icon={DownloadSimple} onClick={app.install}>Install app</Button>}
+          <Button icon={Plant} onClick={() => go("beans", "new")}>Add bean</Button>
+        </div>
       </div>
       <Shelf
         beans={db.beans.filter((b) => !isFinished(b.finished))} storageKey="home"
