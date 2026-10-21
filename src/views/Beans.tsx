@@ -198,11 +198,18 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
 /** The coffee's chart as a spider chart or blob, switchable here (saved as the coffee page setting, apart from card art). */
 function PageArt({ fl, title }: { fl: Flavour; title: string }) {
   const { db, update, busy } = useApp();
-  const art = db.settings.page_art;
+  const s = db.settings;
+  const art = s.page_art;
+  const set = (p: Partial<typeof s>) => { if (!busy) update((d) => saveSettings(d, { ...d.settings, ...p })); };
   return (
     <div className="stack">
-      <Segmented label="Chart view" value={art} options={[["radar", "Spider chart"], ["blob", "Blob"]]}
-        onChange={(page_art) => { if (!busy && page_art !== art) update((d) => saveSettings(d, { ...d.settings, page_art })); }} />
+      <div className="grid-3">
+        <Segmented label="Chart view" value={art} options={[["radar", "Spider"], ["blob", "Blob"]]} onChange={(page_art) => set({ page_art })} />
+        {art === "radar" && <>
+          <Segmented label="Shape" value={s.page_shape} options={[["sharp", "Sharp"], ["rounded", "Rounded"]]} onChange={(page_shape) => set({ page_shape })} />
+          <Segmented label="Chart lines" value={s.page_grid ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ page_grid: v === "show" })} />
+        </>}
+      </div>
       {art === "blob" ? (
         <>
           <div style={{ display: "grid", placeItems: "center" }} role="img" aria-label={title}>
@@ -212,7 +219,7 @@ function PageArt({ fl, title }: { fl: Flavour; title: string }) {
             {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch" style={{ background: l.color }} />{l.note}</span>)}
           </div>
         </>
-      ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} />}
+      ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} />}
     </div>
   );
 }

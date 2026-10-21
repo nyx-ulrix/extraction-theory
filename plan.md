@@ -107,7 +107,7 @@ Method (Ice drip / Hyperchiller / Shaken / Other), ice (g) or "as much ice as po
   - Each layer's points can be dragged along the axes (mouse, touch, keyboard) to show which way a note leans.
   - Overlay roaster vs brew or brew vs brew.
   - Shared axes (Bitterness and Body by default, toggled per axis with the link button): they describe the whole cup, so dragging one moves every note layer together, and new notes start at the shared value.
-  - Chart style (Settings > Flavour chart): sharp or rounded shape, chart lines on or off, card art (spider or blob), and the coffee page chart (spider or blob, also switchable on the coffee page itself). A chart with no notes always shows its empty rings and axis dots.
+  - Chart style (Settings > Flavour chart), set separately for Home and Library cards, coffee pages, and brews and note editors: spider or blob (cards and coffee pages), sharp or rounded shape, chart lines on or off. Coffee pages can also switch these on the page itself. A chart with no notes always shows its empty rings and axis dots.
 - **Brew timeline**: lanes for water (bars per phase, colour by temp, running total line), agitation, valve, press, chilling, events. Two brews can be stacked on one time axis for comparison.
 - **Cup fingerprint**: once a brew's spider chart exists, its note layers are redrawn as small smooth see-through shapes, a visual fingerprint of that cup, at the top of the brew detail and beside each brew in History. No AI is involved. The sign-in screen has no hero image (logo only in the wordmark).
 

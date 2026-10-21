@@ -110,7 +110,7 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
                 {db.settings.card_art === "blob" && fl.layers.length ? (
                   <span className="card-blob"><Fingerprint axes={fl.axes} layers={fl.layers} size={200} /></span>
                 ) : (
-                  <MiniRadar axes={fl.axes} layers={fl.layers} rounded={db.settings.radar_shape === "rounded"} grid={!fl.layers.length || db.settings.radar_grid !== false} />
+                  <MiniRadar axes={fl.axes} layers={fl.layers} rounded={db.settings.card_shape === "rounded"} grid={!fl.layers.length || db.settings.card_grid} />
                 )}
                 <Marquee className="card-title">{name}</Marquee>
                 {sub && <Marquee className="card-sub">{sub}</Marquee>}

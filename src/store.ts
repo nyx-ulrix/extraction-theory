@@ -62,9 +62,11 @@ const toPhase = (r: Rec): Phase => ({
 function parseSettings(rows: Rec[]): Settings {
   const s: Settings = structuredClone(DEFAULT_SETTINGS);
   const target = s as unknown as Record<string, unknown>;
+  const seen = new Set<string>();
   for (const r of rows) {
     const k = str(r.key);
     if (!(k in s)) continue;
+    seen.add(k);
     try {
       const v = JSON.parse(str(r.value));
       const d = (DEFAULT_SETTINGS as unknown as Record<string, unknown>)[k];
@@ -81,6 +83,11 @@ function parseSettings(rows: Rec[]): Settings {
   if (!["per_pour", "target"].includes(s.pour_style)) s.pour_style = DEFAULT_SETTINGS.pour_style;
   if (!["setting", "microns"].includes(s.grind_first)) s.grind_first = DEFAULT_SETTINGS.grind_first;
   if (!["sharp", "rounded"].includes(s.radar_shape)) s.radar_shape = DEFAULT_SETTINGS.radar_shape;
+  // Per-page chart styles start from the one style older sheets had.
+  for (const p of ["card", "page"] as const) {
+    if (!seen.has(`${p}_shape`) || !["sharp", "rounded"].includes(s[`${p}_shape`])) s[`${p}_shape`] = s.radar_shape;
+    if (!seen.has(`${p}_grid`)) s[`${p}_grid`] = s.radar_grid;
+  }
   if (!["radar", "blob"].includes(s.card_art)) s.card_art = DEFAULT_SETTINGS.card_art;
   if (!["radar", "blob"].includes(s.page_art)) s.page_art = DEFAULT_SETTINGS.page_art;
   if (!s.layout || typeof s.layout !== "object" || Array.isArray(s.layout)) s.layout = {};

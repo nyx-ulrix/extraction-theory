@@ -179,10 +179,15 @@ export interface Settings {
   axes: AxisDef[];
   /** Per method: ordered list of visible section / field keys. Missing method = defaultLayout(). */
   layout: Record<string, string[]>;
-  /** Spider chart style: sharp polygons, or rounded shapes like the cup fingerprint art. */
+  /** Spider chart style on brews and editors: sharp polygons, or rounded shapes like the cup fingerprint art. */
   radar_shape: "sharp" | "rounded";
-  /** Show the rings and spokes behind the spider chart. */
+  /** Show the rings and spokes behind the spider chart on brews and editors. */
   radar_grid: boolean;
+  /** Same two choices for the Home and Library cards, and for a coffee's own page. */
+  card_shape: "sharp" | "rounded";
+  card_grid: boolean;
+  page_shape: "sharp" | "rounded";
+  page_grid: boolean;
   /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
   card_art: "radar" | "blob";
   /** Chart on a coffee's own page, chosen apart from the card art. */
@@ -202,6 +207,10 @@ export const DEFAULT_SETTINGS: Settings = {
   layout: {},
   radar_shape: "sharp",
   radar_grid: true,
+  card_shape: "sharp",
+  card_grid: true,
+  page_shape: "sharp",
+  page_grid: true,
   card_art: "radar",
   page_art: "radar",
 };
