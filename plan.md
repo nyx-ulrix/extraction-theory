@@ -138,6 +138,7 @@ Bag auto-fill: "Auto-fill from the bag" at the top of the bean form takes up to 
 - Footer credit "Created by Jia En" linking `https://liewjiaen.com`, `https://github.com/nyx-ulrix`, `https://www.linkedin.com/in/malcolmliewjiaen/`.
 
 ## 9. UI
+Home and Library shelves: card or list view, a Filters panel (roaster, origin, process, and Available / Finished in the Library) and a Sort panel (last brewed, name, date added, date roasted; dates newest first), each opened from the bar above the cards. View and sort are remembered per shelf on the device.
 Swiss-brutalist Caffalyst tokens (see `style.md`). Icon-only buttons with tooltips wherever possible (Phosphor), one primary text button per view. Bottom tab bar on phones, top nav on tablet and laptop, two-column brew form with sticky preview on laptop. App icon is the coffee-flower line art (favicon, header logo, home-screen icon), not uploaded to the Google consent screen.
 Installable as an app (PWA): the service worker passes page loads through (network only, offline notice), so Chrome offers its install prompt; an Install app button shows on Home when it does. Startup screen follows the theme (logo on white, or white logo on black) before the app loads. The Android launch splash can only have one colour, so it is dark: #131312 with the white-flower icon.
 
