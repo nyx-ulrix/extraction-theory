@@ -1,7 +1,9 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowCounterClockwise, ArrowLeft, CheckCircle, FloppyDisk, Plus } from "@phosphor-icons/react";
-import { isFinished } from "../group.ts";
-import { cleanAxes, cleanLayers, daysOffRoast, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
+import { ArrowLeft, FloppyDisk, PencilSimple, Plus } from "@phosphor-icons/react";
+import Radar from "../components/Radar.tsx";
+import Shelf from "../components/Shelf.tsx";
+import { BagToggle, BrewList } from "./History.tsx";
+import { cleanAxes, cleanLayers, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
 import { useApp } from "../ctx.ts";
 import { PROCESSES, ROAST_LEVELS, type Cell, type Rec } from "../schema.ts";
 import { newId, saveBean } from "../store.ts";
@@ -23,67 +25,31 @@ const KEYS = [
 ];
 
 export default function Beans() {
-  const { db, arg, go, update, busy } = useApp();
-  // arg "new" (first run, from the brew form) opens a blank bean and returns to Brew once it is saved.
-  const [toBrew, setToBrew] = useState(arg === "new");
+  const { db, arg, back } = useApp();
+  // arg: "new" = blank form; "edit:<id>" = form; "<id>" = that coffee's page with its brew history.
   const [editing, setEditing] = useState<Rec | null>(() =>
-    arg === "new" ? {} : arg ? db.beans.find((b) => b.id === arg) ?? null : null);
+    arg === "new" ? {} : arg?.startsWith("edit:") ? db.beans.find((b) => b.id === arg.slice(5)) ?? null : null);
+  const viewing = arg && !editing && arg !== "new" && !arg.startsWith("edit:") ? db.beans.find((b) => b.id === arg) : undefined;
   const open = (b: Rec | null) => {
-    setToBrew(false);
     setEditing(b);
     window.scrollTo(0, 0);
   };
 
-  if (editing) return <BeanForm bean={editing} onDone={() => open(null)} onSaved={() => (toBrew ? go("brew") : open(null))} />;
+  if (editing) {
+    // Existing coffee: close the form back onto its page. New one: return to wherever "Add bean" was pressed.
+    const done = () => (editing.id || arg !== "new" ? open(null) : back());
+    return <BeanForm bean={editing} onDone={done} onSaved={done} />;
+  }
+  if (viewing) return <CoffeePage bean={viewing} onEdit={() => open(viewing)} />;
 
-  const today = toSerial(new Date());
-  // Bags still in use first, finished ones after; newest first within each.
-  const beans = [...db.beans].sort((a, b) =>
-    Number(isFinished(a.finished)) - Number(isFinished(b.finished)) || (num(b.created) ?? 0) - (num(a.created) ?? 0));
-
+  // Library: every coffee, finished bags included.
   return (
-    <div className="page">
-      <div className="page-head">
-        <h1>Beans</h1>
-        {beans.length > 0 && <IconButton icon={Plus} label="Add a bean" onClick={() => open({})} />}
+    <div className="page stack-lg">
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h1>Library</h1>
+        <Button icon={Plus} onClick={() => open({})}>Add bean</Button>
       </div>
-      {beans.length ? (
-        <div className="list">
-          {beans.map((b) => {
-            const days = daysOffRoast(num(b.roast_date), today);
-            const brews = db.brews.filter((x) => x.bean_id === b.id).length;
-            return (
-              <div className="item" key={str(b.id)}>
-                <button type="button" className="item-main" onClick={() => open(b)}>
-                  <span className="item-title">
-                    {str(b.name) || "Unnamed"}
-                    <span className="muted">{str(b.roastery) || "-"}</span>
-                  </span>
-                  <span className="meta num">
-                    <span>{str(b.origin) || "-"}</span>
-                    <span>{str(b.process) || "-"}</span>
-                    <span>Roasted {ymd(b.roast_date) || "-"}</span>
-                    <span>{days == null ? "-" : `${days} d off roast`}</span>
-                    <span>{brews} {brews === 1 ? "brew" : "brews"}</span>
-                    {isFinished(b.finished) && <span>Finished</span>}
-                  </span>
-                </button>
-                <IconButton
-                  icon={isFinished(b.finished) ? ArrowCounterClockwise : CheckCircle} tipAlign="end" disabled={busy}
-                  label={isFinished(b.finished) ? "Still have some" : "Mark bag as finished"}
-                  onClick={() => update((d) => saveBean(d, { id: b.id, finished: !isFinished(b.finished) }),
-                    isFinished(b.finished) ? "Back in your bean list" : "Marked as finished")}
-                />
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <>
-          <p>No beans yet. Add the bag you are brewing from.</p>
-          <div><Button icon={Plus} onClick={() => open({})}>Add a bean</Button></div>
-        </>
-      )}
+      <Shelf beans={db.beans} storageKey="library" empty="No coffees yet. Add the bag you are brewing from." />
     </div>
   );
 }
@@ -173,6 +139,39 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
         <span>{dirty ? "Unsaved changes." : ""}</span>
         <Button icon={FloppyDisk} onClick={save} disabled={busy}>Save bean</Button>
       </div>
+    </div>
+  );
+}
+
+/** One coffee: its facts, roaster's radar, bag status and full brew history. */
+function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
+  const { db, back } = useApp();
+  const fl = parseFlavour(bean.flavour, db.settings.axes);
+  const facts: [string, string][] = ([
+    ["Roastery", str(bean.roastery)], ["Roaster's name", str(bean.product)], ["Origin", str(bean.origin)],
+    ["Farm", str(bean.farm)], ["Variety", str(bean.variety)], ["Process", str(bean.process)],
+    ["Roast level", str(bean.roast_level)], ["Roasted", ymd(bean.roast_date)],
+    ["Altitude", [bean.altitude_low_m, bean.altitude_high_m].map(str).filter(Boolean).join(" to ") ? `${[bean.altitude_low_m, bean.altitude_high_m].map(str).filter(Boolean).join(" to ")} m` : ""],
+    ["Roaster's notes", str(bean.roaster_notes)],
+  ] as [string, string][]).filter(([, v]) => v);
+  return (
+    <div className="page stack-lg">
+      <div className="page-head">
+        <IconButton icon={ArrowLeft} label="Back" onClick={back} />
+        <h1 style={{ flex: 1, minWidth: 0 }}>{str(bean.name) || "Unnamed"}</h1>
+        <IconButton icon={PencilSimple} label="Edit coffee" tipAlign="end" onClick={onEdit} />
+      </div>
+      {fl.layers.length > 0 && <Radar axes={fl.axes} layers={fl.layers} size={360} title={`${str(bean.name)} roaster notes`} />}
+      {facts.length > 0 && (
+        <dl className="kv">
+          {facts.map(([k, v]) => <div key={k}><dt className="label">{k}</dt><dd>{v}</dd></div>)}
+        </dl>
+      )}
+      <BagToggle bean={bean} />
+      <section className="section">
+        <header><h2>Brew history</h2></header>
+        <BrewList beanId={str(bean.id)} />
+      </section>
     </div>
   );
 }

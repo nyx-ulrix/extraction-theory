@@ -14,6 +14,8 @@ export interface AppCtx {
   notify: (msg: string, kind?: "info" | "error" | "success") => void;
   /** Switch view. `arg` is a brew id (history detail, or brew form prefill) or a bean id. */
   go: (view: View, arg?: string) => void;
+  /** Return to the page you came from (browser history), or Home if there is none. */
+  back: () => void;
   arg?: string;
   /** Mark the current view as holding unsaved edits. While true, `go` asks before leaving and the tab warns on close. Navigating clears it. */
   setDirty: (dirty: boolean) => void;

@@ -138,9 +138,31 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
 .card:hover { border-color: var(--border); }
 .card:active { transform: translateY(1px); }
 .card > svg, .card > div:first-child { justify-self: center; }
-.card-title { font-weight: 700; color: var(--text-strong); font-size: 12px; line-height: 1.3; overflow-wrap: anywhere; }
+.card-title { font-weight: 700; color: var(--text-strong); font-size: 12px; line-height: 1.3; }
+/* Finished bags: greyed out with a check badge */
+.card { position: relative; }
+.card.done, .item.done { filter: grayscale(1); opacity: 0.5; }
+.card-badge { position: absolute; top: 6px; right: 6px; color: var(--text-strong); line-height: 0; }
 @media (min-width: 768px) { .card { padding: 12px; } .card-title { font-size: 14px; } }
 .card-facts { color: var(--text-strong); }
+
+/* One-line text that scrolls slowly when it does not fit */
+.marquee { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+.marquee > span { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) {
+  .marquee.run { text-overflow: clip; }
+  .marquee.run > span { animation: marquee var(--dur) ease-in-out infinite alternate; }
+}
+@keyframes marquee { 0%, 20% { transform: translateX(0); } 80%, 100% { transform: translateX(var(--shift)); } }
+
+/* Shelf: filters plus card / list switch */
+.shelf-bar { display: flex; gap: 12px; align-items: flex-end; }
+.shelf-bar .seg button { min-width: 44px; justify-content: center; }
+@media (max-width: 479px) { .shelf-bar { flex-direction: column; align-items: stretch; } .shelf-bar .seg { align-self: flex-end; } }
+
+/* Coffee page facts */
+.kv { display: grid; gap: 12px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.kv dd { margin: 4px 0 0; color: var(--text-strong); overflow-wrap: anywhere; }
 
 /* Tasting notes: one input per note */
 .note-rows { display: grid; gap: 8px; }

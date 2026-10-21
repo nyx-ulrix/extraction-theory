@@ -3,7 +3,7 @@ import {
   ArrowLeft, ArrowsClockwise, CheckSquare, Coffee, Plant, Square, Target, X, type Icon, type IconProps,
 } from "@phosphor-icons/react";
 import { fmtTime, fromSerial, num, parseFlavour, round } from "../calc.ts";
-import { groups, isFinished, norm, originKey } from "../group.ts";
+import { isFinished } from "../group.ts";
 import { useApp } from "../ctx.ts";
 import { AGITATION_TIMING, methodDefs, type MethodDef, type Phase, type Rec } from "../schema.ts";
 import { patchBrew, saveBean, type Db } from "../store.ts";
@@ -131,68 +131,49 @@ function params(b: Rec, db: Db, m: MethodDef): P[] {
   return [...head, ...own, ...tail];
 }
 
+/** Brew detail by id (arg). Without one there is nothing to show here: history lives on each coffee's page. */
 export default function History() {
-  const { db, arg, go } = useApp();
+  const { db, arg, back } = useApp();
   const defs = useMemo(() => methodDefs(db.fields), [db.fields]);
-  const [bean, setBean] = useState("");
+  const b = arg ? db.brews.find((x) => x.id === arg) : undefined;
+  if (b) return <Detail brew={b} defs={defs} />;
+  return (
+    <div className="page">
+      <div className="row">
+        <IconButton icon={ArrowLeft} label="Back" onClick={back} />
+        <Msg kind="error">That brew was not found. It may have been deleted from the sheet.</Msg>
+      </div>
+    </div>
+  );
+}
+
+/** One coffee's brew history: method filter, rows, compare two. */
+export function BrewList({ beanId }: { beanId: string }) {
+  const { db, go } = useApp();
+  const defs = useMemo(() => methodDefs(db.fields), [db.fields]);
   const [method, setMethod] = useState("");
-  const [roaster, setRoaster] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [process, setProcess] = useState("");
   const [sel, setSel] = useState<string[]>([]);
 
-  if (arg) {
-    const b = db.brews.find((x) => x.id === arg);
-    if (b) return <Detail brew={b} defs={defs} />;
+  const mine = db.brews.filter((b) => b.bean_id === beanId);
+  if (!mine.length) {
     return (
-      <div className="page">
-        <div className="row">
-          <IconButton icon={ArrowLeft} label="Back to history" onClick={() => go("history")} />
-          <Msg kind="error">That brew was not found. It may have been deleted from the sheet.</Msg>
-        </div>
+      <div className="stack">
+        <p>No brews of this coffee yet.</p>
+        <div><Button ghost icon={Coffee} onClick={() => go("brew")}>Log a brew</Button></div>
       </div>
     );
   }
-
-  if (!db.brews.length) {
-    return (
-      <div className="page">
-        <h1>History</h1>
-        <p>No brews yet. Log one to start your calibration history.</p>
-        <div><Button icon={Coffee} onClick={() => go("brew")}>Log a brew</Button></div>
-      </div>
-    );
-  }
-
-  const beanOf = (b: Rec) => db.beans.find((x) => x.id === b.bean_id);
-  const rows = db.brews
-    .filter((b) => {
-      const bn = beanOf(b);
-      return (!bean || b.bean_id === bean) && (!method || b.method === method)
-        && (!roaster || norm(bn?.roastery) === roaster)
-        && (!origin || originKey(bn?.origin) === origin)
-        && (!process || norm(bn?.process) === process);
-    })
-    .sort((a, b) => when(b) - when(a));
-  const filter = (set: (v: string) => void) => (v: string) => { set(v); setSel([]); };
+  const rows = mine.filter((b) => !method || b.method === method).sort((a, b) => when(b) - when(a));
+  const used = defs.filter((m) => mine.some((b) => b.method === m.id));
   const picked = sel.map((id) => db.brews.find((b) => b.id === id)).filter((b): b is Rec => !!b);
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < 2 ? [...s, id] : s));
 
   return (
-    <div className="page">
-      <h1>History</h1>
-      <div className="grid-2">
-        <SelectField label="Bean" value={bean} placeholder="All beans" onChange={(v) => { setBean(v); setSel([]); }}
-          options={db.beans.map((b): [string, string] => [str(b.id), str(b.name) || "Unnamed"])} />
+    <div className="stack">
+      {used.length > 1 && (
         <SelectField label="Method" value={method} placeholder="All methods" onChange={(v) => { setMethod(v); setSel([]); }}
-          options={defs.map((m): [string, string] => [m.id, m.label])} />
-        <SelectField label="Roaster" value={roaster} placeholder="All roasters" onChange={filter(setRoaster)}
-          options={groups(db.beans.map((b) => b.roastery))} />
-        <SelectField label="Origin" value={origin} placeholder="All origins" onChange={filter(setOrigin)}
-          options={groups(db.beans.map((b) => b.origin), originKey)} />
-        <SelectField label="Process" value={process} placeholder="All processes" onChange={filter(setProcess)}
-          options={groups(db.beans.map((b) => b.process))} />
-      </div>
+          options={used.map((m): [string, string] => [m.id, m.label])} />
+      )}
 
       {picked.length === 2 && <Compare pair={picked} defs={defs} onClear={() => setSel([])} />}
 
@@ -211,8 +192,7 @@ export default function History() {
                 </span>
                 <button type="button" className="item-main" onClick={() => go("history", id)}>
                   <span className="item-title">
-                    {beanName(db, b.bean_id)}
-                    <span className="muted">{m.label}</span>
+                    {[m.label, str(b.milk_drink)].filter(Boolean).join(", ")}
                     {yes(b.dialed_in) && <><TargetFill size={16} aria-hidden /><span className="sr-only">Dialed in</span></>}
                   </span>
                   <span className="meta num">
@@ -246,7 +226,7 @@ export default function History() {
 }
 
 function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
-  const { db, go, update, busy } = useApp();
+  const { db, go, back, update, busy } = useApp();
   const [overlay, setOverlay] = useState(false);
   const m = methodOf(brew.method, defs);
   const bean = db.beans.find((x) => x.id === brew.bean_id);
@@ -262,7 +242,7 @@ function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
   return (
     <div className="page">
       <div className="row">
-        <IconButton icon={ArrowLeft} label="Back to history" onClick={() => go("history")} />
+        <IconButton icon={ArrowLeft} label="Back" onClick={back} />
         <span className="spacer" />
         <IconButton
           icon={dialed ? TargetFill : Target} label={dialed ? "Unmark dialed in" : "Mark as dialed in"} pressed={dialed} disabled={busy}

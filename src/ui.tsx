@@ -199,6 +199,30 @@ export function Section({ title, actions, children }: { title: string; actions?:
   );
 }
 
+/**
+ * One line of text. If it does not fit, it scrolls slowly side to side; with reduced motion
+ * it stays put and ends in "...".
+ */
+export function Marquee({ children, className }: { children: string; className?: string }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const [shift, setShift] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => setShift(Math.max(0, (el.firstElementChild as HTMLElement).scrollWidth - el.clientWidth));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [children]);
+  return (
+    <span ref={box} className={`marquee${shift > 0 ? " run" : ""}${className ? ` ${className}` : ""}`} title={children}
+      style={{ ["--shift" as string]: `-${shift}px`, ["--dur" as string]: `${Math.max(4, shift / 12)}s` }}>
+      <span>{children}</span>
+    </span>
+  );
+}
+
 export function Msg({ kind = "info", children }: { kind?: "info" | "error" | "success" | "warning"; children: ReactNode }) {
   return <div className={`msg ${kind}`} role={kind === "error" ? "alert" : "status"}>{children}</div>;
 }

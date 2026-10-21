@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
-  ArrowClockwise, ClockCounterClockwise, Coffee, GearSix, GoogleLogo, House, Moon, Plant, SignIn, Sun, Table, X, type Icon,
+  ArrowClockwise, Books, Coffee, GearSix, GoogleLogo, House, Moon, SignIn, Sun, Table, X, type Icon,
 } from "@phosphor-icons/react";
 import { Ctx, type AppCtx, type View } from "./ctx.ts";
 import { AuthError, hadSession, hasToken, preload, signIn } from "./google.ts";
@@ -65,8 +65,7 @@ export function IconLink({ href, icon: I, label, tipAlign }: { href: string; ico
 const NAV: [View, string, Icon][] = [
   ["home", "Home", House],
   ["brew", "Brew", Coffee],
-  ["history", "History", ClockCounterClockwise],
-  ["beans", "Beans", Plant],
+  ["beans", "Library", Books],
   ["settings", "Settings", GearSix],
 ];
 const VIEW_KEY = "et.view";
@@ -194,12 +193,18 @@ export default function App() {
     }
   };
 
-  const navigate = useCallback((v: View, a?: string) => {
+  // Every page change is a browser history entry, so the back arrow and the phone's back gesture
+  // both return to the page you came from.
+  const navigate = useCallback((v: View, a?: string, push = true) => {
     dirty.current = false;
     setLeaving(null);
     setView(v);
     setArg(a);
     window.scrollTo(0, 0);
+    if (push) {
+      const depth = ((window.history.state as { depth?: number } | null)?.depth ?? 0) + 1;
+      window.history.pushState({ v, a, depth }, "");
+    }
     try { sessionStorage.setItem(VIEW_KEY, v); } catch { /* storage blocked */ }
   }, []);
   // Same view and arg keeps the page mounted, so nothing is lost and no need to ask.
@@ -207,11 +212,31 @@ export default function App() {
     if (dirty.current && !(v === view && a === arg)) setLeaving([v, a]);
     else navigate(v, a);
   }, [navigate, view, arg]);
+  const back = useCallback(() => {
+    if (((window.history.state as { depth?: number } | null)?.depth ?? 0) > 0) window.history.back();
+    else go("home");
+  }, [go]);
+  useEffect(() => {
+    if (!window.history.state?.v) window.history.replaceState({ v: view, a: arg, depth: 0 }, "");
+    const onPop = (e: PopStateEvent) => {
+      const s = e.state as { v?: View; a?: string } | null;
+      if (!s?.v) return;
+      if (dirty.current) {
+        // Unsaved edits: stay put and ask first.
+        window.history.pushState({ v: view, a: arg, depth: ((s as { depth?: number }).depth ?? 0) + 1 }, "");
+        setLeaving([s.v, s.a]);
+        return;
+      }
+      navigate(s.v, s.a, false);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [navigate, view, arg]);
   const setDirty = useCallback((d: boolean) => { dirty.current = d; }, []);
 
   const ctx = useMemo<AppCtx | null>(
-    () => (db ? { db, update, busy, notify, go, arg, setDirty } : null),
-    [db, update, busy, notify, go, arg, setDirty],
+    () => (db ? { db, update, busy, notify, go, back, arg, setDirty } : null),
+    [db, update, busy, notify, go, back, arg, setDirty],
   );
 
   const toastEl = toast && (
@@ -346,7 +371,7 @@ const CSS = `
 .nav-top button:hover, .tabbar button:hover { color: var(--text-strong); }
 .nav-top button[aria-current="page"] { color: var(--text-strong); border-bottom-color: var(--border); }
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   background: var(--bg); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom);
 }
 .tabbar button { min-width: 0; letter-spacing: 0.06em; height: var(--nav-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
