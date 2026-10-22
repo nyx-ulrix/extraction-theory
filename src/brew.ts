@@ -3,7 +3,7 @@ import {
   cleanAxes, cleanLayers, daysOffRoast, dialToClicks, estimateMicrons, finalRatio, iceSplit, num, pressTimes, profile, round,
   solveRatio, toSerial, type AxisDef, type Dial, type Flavour, type Num,
 } from "./calc.ts";
-import { newPhase, TABS, type Gear, type MethodDef, type MethodField, type Phase, type Rec } from "./schema.ts";
+import { frozenOn, newPhase, TABS, type Gear, type MethodDef, type MethodField, type Phase, type Rec } from "./schema.ts";
 import type { Db } from "./store.ts";
 
 /** A phase with a stable React key. The key is dropped on save. */
@@ -239,7 +239,8 @@ export function buildRecord(d: Draft, db: Db, m: MethodDef, template: AxisDef[])
     serve_water_g: s("serve") === "black" ? n("serve_water_g") : null,
     milk_drink: s("serve") === "milk" || (!s("serve") && s("milk_drink")) ? s("milk_drink") : null,
     milk_g: s("serve") === "milk" || (!s("serve") && s("milk_drink")) ? n("milk_g") : null,
-    days_off_roast: daysOffRoast(num(bean?.roast_date), serial),
+    // A frozen coffee stops resting on the day it went in the freezer.
+    days_off_roast: daysOffRoast(num(bean?.roast_date), Math.min(serial ?? Infinity, frozenOn(bean) ?? Infinity)),
     dripper_id: dripper ? dripper.id : null,
     paper: m.dripper ? s("paper") : null,
     drain_at_s: drains ? n("drain_at_s") : null,

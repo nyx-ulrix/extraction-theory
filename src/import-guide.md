@@ -95,6 +95,7 @@ Use this to add coffees and brews to Extraction Theory in one go. You can fill t
 | `roast_level` | One of `Super light`, `Light`, `Medium light`, `Medium`, `Medium dark`, `Dark`. |
 | `roast_date` | `YYYY-MM-DD`. Many bags print day and month only: use the most recent past date that fits. |
 | `roaster_notes` | The printed tasting notes, comma separated. |
+| `frozen`, `frozen_date` | `true` and `YYYY-MM-DD` if the beans were frozen; days off roast then counts only up to that date. |
 | `finished` | `true` if the bag is used up. |
 | `flavour` | The coffee's spider chart (see Flavour below). One chart per coffee. |
 

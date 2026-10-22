@@ -13,7 +13,7 @@ const F_COLS = [...DEFAULT_AXES.map((a) => `f_${a.key}`), "flavour"];
 export const TABS = {
   Beans: [
     "id", "created", "name", "product", "roastery", "origin", "farm", "altitude_low_m", "altitude_high_m",
-    "variety", "process", "roast_level", "roast_date", "roaster_notes", "finished", "dialed", ...F_COLS,
+    "variety", "process", "roast_level", "roast_date", "frozen", "frozen_date", "roaster_notes", "finished", "dialed", ...F_COLS,
   ],
   Gear: ["id", "type", "brand", "name", "style", "dial_type", "clicks_per_number", "numbers_per_rotation", "um_per_step", "zero_um"],
   Methods: ["method", "key", "label", "type", "unit", "options", "show_if", "order"],
@@ -32,7 +32,7 @@ export const TAB_NAMES = Object.keys(TABS) as Tab[];
 
 /** Columns written as Sheets date serials. */
 export const DATE_COLS: Partial<Record<Tab, Record<string, string>>> = {
-  Beans: { created: "yyyy-mm-dd hh:mm", roast_date: "yyyy-mm-dd" },
+  Beans: { created: "yyyy-mm-dd hh:mm", roast_date: "yyyy-mm-dd", frozen_date: "yyyy-mm-dd" },
   Brews: { created: "yyyy-mm-dd hh:mm", brew_date: "yyyy-mm-dd hh:mm" },
 };
 
@@ -276,6 +276,12 @@ export const BODY_LEVELS: [string, string][] = [["low", "Low"], ["medium_low", "
 const OLD_BODY: Record<string, string> = { weak: "low", balanced: "mid", strong: "high" };
 export const bodyLevel = (v: unknown) => OLD_BODY[String(v ?? "")] ?? String(v ?? "");
 export const bodyLabel = (v: unknown) => BODY_LEVELS.find(([k]) => k === bodyLevel(v))?.[1] ?? "";
+/** Freeze date of a frozen coffee, if set: its rest stops counting on that day. */
+export const frozenOn = (bean: Rec | undefined): number | null => {
+  if (!bean || !(bean.frozen === true || String(bean.frozen).toLowerCase() === "true")) return null;
+  const n = typeof bean.frozen_date === "number" ? bean.frozen_date : Number(bean.frozen_date);
+  return Number.isFinite(n) && bean.frozen_date !== "" && bean.frozen_date != null ? n : null;
+};
 export const CHILL_METHODS =["Ice drip", "Hyperchiller", "Shaken"];
 export const PROCESSES = ["Washed", "Natural", "Honey", "Anaerobic", "Carbonic maceration", "Wet hulled"];
 export const ROAST_LEVELS = ["Super light", "Light", "Medium light", "Medium", "Medium dark", "Dark"];

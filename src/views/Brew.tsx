@@ -9,7 +9,7 @@ import { isFinished } from "../group.ts";
 import {
   beanRecipe, buildRecord, DRAFT_KEY, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
-import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
+import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, frozenOn, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
 import { addBrew, newId, saveBean, type Db } from "../store.ts";
 import { Button, Dialog, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import Timeline from "../components/Timeline.tsx";
@@ -160,7 +160,9 @@ export default function Brew() {
           </div>
           <div className="grid-2">
             <DateField label="Roast date" value={num(bean?.roast_date)} onChange={setRoast} disabled={!bean || busy} />
-            <Readout label="Days off roast">{num(rec.days_off_roast) ?? "-"}</Readout>
+            <Readout label={frozenOn(bean) != null
+              ? <span className="frozen-label">Days off roast<Snowflake size={14} weight="bold" aria-label="to the day it was frozen" /></span>
+              : "Days off roast"}>{num(rec.days_off_roast) ?? "-"}</Readout>
           </div>
         </Section>
       );

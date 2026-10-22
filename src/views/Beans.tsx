@@ -7,9 +7,10 @@ import Shelf from "../components/Shelf.tsx";
 import { BagToggle, BrewList } from "./History.tsx";
 import { cleanAxes, cleanLayers, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
 import { useApp } from "../ctx.ts";
-import { PROCESSES, ROAST_LEVELS, methodDefs, type Cell, type Rec } from "../schema.ts";
+import { PROCESSES, ROAST_LEVELS, frozenOn, methodDefs, type Cell, type Rec } from "../schema.ts";
 import { deleteBean, newId, saveBean, saveSettings } from "../store.ts";
-import { Button, Dialog, Field, IconButton, Msg, NumField, Segmented, SelectField, TextField } from "../ui.tsx";
+import { Button, Dialog, Field, IconButton, Msg, NumField, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
+import { DateField } from "../components/DateField.tsx";
 import FlavourEditor, { syncLayers } from "../components/FlavourEditor.tsx";
 import { MAX_BAG_PHOTOS, getKey, photo, readBag, type BagInfo, type Img } from "../ai.ts";
 import { ink } from "../palette.ts";
@@ -25,7 +26,7 @@ const ymd = (v: unknown) => {
 // Only the columns this form edits are written, so other values typed into the sheet stay.
 const KEYS = [
   "name", "product", "roastery", "origin", "farm", "altitude_low_m", "altitude_high_m",
-  "variety", "process", "roast_level", "roast_date", "roaster_notes",
+  "variety", "process", "roast_level", "roast_date", "frozen", "frozen_date", "roaster_notes",
 ];
 
 export default function Beans() {
@@ -152,6 +153,14 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
             }}
           />
         </Field>
+        {/* Frozen beans stop ageing: days off roast counts only up to the freeze date. */}
+        <div className="grid-2">
+          <Toggle label="Frozen" checked={f.frozen === true || str(f.frozen) === "true"}
+            onChange={(v) => setF((p) => ({ ...p, frozen: v, frozen_date: v ? (p.frozen_date ?? toSerial(new Date(new Date().setHours(0, 0, 0, 0)))) : p.frozen_date }))} />
+          {(f.frozen === true || str(f.frozen) === "true") && (
+            <DateField label="Frozen on" value={num(f.frozen_date)} onChange={(v) => setF((p) => ({ ...p, frozen_date: v }))} />
+          )}
+        </div>
         <FlavourEditor
           label="Roaster tasting notes" notes={str(f.roaster_notes)} onNotes={set("roaster_notes")}
           value={flav} onChange={setFlav} template={db.settings.axes}
@@ -240,6 +249,7 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
     ["Roastery", str(bean.roastery)], ["Roaster's name", str(bean.product)], ["Origin", str(bean.origin)],
     ["Farm", str(bean.farm)], ["Variety", str(bean.variety)], ["Process", str(bean.process)],
     ["Roast level", str(bean.roast_level)], ["Roasted", ymd(bean.roast_date)],
+    ["Frozen on", frozenOn(bean) != null ? ymd(frozenOn(bean)) : ""],
     ["Altitude", [bean.altitude_low_m, bean.altitude_high_m].map(str).filter(Boolean).join(" to ") ? `${[bean.altitude_low_m, bean.altitude_high_m].map(str).filter(Boolean).join(" to ")} m` : ""],
     ["Roaster's notes", str(bean.roaster_notes)],
   ] as [string, string][]).filter(([, v]) => v);

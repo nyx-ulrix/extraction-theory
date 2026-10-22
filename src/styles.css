@@ -348,3 +348,7 @@ pre.code { margin: 0; padding: 12px; overflow-x: auto; border: 1px solid var(--b
 
 /* Native date inputs size to their content; keep them inside their column. */
 input[type="date"], input[type="datetime-local"] { width: 100%; min-width: 0; }
+
+/* Frozen coffee: blue snowflake beside days off roast. */
+.frozen-label { display: inline-flex; align-items: center; gap: 6px; }
+.frozen-label svg { color: #3EADF4; }
