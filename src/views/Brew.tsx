@@ -36,7 +36,7 @@ const ymd = (serial: unknown) => {
 const VERDICT = "Rating and what changed";
 
 /** What would replace an unlogged draft: an earlier brew (Brew again) or a coffee's last recipe. */
-type Pending = { brew?: Rec; beanId?: string };
+type Pending = { brew?: Rec; beanId?: string; shared?: boolean };
 
 /** Brew again: the earlier brew's recipe, remembering its date for the notice. */
 const again = (db: Db, b: Rec, fallback: string): Draft => ({ ...loadFrom(db, b, emptyDraft(str(b.method) || fallback)), from: ymd(b.brew_date) });
@@ -56,7 +56,7 @@ export default function Brew() {
     // A touched draft is not replaced without asking.
     if (b && saved?.touched) return { d: saved, pending: { brew: b } as Pending };
     if (beanArg) {
-      if (saved?.touched) return { d: saved, pending: { beanId: beanArg } as Pending };
+      if (saved?.touched) return { d: saved, pending: { beanId: beanArg, shared: fromShare } as Pending };
       return { d: beanRecipe(db, emptyDraft(methods[0].id), beanArg, fromShare), pending: undefined };
     }
     let d = b ? again(db, b, methods[0].id) : saved ?? emptyDraft(methods[0].id);
@@ -412,7 +412,7 @@ export default function Brew() {
             : <Button ghost onClick={() => setPending(undefined)}>Keep draft</Button>}
           <Button onClick={() => {
             if (pending?.brew) setD(again(db, pending.brew, methods[0].id));
-            else if (pending?.beanId) setD((o) => beanRecipe(db, o, pending.beanId!));
+            else if (pending?.beanId) setD((o) => beanRecipe(db, o, pending.beanId!, pending.shared));
             setPending(undefined);
           }}>Load recipe</Button>
         </div>

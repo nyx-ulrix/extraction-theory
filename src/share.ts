@@ -2,7 +2,7 @@
 // #fragment, which browsers never send to a server: deflated JSON in base64url. Nothing is stored online.
 import { cleanAxes, cleanLayers, num, profile, toSerial } from "./calc.ts";
 import { str, toRecipe, editDraft } from "./brew.ts";
-import { methodDefs, newPhase, type Phase, type Rec, type Recipe } from "./schema.ts";
+import { methodDefs, newPhase, TABS, type Phase, type Rec, type Recipe } from "./schema.ts";
 import type { Db } from "./store.ts";
 
 /** Bean columns a share carries. Personal ones (finished, dialed, frozen) stay home. */
@@ -38,7 +38,7 @@ export function makeShare(bean: Rec, recipe: Shared["recipe"], o: { roast: boole
   const b: Rec = {};
   for (const k of BEAN_KEYS) {
     if ((k === "roast_date" && !o.roast) || (k === "flavour" && !o.flavour)) continue;
-    const v = bean[k];
+    const v = k === "roaster_notes" && typeof bean[k] === "string" ? (bean[k] as string).slice(0, 300) : bean[k];
     if (v != null && v !== "") b[k] = v;
   }
   if (!recipe) return { bean: b, recipe: null };
@@ -80,9 +80,10 @@ function packFlavour(cell: unknown): unknown {
 function unpackFlavour(x: unknown): string | undefined {
   if (!Array.isArray(x) || !Array.isArray(x[0]) || !Array.isArray(x[1])) return undefined;
   const c = (h: unknown) => `#${str(h).replace(/^#/, "")}`;
-  const axes = (x[0] as unknown[][]).slice(0, 12).filter(Array.isArray).map((a) => ({ key: str(a[0]), label: str(a[1]), color: c(a[2]), shared: a[3] === 1 }));
+  const axes = (x[0] as unknown[][]).slice(0, 12).filter(Array.isArray)
+    .map((a) => ({ key: str(a[0]).slice(0, 30), label: str(a[1]).slice(0, 24), color: c(a[2]).slice(0, 7), shared: a[3] === 1 }));
   const layers = (x[1] as unknown[][]).slice(0, 24).filter(Array.isArray).map((l) => ({
-    note: str(l[0]), color: c(l[1]),
+    note: str(l[0]).slice(0, 40), color: c(l[1]).slice(0, 7),
     v: Object.fromEntries(axes.map((a, i) => [a.key, Number((Array.isArray(l[2]) ? l[2] : [])[i]) || 0])),
   }));
   return JSON.stringify({ axes, layers });
@@ -134,11 +135,12 @@ export async function decodeShare(code: string, db: Db): Promise<Shared> {
   const bean = clean(rename(o.b, LONG), BEAN_KEYS, 1000);
   const flavour = unpackFlavour(o.fl);
   if (flavour) bean.flavour = flavour;
-  if (flavour && !str(bean.roaster_notes)) bean.roaster_notes = layerNotes(flavour) || null;
+  if (flavour && !str(bean.roaster_notes)) bean.roaster_notes = layerNotes(flavour).slice(0, 1000) || null;
   if (!str(bean.name).trim()) throw new Error("bad code");
   let recipe: Shared["recipe"] = null;
   if (typeof o.m === "string" && methodDefs(db.fields).some((m) => m.id === o.m)) {
-    const f = clean(rename(o.f, LONG));
+    const allowed = [...TABS.Brews, ...db.fields.filter((x) => x.method === o.m).map((x) => x.key)];
+    const f = clean(rename(o.f, LONG), allowed);
     for (const k of NOT_SHARED) delete f[k];
     const phases = (a: unknown, kind: Phase["kind"]) => (Array.isArray(a) ? a.slice(0, 20) : [])
       .map((t, i) => ({ ...newPhase(kind, i + 1), ...clean(fromTuple(t), PHASE_KEYS), kind, n: i + 1 }) as Phase);

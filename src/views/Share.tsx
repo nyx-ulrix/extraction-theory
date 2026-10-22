@@ -145,7 +145,7 @@ export function ShareCoffee() {
       const url = shareUrl(await encodeShare(shared));
       const c = card(db, shared, url, accent, await fonts());
       if (live) setOut({ url, ...c });
-    })().catch((e) => notify(e instanceof Error ? e.message : String(e), "error"));
+    })().catch((e) => notify(e instanceof RangeError ? "Too much to fit in one code. Leave out the flavour chart or pick a simpler recipe." : e instanceof Error ? e.message : String(e), "error"));
     return () => { live = false; };
   }, [shared, accent, db, notify]);
 
@@ -278,8 +278,10 @@ export function SharedCoffee() {
       let x = d;
       if (!have) x = await saveBean(x, beanRow(b, d.settings.axes, id));
       if (s.recipe) {
-        const saved = savedRecipe(x, s.recipe, id, recipeName);
-        x = await saveSettings(x, { ...x.settings, recipes: [...x.settings.recipes.filter((y) => y.name !== saved.name), saved] });
+        // Same name as one of the user's own recipes: keep theirs and tag this one.
+        const mine = x.settings.recipes.some((y) => y.name === recipeName && y.bean !== id);
+        const saved = savedRecipe(x, s.recipe, id, mine ? `${recipeName.slice(0, 31)} (shared)` : recipeName);
+        x = await saveSettings(x, { ...x.settings, recipes: [...x.settings.recipes.filter((y) => y.bean !== id && y.name !== saved.name), saved] });
       }
       return x;
     }, have ? (s.recipe ? "Recipe added" : "Already in your library") : "Coffee added");
@@ -376,7 +378,9 @@ export function Scan() {
       if (!live || !v) return;
       try {
         if (v.readyState >= 2) {
-          for (const c of await detector.detect(v)) {
+          const found = await detector.detect(v);
+          if (!live) return;
+          for (const c of found) {
             const code = codeFrom(c.rawValue);
             if (code) { live = false; go("shared", code); return; }
             setHint("That code isn't an Extraction Theory coffee.");
