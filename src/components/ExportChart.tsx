@@ -125,10 +125,12 @@ export default function ExportChart({ bean, fl, open, onClose }: { bean: Rec; fl
           {o.art === "radar" && <Segmented label="Chart lines" full value={o.grid ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ grid: v === "show" })} />}
           <Toggle label="Coffee details" checked={o.coffee} onChange={(coffee) => set({ coffee })} />
           <Toggle label="Tasting notes" checked={o.notes} onChange={(notes) => set({ notes })} />
-          <Segmented label="Background" full value={o.bg} options={[["theme", "Theme"], ["none", "Clear"], ["colour", "Colour"]]} onChange={(bg) => set({ bg })} />
-          {o.bg === "colour" && (
-            <div className="field"><span className="label">Background colour</span><ColourPicker value={o.bgColour} label="Background colour" onChange={(bgColour) => set({ bgColour })} /></div>
-          )}
+        </div>
+        <div className="row" style={{ alignItems: "flex-end" }}>
+          <div style={{ flex: "1 1 240px" }}>
+            <Segmented label="Background" full value={o.bg} options={[["theme", "Theme"], ["none", "Clear"], ["colour", "Colour"]]} onChange={(bg) => set({ bg })} />
+          </div>
+          {o.bg === "colour" && <ColourPicker value={o.bgColour} label="Background colour" onChange={(bgColour) => set({ bgColour })} />}
         </div>
         <SelectField label="Brew details" value={o.brewId} placeholder="None" onChange={(brewId) => set({ brewId })}
           options={brews.map((b) => [str(b.id), `${defs.find((m) => m.id === b.method)?.label ?? str(b.method)} ${stamp(b.brew_date)}`])} />
