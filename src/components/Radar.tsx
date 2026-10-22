@@ -30,8 +30,10 @@ function extreme(hex: string) {
 
 export default function Radar({
   axes, layers, onChange, selected = null, onSelect, size = 420, legend = true, title = "Flavour radar",
-  emptyText = "Add tasting notes to draw layers.", rounded: roundedProp, grid: gridProp, pitch = 3.4,
+  emptyText = "Add tasting notes to draw layers.", rounded: roundedProp, grid: gridProp, pitch = 3.4, animate = true,
 }: {
+  /** false draws the finished chart straight away (image export). */
+  animate?: boolean;
   /** Halftone dot spacing in chart units; smaller is denser. */
   pitch?: number;
   /** Chart style; defaults to the user's Settings. Passed explicitly for the Settings preview. */
@@ -61,7 +63,7 @@ export default function Radar({
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ axis: number | null; id: number } | null>(null);
   const handles = useRef<(SVGGElement | null)[]>([]);
-  const grow = useGrow();
+  const grow = useGrow(animate);
   const [focus, setFocus] = useState<number | null>(null);
   const sel = selected != null && layers[selected] ? selected : null;
   const editable = !!onChange && sel != null;

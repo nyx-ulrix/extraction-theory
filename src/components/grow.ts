@@ -8,8 +8,8 @@ const POINT_SPREAD = 250; // ...and each point within a note a little apart agai
 const ease = (x: number) => 1 - (1 - x) ** 4; // quick start, slow settle
 
 /** Returns the share (0 to 1) of its final distance that point `axis` of note `layer` has travelled. */
-export function useGrow(): (layer: number, axis: number) => number {
-  const still = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+export function useGrow(animate = true): (layer: number, axis: number) => number {
+  const still = !animate || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [t, setT] = useState(still ? Infinity : 0);
   const delays = useRef(new Map<string, number>());
   useEffect(() => {

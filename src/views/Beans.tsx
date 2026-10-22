@@ -1,9 +1,10 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowLeft, Camera, Coffee, FloppyDisk, MagicWand, PencilSimple, Plus, Target, Trash, X } from "@phosphor-icons/react";
+import { ArrowLeft, Camera, Coffee, Export, FloppyDisk, MagicWand, PencilSimple, Plus, Target, Trash, X } from "@phosphor-icons/react";
 import { dialedMethods } from "../group.ts";
 import Radar from "../components/Radar.tsx";
 import Fingerprint from "../components/Fingerprint.tsx";
 import Shelf from "../components/Shelf.tsx";
+import ExportChart from "../components/ExportChart.tsx";
 import { BagToggle, BrewList } from "./History.tsx";
 import { cleanAxes, cleanLayers, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
 import { useApp } from "../ctx.ts";
@@ -243,6 +244,7 @@ function BagFill({ onFill }: { onFill: (info: BagInfo) => void }) {
 function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
   const { db, back, update, busy, go } = useApp();
   const [confirm, setConfirm] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const brewCount = db.brews.filter((b) => b.bean_id === bean.id).length;
   const fl = parseFlavour(bean.flavour, db.settings.axes);
   const facts: [string, string][] = ([
@@ -258,6 +260,7 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
       <div className="page-head">
         <IconButton icon={ArrowLeft} label="Back" onClick={back} />
         <h1 style={{ flex: 1, minWidth: 0 }}>{str(bean.name) || "Unnamed"}</h1>
+        {fl.layers.length > 0 && <IconButton icon={Export} label="Export chart" onClick={() => setExporting(true)} />}
         <IconButton icon={PencilSimple} label="Edit coffee" onClick={onEdit} />
         <IconButton icon={Trash} label="Delete coffee" variant="danger" tipAlign="end" disabled={busy} onClick={() => setConfirm(true)} />
       </div>
@@ -275,6 +278,7 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
         </div>
       </Dialog>
       {fl.layers.length > 0 && <PageArt fl={fl} title={`${str(bean.name)} roaster notes`} />}
+      {exporting && <ExportChart bean={bean} fl={fl} open onClose={() => setExporting(false)} />}
       {facts.length > 0 && (
         <dl className="kv">
           {facts.map(([k, v]) => <div key={k}><dt className="label">{k}</dt><dd>{v}</dd></div>)}

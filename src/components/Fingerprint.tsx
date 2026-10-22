@@ -6,8 +6,8 @@ import { useId } from "react";
 import { useGrow } from "./grow.ts";
 import { ink } from "../palette.ts";
 
-export default function Fingerprint({ axes, layers, size = 96, dense = false }: { axes: AxisDef[]; layers: Layer[]; size?: number; dense?: boolean }) {
-  const grow = useGrow();
+export default function Fingerprint({ axes, layers, size = 96, dense = false, animate = true }: { axes: AxisDef[]; layers: Layer[]; size?: number; dense?: boolean; animate?: boolean }) {
+  const grow = useGrow(animate);
   if (!layers.length) return null;
   const n = axes.length;
   return (
