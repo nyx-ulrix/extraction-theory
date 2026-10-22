@@ -237,8 +237,8 @@ export const SECTIONS: Record<string, string> = {
   presses: "Press phases",
   chill: "Chilling",
   taste: "Tasting notes",
-  rating: "Rating and taste direction",
-  notes: "What changed and notes",
+  rating: "Rating and what changed",
+  notes: "What changed (shown with rating)",
 };
 
 /** Sections a method can show at all, in default order, with its Methods-tab fields after recipe. */

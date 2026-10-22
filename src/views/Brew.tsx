@@ -11,7 +11,7 @@ import {
 } from "../brew.ts";
 import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, frozenOn, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
 import { addBrew, newId, saveBean, saveBrew, type Db } from "../store.ts";
-import { Button, Dialog, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
+import { Button, Dialog, FoldCtx, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import Timeline from "../components/Timeline.tsx";
 import Chill from "../components/brew/Chill.tsx";
 import Dripper from "../components/brew/Dripper.tsx";
@@ -32,6 +32,8 @@ const ymd = (serial: unknown) => {
   const d = fromSerial(s);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
+
+const VERDICT = "Rating and what changed";
 
 /** What would replace an unlogged draft: an earlier brew (Brew again) or a coffee's last recipe. */
 type Pending = { brew?: Rec; beanId?: string };
@@ -84,11 +86,8 @@ export default function Brew() {
   const dripper = db.gear.find((g) => g.id === d.f.dripper_id);
   const iced = isIced(d.f, m);
   const serve = serveOf(d.f);
-  // Extras (method details, water) start folded unless one is already filled in.
-  const [more, setMore] = useState(() => {
-    const extras = ["water_type", ...db.fields.filter((x) => x.method === init.d.method).map((x) => x.key)];
-    return extras.some((k) => str(init.d.f[k]) !== "");
-  });
+  // Every section is a fold, closed by default except the verdict; a closed one still shows its key values.
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
   const missBean = !d.f.bean_id;
   const missDose = !num(d.f.dose_g);
   const missChill = m.chill === "required" && !str(d.f.chill_method).trim();
@@ -124,6 +123,7 @@ export default function Brew() {
     setTried(true);
     const missing = [missBean && "Pick a bean", missDose && "Enter the dose", missChill && "Choose a chill method"].filter(Boolean);
     if (missing.length) {
+      setOpened((o) => ({ ...o, ...(missBean ? { "Bean and date": true } : {}), ...(missDose ? { "Dose, ratio, temp, time": true } : {}), ...(missChill ? { Chilling: true } : {}) }));
       notify(`${missing.join(". ")}.`, "error");
       requestAnimationFrame(() => document.querySelector(".brew-form [role=alert]")?.scrollIntoView({ block: "center" }));
       return;
@@ -155,6 +155,7 @@ export default function Brew() {
     }));
   }
 
+  const layoutHasRating = layoutFor(m, db.fields, db.settings).includes("rating");
   // Consecutive Methods-tab fields share one section.
   const own = db.fields.filter((f) => f.method === m.id);
   const blocks: (string | MethodField[])[] = [];
@@ -232,8 +233,11 @@ export default function Brew() {
             hint="What you tasted in this cup. The coffee's flavour chart is on its page." />
         </Section>
       );
+      // Rating and what changed are one section (the verdict), open by default.
+      case "notes": if (layoutHasRating) return null;
+      // falls through
       case "rating": return (
-        <Section key={b} title="Rating and taste direction">
+        <Section key={b} title={VERDICT}>
           <Segmented label="Rating" value={str(d.f.rating)} onChange={(v) => up(withF({ rating: Number(v) }))}
             options={["1", "2", "3", "4", "5"].map((n): [string, string, Icon] => [n, n, Star])} />
           <div className="stack brew-pair">
@@ -242,10 +246,6 @@ export default function Brew() {
             <SelectField label="Body" value={bodyLevel(d.f.taste_strength)} placeholder="Not set" options={BODY_LEVELS}
               onChange={(v) => up(withF({ taste_strength: v }))} />
           </div>
-        </Section>
-      );
-      case "notes": return (
-        <Section key={b} title="What changed and notes">
           <TextField label="What changed" value={str(d.f.changed)} onChange={(v) => up(withF({ changed: v }))} />
           <TextField label="Notes" multiline value={str(d.f.notes)} onChange={(v) => up(withF({ notes: v }))} />
           <Toggle label="Dialed in" checked={!!d.f.dialed_in} onChange={(v) => up(withF({ dialed_in: v }))} />
@@ -257,6 +257,28 @@ export default function Brew() {
 
   const ratio = num(rec.ratio), fin = num(rec.final_ratio), dose = num(rec.dose_g);
   const liquid = num(m.liquid === "yield" ? rec.yield_g : rec.water_g);
+  const grinderName = db.gear.find((g) => g.id === d.f.grinder_id)?.name;
+  const extrasSet = db.fields.filter((x) => x.method === m.id && str(d.f[x.key]) !== "").length;
+  const summary: Record<string, string> = {
+    "Bean and date": [str(bean?.name), d.date.slice(0, 10)].filter(Boolean).join(", "),
+    Grind: [str(d.f.grind_setting), grinderName].filter(Boolean).join(" on "),
+    "Dose, ratio, temp, time": [dose != null && liquid != null ? `${dose} to ${liquid} g` : "", ratio != null ? `1:${ratio}` : "", num(rec.temp_c) != null ? `${num(rec.temp_c)} °C` : ""].filter(Boolean).join(", "),
+    [`${m.label} details`]: extrasSet ? `${extrasSet} set` : "",
+    "Water used": str(d.f.water_type),
+    Milk: [str(d.f.milk_drink), num(d.f.milk_g) != null ? `${num(d.f.milk_g)} g` : ""].filter(Boolean).join(", "),
+    Black: num(d.f.serve_water_g) != null ? `${num(d.f.serve_water_g)} g water` : "Straight",
+    "Dripper and paper": [str(dripper?.name), str(d.f.paper)].filter(Boolean).join(", "),
+    "Pour phases": d.pours.length ? `${d.pours.length} pours` : "",
+    "Press phases": d.presses.length ? `${d.presses.length} presses` : "",
+    Chilling: str(d.f.chill_method),
+    "Tasting notes": str(d.f.tasting_notes).slice(0, 28),
+    [VERDICT]: num(d.f.rating) != null ? `${num(d.f.rating)}/5` : "",
+  };
+  const fold = {
+    isOpen: (t: string) => opened[t] ?? t === VERDICT,
+    toggle: (t: string, open: boolean) => setOpened((o) => (o[t] === open || (o[t] == null && open === (t === VERDICT)) ? o : { ...o, [t]: open })),
+    meta: (t: string) => summary[t] ?? "",
+  };
   return (
     <div className="brew">
       <style href="et-brew" precedence="default">{CSS}</style>
@@ -289,19 +311,7 @@ export default function Brew() {
             </Msg>
           )}
         </div>
-        {(() => {
-          const extra = (b: string | MethodField[]) => Array.isArray(b) || b === "water_type";
-          const at = blocks.findIndex(extra);
-          const core = blocks.map((b, i) => (extra(b) ? null : section(b, i)));
-          if (at < 0) return core;
-          const folded = (
-            <details key="more" className="more-details" open={more} onToggle={(e) => setMore(e.currentTarget.open)}>
-              <summary>More details</summary>
-              <div className="stack">{blocks.map((b, i) => (extra(b) ? section(b, i) : null))}</div>
-            </details>
-          );
-          return [...core.slice(0, at), folded, ...core.slice(at)];
-        })()}
+        <FoldCtx.Provider value={fold}>{blocks.map(section)}</FoldCtx.Provider>
       </div>
       <aside className="brew-side" aria-label="Brew summary">
         <div className="brew-bar">

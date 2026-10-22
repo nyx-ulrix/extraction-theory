@@ -1,5 +1,5 @@
 // Shared form primitives. Every view builds from these so the look stays one system.
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useContext, createContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { Icon } from "@phosphor-icons/react";
 import { X } from "@phosphor-icons/react";
 import { fmtTime, num, parseTime, type Num } from "./calc.ts";
@@ -199,7 +199,24 @@ export function Dialog({ open, onClose, title, children }: { open: boolean; onCl
   );
 }
 
+/** Inside a provider, every Section becomes a fold: open state and a one-line summary come from the page. */
+export const FoldCtx = createContext<{ isOpen: (title: string) => boolean; toggle: (title: string, open: boolean) => void; meta: (title: string) => string } | null>(null);
+
 export function Section({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
+  const fold = useContext(FoldCtx);
+  if (fold) {
+    const meta = fold.meta(title);
+    return (
+      <details className="section fold-section" open={fold.isOpen(title)} onToggle={(e) => fold.toggle(title, e.currentTarget.open)}>
+        <summary>
+          <h2>{title}</h2>
+          {meta && <span className="fold-meta num">{meta}</span>}
+        </summary>
+        {actions && <div className="row">{actions}</div>}
+        {children}
+      </details>
+    );
+  }
   return (
     <section className="section">
       <header><h2>{title}</h2>{actions && <div className="row">{actions}</div>}</header>

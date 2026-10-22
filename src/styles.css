@@ -360,14 +360,14 @@ input[type="date"], input[type="datetime-local"] { width: 100%; min-width: 0; }
   background: repeating-conic-gradient(var(--surface) 0 25%, var(--bg) 0 50%) 0 0 / 16px 16px;
 }
 
-/* Brew form: optional extras folded under one summary. */
-.more-details { border-top: 1px solid var(--border-soft); padding-top: 16px; }
-.more-details > summary {
-  cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; min-height: 44px;
-  font: 700 18px/1.2 var(--mono); color: var(--text-strong);
+/* Brew form: each section folds; the summary line shows its key values while closed. */
+.fold-section > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 12px; min-height: 44px; flex-wrap: wrap;
 }
-.more-details > summary::-webkit-details-marker { display: none; }
-.more-details > summary::after { content: "+"; font-weight: 400; font-size: 22px; }
-.more-details[open] > summary::after { content: "-"; }
-.more-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.more-details > .stack { margin-top: 16px; }
+.fold-section > summary::-webkit-details-marker { display: none; }
+.fold-section > summary h2 { margin: 0; }
+.fold-section > summary .fold-meta { flex: 1 1 auto; min-width: 0; color: var(--text); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fold-section > summary::after { content: "+"; margin-left: auto; font-size: 22px; color: var(--text-strong); }
+.fold-section[open] > summary::after { content: "-"; }
+.fold-section > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fold-section[open] > summary { margin-bottom: 16px; }
