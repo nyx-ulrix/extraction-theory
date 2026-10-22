@@ -212,18 +212,19 @@ export default function App() {
     }
   };
 
-  // Token expired: the next tap anywhere renews it. Google only opens its window during a tap, and
-  // with consent already given it closes by itself.
+  // Token expired and the Worker couldn't renew it: the next tap anywhere tries again, falling back to
+  // Google's window (it can only open during a tap).
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     if (phase !== "in" || authed || !gisReady) return;
     const renew = () => {
-      resume().then((ok) => ok || signIn()).then(() => { setAuthed(true); refresh(); }, () => { /* closed or blocked: try again on the next tap */ });
+      resume().then((ok) => ok || signIn()).then(() => { setAuthed(true); refresh(); }, () => setRetry((n) => n + 1));
     };
     // click, not pointerdown: on touch screens only the end of a tap counts as a gesture for pop-ups.
     window.addEventListener("click", renew, { capture: true, once: true });
     return () => window.removeEventListener("click", renew, { capture: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, authed, gisReady]);
+  }, [phase, authed, gisReady, retry]);
 
   const update = useCallback<AppCtx["update"]>(async (fn, done) => {
     const cur = dbRef.current;

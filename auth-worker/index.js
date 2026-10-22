@@ -12,9 +12,9 @@ const GOOGLE_REVOKE = "https://oauth2.googleapis.com/revoke";
 export default {
   async fetch(req, env) {
     const origin = req.headers.get("Origin") ?? "";
-    const allowed = env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).includes(origin);
+    const allowed = (env.ALLOWED_ORIGINS ?? "").split(",").map((o) => o.trim()).includes(origin);
     const cors = allowed
-      ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type", Vary: "Origin" }
+      ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400", Vary: "Origin" }
       : { Vary: "Origin" };
     if (req.method === "OPTIONS") return new Response(null, { status: allowed ? 204 : 403, headers: cors });
     // Only the app's own pages may call this; browsers always send Origin on these cross-origin POSTs.
@@ -35,12 +35,12 @@ export default {
 /** Sign-in code from Google's popup -> access token for the app, refresh token into the cookie. */
 async function exchange(req, env, cors) {
   const { code } = await req.json().catch(() => ({}));
-  if (typeof code !== "string" || !code) return json({ error: "bad_request" }, 400, cors);
+  if (typeof code !== "string" || !code || code.length > 512) return json({ error: "bad_request" }, 400, cors);
   const g = await google(env, { grant_type: "authorization_code", code, redirect_uri: "postmessage" });
   if (!g.access_token) return json({ error: g.error ?? "exchange_failed" }, 400, cors);
-  // Google only sends a refresh token on a fresh offline grant; keep any cookie already set otherwise.
-  const headers = g.refresh_token ? { ...cors, "Set-Cookie": cookie(g.refresh_token, MAX_AGE) } : cors;
-  return json({ access_token: g.access_token, expires_in: g.expires_in, stay: !!g.refresh_token || !!readCookie(req) }, 200, headers);
+  // No refresh token: drop any older cookie too, as it may belong to a different Google account.
+  const headers = { ...cors, "Set-Cookie": g.refresh_token ? cookie(g.refresh_token, MAX_AGE) : cookie("", 0) };
+  return json({ access_token: g.access_token, expires_in: g.expires_in, stay: !!g.refresh_token }, 200, headers);
 }
 
 /** Fresh access token from the cookie, no popup. 401 means sign in again. */

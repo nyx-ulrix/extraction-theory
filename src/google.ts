@@ -112,6 +112,8 @@ function setToken(r: { access_token: string; expires_in?: number }) {
 async function worker<T>(path: string, body?: unknown): Promise<{ ok: boolean; status: number; data: T }> {
   const r = await fetch(`${AUTH}${path}`, {
     method: "POST", credentials: "include", keepalive: path === "/logout",
+    // A slow renew must not use up the tap: browsers allow Google's window only ~5 s after it.
+    signal: path === "/refresh" ? AbortSignal.timeout(3000) : undefined,
     headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}),
   });
   return { ok: r.ok, status: r.status, data: (await r.json().catch(() => ({}))) as T };
