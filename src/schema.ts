@@ -193,6 +193,8 @@ export interface Settings {
   my_grinders: string[];
   /** Filter papers the user has: listed first in the brew form, after papers they've actually used. */
   my_papers: string[];
+  /** Optional sections and method fields switched off everywhere (Settings, Brew form). Required ones always show. */
+  hidden: string[];
   /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
   card_art: "radar" | "blob";
   /** Chart on a coffee's own page, chosen apart from the card art. */
@@ -220,6 +222,7 @@ export const DEFAULT_SETTINGS: Settings = {
   page_art: "radar",
   my_grinders: [],
   my_papers: [],
+  hidden: [],
 };
 
 /**
@@ -259,10 +262,16 @@ export function layoutFor(m: MethodDef, fields: MethodField[], s: Settings): str
   const avail = availableKeys(m, fields);
   // Preinfusion became pre-soak and hold: a saved layout keeps its place for them.
   const saved = s.layout[m.id]?.flatMap((k) => (k === "preinfusion_s" ? ["presoak_s", "hold_s"] : [k])).filter((k) => avail.includes(k));
-  const keys = saved?.length ? saved : avail;
   const required = ["bean", "recipe", ...(m.chill === "required" ? ["chill"] : [])];
+  const keys = (saved?.length ? saved : avail).filter((k) => required.includes(k) || !s.hidden.includes(k));
   return [...required.filter((k) => !keys.includes(k)), ...keys];
 }
+
+/** Sections that can be switched off for every method (the rest are the core of a brew). */
+export const OPTIONAL_SECTIONS: [string, string][] = [
+  ["grind", "Grind"], ["water_type", "Water used"], ["milk", "Black or milk"], ["dripper", "Dripper and paper"],
+  ["pours", "Pour phases"], ["presses", "Press phases"], ["chill", "Chilling (iced drinks)"], ["taste", "Tasting notes"], ["rating", "Rating and what changed"],
+];
 
 export const AGITATIONS = ["None", "Swirl", "Stir", "Rao spin", "Tap"];
 export const AGITATION_TIMING = [
