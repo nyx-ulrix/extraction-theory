@@ -100,7 +100,7 @@ export default function Settings() {
             patch({ brew_mode });
           }} />
           <p className="meta">{s.brew_mode === "basic"
-            ? "Normal human shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Pick I'm a snob to choose every variable yourself."
+            ? "Normal human shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Pick I'm a snob to choose which fields show."
             : s.brew_mode === "advanced" ? "I'm a snob shows what you tick below, in the order you set."
             : "Pretentious shows every variable, takes grind size in microns only, and won't log a brew without the water's GH and KH."}</p>
           {lockedHours > 0 && s.brew_mode !== "pretentious" && <p className="meta">You stepped down from Pretentious. It unlocks in {lockedHours} h.</p>}

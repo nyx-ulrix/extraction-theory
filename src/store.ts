@@ -129,6 +129,16 @@ export async function loadDb(): Promise<Db> {
     await sh.deleteWhere(id, "Methods", { method: "espresso", key: "preinfusion_s" });
     fields = [...fields.filter((f) => !(f.method === "espresso" && f.key === "preinfusion_s")), ...added];
   }
+  // Snob variables for espresso: added once to older sheets, so deleting one in Settings sticks.
+  if (!have.has("fields_v2")) {
+    const esp = fields.filter((f) => f.method === "espresso");
+    const keys = new Set(esp.map((f) => f.key));
+    const top = Math.max(0, ...esp.map((f) => f.order ?? 0));
+    const added = DEFAULT_FIELDS.filter((f) => f.method === "espresso" && !keys.has(f.key)).map((f, i) => ({ ...f, order: top + i + 1 }));
+    if (added.length) await sh.append(id, headers, "Methods", added as unknown as Rec[]);
+    await sh.upsert(id, headers, "Settings", { key: "fields_v2", value: "true" }, "key");
+    fields = [...fields, ...added];
+  }
   return {
     id,
     headers,

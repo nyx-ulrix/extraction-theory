@@ -122,7 +122,14 @@ export const espressoStyle = (m: MethodDef) => m.id === "espresso" || m.id === "
 export const serveOf = (f: Rec): "black" | "milk" => (str(f.serve) === "milk" || (!str(f.serve) && str(f.milk_drink)) ? "milk" : "black");
 
 // A recipe leaves out the coffee, the verdict and anything worked out from the coffee.
-const NOT_RECIPE = new Set(["bean_id", "tasting_notes", "rating", "taste_balance", "taste_strength", "changed", "notes", "dialed_in", "flavour"]);
+const NOT_RECIPE = new Set(["bean_id", "tasting_notes", "rating", "taste_balance", "taste_strength", "astringency", "changed", "notes", "dialed_in", "flavour", "tds_pct", "beverage_g", "first_drop_s"]);
+
+/** Extraction yield %: TDS times the drink's weight (espresso: the yield) over the dose. */
+export function extraction(m: MethodDef, f: Rec): Num {
+  const tds = num(f.tds_pct), dose = num(f.dose_g);
+  const bev = num(m.liquid === "yield" ? f.yield_g : f.beverage_g);
+  return tds && dose && bev ? round((tds * bev) / dose, 1) : null;
+}
 
 /** The form's recipe, ready to save under a name. */
 export function toRecipe(d: Draft, name: string): Recipe {
@@ -251,7 +258,8 @@ export function buildRecord(d: Draft, db: Db, m: MethodDef, template: AxisDef[])
 
   const pours = m.pours ? d.pours : [];
   const presses = m.presses ? d.presses : [];
-  const water = m.pours ? sumWater(pours) : m.liquid === "water" ? n("water_g") : null;
+  // With pour phases switched off, the water typed in Recipe stands in.
+  const water = m.pours ? sumWater(pours) ?? n("water_g") : m.liquid === "water" ? n("water_g") : null;
   const liquid = m.liquid === "yield" ? n("yield_g") : water;
   const dose = n("dose_g");
 
@@ -296,6 +304,12 @@ export function buildRecord(d: Draft, db: Db, m: MethodDef, template: AxisDef[])
     water_gh_ppm: n("water_gh_ppm"),
     water_kh_ppm: n("water_kh_ppm"),
     water_tds_ppm: n("water_tds_ppm"),
+    tds_pct: n("tds_pct"),
+    beverage_g: m.liquid === "yield" ? null : n("beverage_g"),
+    ey_pct: extraction(m, f),
+    rdt: f.rdt === true ? true : null,
+    grinder_rpm: n("grinder_rpm"),
+    astringency: s("astringency"),
     iced: m.id === "coldbrew" ? null : cold,
     serve: espressoStyle(m) ? serveOf(f) : null,
     serve_iced: espressoStyle(m) ? cold : null,

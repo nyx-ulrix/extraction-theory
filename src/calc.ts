@@ -74,12 +74,13 @@ export function parseTime(s: string): Num {
   const t = s.trim();
   if (!t) return null;
   // Typed without a colon: the last two digits are seconds, so 230 is 2:30 and 45 is 0:45.
-  if (/^\d{3,}$/.test(t)) return Number(t.slice(0, -2)) * 60 + Number(t.slice(-2));
+  if (/^\d{3,}$/.test(t)) return Number(t.slice(-2)) < 60 ? Number(t.slice(0, -2)) * 60 + Number(t.slice(-2)) : null;
   const parts = t.split(":");
   if (parts.length > 3) return null;
   let total = 0;
-  for (const p of parts) {
+  for (const [i, p] of parts.entries()) {
     if (!/^\d+(\.\d+)?$/.test(p)) return null;
+    if (i > 0 && Number(p) >= 60) return null;
     total = total * 60 + Number(p);
   }
   return total;

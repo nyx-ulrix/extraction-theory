@@ -3,9 +3,9 @@ import { FloppyDisk } from "@phosphor-icons/react";
 import { dialToClicks, estimateMicrons, num, type DialType, type Num } from "../../calc.ts";
 import { useApp } from "../../ctx.ts";
 import { str, toDial, withF, type Draft, type Up } from "../../brew.ts";
-import type { Gear } from "../../schema.ts";
+import { shows, type Gear } from "../../schema.ts";
 import { newId, saveGear } from "../../store.ts";
-import { Dialog, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../../ui.tsx";
+import { Dialog, IconButton, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../../ui.tsx";
 
 export default function Grind({ d, up }: { d: Draft; up: Up }) {
   const { db } = useApp();
@@ -19,7 +19,9 @@ export default function Grind({ d, up }: { d: Draft; up: Up }) {
   const setting = str(d.f.grind_setting);
   const clicks = dial && dial.dial_type !== "stepless" ? dialToClicks(setting, dial) : null;
   const est = dial ? estimateMicrons(clicks, dial) : null;
-  const how = dial?.dial_type === "rotation" ? "r.n.c, for example 2.4.1" : dial?.dial_type === "stepless" ? "Dial reading" : "Clicks from zero";
+  const basic = db.settings.brew_mode === "basic";
+  const how = dial?.dial_type === "rotation" ? "Turns.number.clicks, for example 2.4.1" : dial?.dial_type === "stepless" ? "Dial reading"
+    : dial ? "Clicks from zero" : "The number or mark on your grinder's dial";
   const calc = [dial?.dial_type === "rotation" && clicks != null ? `${clicks} clicks` : "", est != null ? `about ${est} µm` : ""].filter(Boolean).join(", ");
 
   const settingField = (
@@ -36,13 +38,20 @@ export default function Grind({ d, up }: { d: Draft; up: Up }) {
       <SelectField
         label="Grinder" value={str(d.f.grinder_id)} other onOther={() => setAdding(true)}
         options={grinders.map((x) => [x.id, [x.brand, x.name].filter(Boolean).join(" ")])}
-        onChange={(v) => up(withF({ grinder_id: v || null }))}
+        onChange={(v) => up(withF({ grinder_id: v || null }))} hint={basic ? "Not listed? Choose Other to add yours." : undefined}
       />
       {/* Pretentious mode: the burr gap in microns, nothing else. */}
       {db.settings.brew_mode === "pretentious"
         ? <NumField label="Grind size" unit="µm" min={0} value={num(d.f.grind_um)} placeholder={est != null ? String(est) : undefined}
             hint="Microns only. Clicks are for normal humans." onChange={(v) => up(withF({ grind_um: v }))} />
+        : basic ? settingField
         : <div className="grid-2">{db.settings.grind_first === "microns" ? [umField, settingField] : [settingField, umField]}</div>}
+      {shows(db.settings, "rdt") && (
+        <div className="grid-2">
+          <Toggle label="RDT (spritzed)" checked={d.f.rdt === true} onChange={(v) => up(withF({ rdt: v }))} />
+          <NumField label="Grinder RPM" min={0} step={1} value={num(d.f.grinder_rpm)} hint="Variable-speed grinders" onChange={(v) => up(withF({ grinder_rpm: v }))} />
+        </div>
+      )}
       <GrinderDialog open={adding} onClose={() => setAdding(false)} onSaved={(g) => up(withF({ grinder_id: g.id }))} />
     </Section>
   );

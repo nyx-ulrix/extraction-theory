@@ -31,7 +31,7 @@ export function ratioOf(b: Rec, m: MethodDef): string {
   const dose = num(b.dose_g);
   const liq = liquidOf(b, m);
   const r = num(b.ratio) ?? (dose && liq != null ? liq / dose : null);
-  return r == null ? "" : `1:${round(r, 1)}`;
+  return r == null ? "" : `1:${round(r, 2)}`;
 }
 const phasesOf = (db: Db, id: unknown): Phase[] =>
   db.phases.filter((p) => p.brew_id === id).sort((a, b) => (a.kind === b.kind ? a.n - b.n : a.kind === "pour" ? -1 : 1));
@@ -269,9 +269,12 @@ function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
         <Section title="Tasting notes"><p>{str(brew.tasting_notes)}</p></Section>
       )}
 
-      <Section title="Timeline">
-        <Timeline items={[{ label: m.label, method: m, brew, phases: phasesOf(db, brew.id) }]} />
-      </Section>
+      {/* Nothing timed (a Normal human espresso, say): no empty timeline. */}
+      {(num(brew.total_s) != null || phasesOf(db, brew.id).length > 0 || num(brew.steep_h) != null) && (
+        <Section title="Timeline">
+          <Timeline items={[{ label: m.label, method: m, brew, phases: phasesOf(db, brew.id) }]} />
+        </Section>
+      )}
 
       {GROUPS.map((g) => {
         const items = ps.filter((p) => p[0] === g);

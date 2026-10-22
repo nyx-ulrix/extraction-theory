@@ -9,7 +9,7 @@ import { isFinished } from "../group.ts";
 import {
   applyRecipe, beanRecipe, buildRecord, DRAFT_KEY, editDraft, espressoStyle, isIced, pastValues, serveOf, toRecipe, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
-import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, frozenOn, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
+import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, frozenOn, layoutFor, methodDefs, shows, type MethodField, type Rec } from "../schema.ts";
 import { addBrew, newId, saveBean, saveBrew, saveSettings, type Db } from "../store.ts";
 import { Button, Dialog, FoldCtx, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import Timeline from "../components/Timeline.tsx";
@@ -95,6 +95,7 @@ export default function Brew() {
   const missChill = m.chill === "required" && !str(d.f.chill_method).trim();
   // Pretentious mode will not log a brew without the grind in microns and the water's makeup.
   const mode = db.settings.brew_mode;
+  const basic = mode === "basic";
   const missMicrons = mode === "pretentious" && num(d.f.grind_um) == null;
   const missWater = mode === "pretentious" && (!str(d.f.water_type).trim() || num(d.f.water_gh_ppm) == null || num(d.f.water_kh_ppm) == null);
   const errBean = tried && missBean ? "Pick a bean" : undefined;
@@ -265,12 +266,18 @@ export default function Brew() {
           <div className="stack brew-pair">
             <Segmented label="Taste balance" value={str(d.f.taste_balance)} onChange={(v) => up(withF({ taste_balance: v }))} full
               options={[["sour", "Sour"], ["balanced", "Balanced"], ["bitter", "Bitter"]]} />
-            <SelectField label="Body" value={bodyLevel(d.f.taste_strength)} placeholder="Not set" options={BODY_LEVELS}
-              onChange={(v) => up(withF({ taste_strength: v }))} />
+            {!basic && <SelectField label="Body" value={bodyLevel(d.f.taste_strength)} placeholder="Not set" options={BODY_LEVELS}
+              onChange={(v) => up(withF({ taste_strength: v }))} />}
           </div>
-          <TextField label="What changed" value={str(d.f.changed)} onChange={(v) => up(withF({ changed: v }))} />
-          <TextField label="Notes" multiline value={str(d.f.notes)} onChange={(v) => up(withF({ notes: v }))} />
+          {basic && <p className="hint">1 star: poured it out. 5: would not change a thing. Sour? Grind finer or brew longer. Bitter? Grind coarser or brew shorter.</p>}
+          {shows(db.settings, "astringency") && (
+            <SelectField label="Astringency" value={str(d.f.astringency)} placeholder="Not set" options={["None", "Slight", "Strong"]}
+              onChange={(v) => up(withF({ astringency: v }))} />
+          )}
+          <TextField label="What changed" value={str(d.f.changed)} placeholder="For example: 2 clicks finer" onChange={(v) => up(withF({ changed: v }))} />
+          {!basic && <TextField label="Notes" multiline value={str(d.f.notes)} onChange={(v) => up(withF({ notes: v }))} />}
           <Toggle label="Dialed in" checked={!!d.f.dialed_in} onChange={(v) => up(withF({ dialed_in: v }))} />
+          {basic && <p className="hint">Dialed in: this recipe tastes right, so you can brew it the same way again.</p>}
         </Section>
       );
     }
@@ -312,10 +319,11 @@ export default function Brew() {
               options={methods.map((x): [string, string, Icon] => [x.id, x.label, ICONS[x.id] ?? Flask])} />
           </div>
           {/* Saved recipes: load one into the form, or save this one under a name. */}
-          <div className="brew-recipes">
-            <SelectField label="Saved recipe" value="" placeholder={db.settings.recipes.length ? "Load a saved recipe" : "No saved recipes yet"}
+          {/* No saved recipes yet: just the bookmark, no empty dropdown. */}
+          <div className={db.settings.recipes.length ? "brew-recipes" : "brew-recipes solo"}>
+            {db.settings.recipes.length > 0 && <SelectField label="Saved recipe" value="" placeholder="Load a saved recipe"
               options={db.settings.recipes.map((r, i): [string, string] => [String(i), `${r.name} (${methods.find((x) => x.id === r.method)?.label ?? r.method})`])}
-              onChange={(v) => { const r = db.settings.recipes[Number(v)]; if (r) { setD((o) => applyRecipe(o, r)); notify(`Loaded ${r.name}`, "success"); } }} />
+              onChange={(v) => { const r = db.settings.recipes[Number(v)]; if (r) { setD((o) => applyRecipe(o, r)); notify(`Loaded ${r.name}`, "success"); } }} />}
             <IconButton icon={BookmarkSimple} label="Save as recipe" onClick={() => setNaming(true)} />
           </div>
           <Dialog open={naming} onClose={() => setNaming(false)} title="Save as recipe">
@@ -403,6 +411,7 @@ const CSS = `
 .brew-form { display: grid; gap: 0; min-width: 0; }
 .brew-form > .stack:first-child { margin-bottom: 24px; }
 .brew-recipes { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.brew-recipes.solo { grid-template-columns: auto; justify-content: end; }
 .brew-form > .section:not(.fold-section) { margin-bottom: 32px; }
 .brew-err { margin: 0; font-size: 12px; color: var(--error); }
 .readout { min-height: 44px; display: flex; align-items: center; }
@@ -431,7 +440,7 @@ const CSS = `
 }
 @media (min-width: 768px) { .brew-side { bottom: env(safe-area-inset-bottom); } }
 .brew-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.brew-bar-err { flex: 1; min-width: 0; text-align: right; }
+.brew-bar-err { display: none; }
 .brew-sum { display: grid; gap: 2px; min-width: 0; font-size: 12px; }
 .brew-sum strong { font-size: 18px; color: var(--text-strong); }
 .brew-preview { display: none; }
@@ -442,7 +451,7 @@ const CSS = `
     display: grid; gap: 24px; max-height: calc(100dvh - var(--nav-h) - 48px); overflow-y: auto;
   }
   .brew-bar { flex-direction: column; align-items: stretch; border-bottom: 1px solid var(--border-soft); padding-bottom: 24px; }
-  .brew-bar-err { text-align: left; }
+  .brew-bar-err { display: block; text-align: left; }
   .brew-preview { display: grid; gap: 24px; }
 }
 `;

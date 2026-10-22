@@ -321,7 +321,7 @@ export default function App() {
         <main className="hero wrap">
           <div className="stack-lg">
             <Brand big />
-            <p className="lede">Log every brew and dial in faster. Your data lives in your own Google Sheet.</p>
+            <p className="lede">Log every brew and get to a cup you like, faster. Your data lives in your own Google Sheet.</p>
             <div>
               <Button icon={GoogleLogo} onClick={start} disabled={signing || !gisReady}>{hadSession() ? "Continue with Google" : "Sign in with Google"}</Button>
             </div>

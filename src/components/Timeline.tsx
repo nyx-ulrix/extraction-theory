@@ -44,7 +44,7 @@ function build({ label, brew, phases }: TimelineItem): Model {
   }
   const T = total ?? Math.max(...known);
 
-  // Water: each pour lasts until the next pour starts, or the end.
+  // Water: each pour lasts its logged duration, else until the next pour starts, or the end.
   const timed = pours.filter((p) => p.start_s != null).sort((a, b) => a.start_s! - b.start_s!);
   const segEnd = new Map<Phase, number>();
   const m: Model = { ...empty, end: T };
@@ -52,7 +52,7 @@ function build({ label, brew, phases }: TimelineItem): Model {
   m.line.push([timed[0]?.start_s ?? 0, 0]);
   timed.forEach((p, i) => {
     const s = p.start_s!;
-    const e = Math.max(s, timed[i + 1]?.start_s ?? T);
+    const e = p.duration_s != null ? s + p.duration_s : Math.max(s, timed[i + 1]?.start_s ?? T);
     segEnd.set(p, e);
     const g = p.water_g ?? 0;
     m.pours.push({ s, e, g, temp: p.temp_c ?? n("temp_c") });

@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, MagicWand, Plus, Trash } from "@phosphor-icons/reac
 import { fromTargets, num, parsePattern, planPours, toTargets, type Num } from "../../calc.ts";
 import { useApp } from "../../ctx.ts";
 import { kp, type Draft, type DPhase, type Up } from "../../brew.ts";
-import { AGITATION_TIMING, AGITATIONS, newPhase, type Phase } from "../../schema.ts";
+import { AGITATION_TIMING, AGITATIONS, newPhase, shows, type Phase } from "../../schema.ts";
 import { IconButton, NumField, Section, Segmented, SelectField, TextField, TimeField } from "../../ui.tsx";
 import Readout from "./Readout.tsx";
 
@@ -14,6 +14,11 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
   const pours = d.pours;
   const brewTemp = num(d.f.temp_c);
   const target = db.settings.pour_style === "target";
+  const basic = db.settings.brew_mode === "basic";
+  const durations = shows(db.settings, "pour_time");
+  const dose = num(d.f.dose_g);
+  const bloomRatio = dose && pours[0]?.water_g ? Math.round((pours[0].water_g / dose) * 10) / 10 : null;
+  const bloomTime = pours[0]?.start_s != null && pours[1]?.start_s != null ? pours[1].start_s - pours[0].start_s : null;
   const cum = toTargets(pours.map((p) => p.water_g ?? 0));
   const pattern = parsePattern(d.x.pattern);
   const patternErr = d.x.pattern.trim() && !pattern;
@@ -59,7 +64,7 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
   };
 
   return (
-    <Section title="Pour phases">
+    <Section title={basic ? "Pours" : "Pour phases"}>
       <div className="stack brew-assist">
         {/* Presets sit beside the water they split. */}
         <div className="pour-top">
@@ -75,7 +80,14 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
             </div>
           )}
         </div>
-        <div className="brew-split">
+        {basic && db.settings.presets.length > 0 && <p className="hint">Tap a preset to split the water into pours.</p>}
+        {!basic && (bloomRatio != null || bloomTime != null) && (
+          <dl className="brew-kv num">
+            <div><dt>Bloom</dt><dd>{bloomRatio != null ? `${bloomRatio}× dose` : "-"}</dd></div>
+            <div><dt>Bloom time</dt><dd>{bloomTime != null ? `${bloomTime} s` : "-"}</dd></div>
+          </dl>
+        )}
+        {!basic && <div className="brew-split">
           <TextField
             label="Split pattern" value={d.x.pattern} placeholder="1:2:3:3" onChange={(v) => setX({ pattern: v })}
             hint={patternErr ? "Use numbers split by colons, for example 4:6" : "Parts of the water, the first is the bloom"}
@@ -83,14 +95,14 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
           <NumField label="Interval" unit="s" value={d.x.interval} onChange={(v) => setX({ interval: v })} min={0} hint="Optional, sets start times" />
           <IconButton icon={MagicWand} label="Split water into phases" variant="solid" disabled={!pattern || !total}
             onClick={() => up((o) => split(o, pattern))} />
-        </div>
+        </div>}
       </div>
 
       {pours.length === 0 && <p>No phases yet. Split the water above or add one below.</p>}
       {pours.map((p, i) => (
         <div key={p.k} className="phase">
           <header>
-            <span className="label">{i === 0 ? "Bloom" : `Phase ${i + 1}`}</span>
+            <span className="label">{i === 0 ? "Bloom" : basic ? `Pour ${i + 1}` : `Phase ${i + 1}`}</span>
             <span className="spacer" />
             <IconButton icon={ArrowUp} label="Move up" variant="bare" disabled={i === 0} onClick={() => move(i, -1)} />
             <IconButton icon={ArrowDown} label="Move down" variant="bare" disabled={i === pours.length - 1} onClick={() => move(i, 1)} />
@@ -109,8 +121,9 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
               label="Temp" unit="°C" value={p.temp_c} placeholder={brewTemp != null ? String(brewTemp) : "Brew temp"}
               onChange={(v) => edit(i, { temp_c: v })}
             />
-            <SelectField label="Agitation" value={p.agitation} options={AGITATIONS} other onChange={(v) => edit(i, { agitation: v || "None" })} />
-            {p.agitation !== "None" && (
+            {durations && <TimeField label="Pour time" value={p.duration_s} hint="How long the pour took" onChange={(v) => edit(i, { duration_s: v })} />}
+            {!basic && <SelectField label="Agitation" value={p.agitation} options={AGITATIONS} other onChange={(v) => edit(i, { agitation: v || "None" })} />}
+            {!basic && p.agitation !== "None" && (
               <>
                 <SelectField label="When" value={p.agitation_timing} options={TIMING} onChange={(v) => edit(i, { agitation_timing: v || "after" })} />
                 {p.agitation_timing === "at" && <TimeField label="Agitate at" value={p.agitation_at_s} onChange={(v) => edit(i, { agitation_at_s: v })} />}
@@ -118,6 +131,7 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
               </>
             )}
           </div>
+          {basic && i === 0 && <p className="hint">Bloom: a small first pour, about twice the coffee's weight, to wet the grounds.</p>}
           {low[p.k] != null && typing !== p.k && <p className="brew-err" role="alert">Must be at least {low[p.k]} g</p>}
           {hybrid && (
             <Segmented label="Valve" value={p.valve} onChange={(v) => edit(i, { valve: v })}

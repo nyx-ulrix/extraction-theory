@@ -20,9 +20,10 @@ export const TABS = {
   Brews: [
     "id", "created", "brew_date", "method", "bean_id", "grinder_id", "grind_setting", "grind_clicks", "grind_um",
     "dose_g", "water_g", "yield_g", "ratio", "temp_c", "total_s", "water_type", "water_gh_ppm", "water_kh_ppm", "water_tds_ppm", "days_off_roast",
+    "tds_pct", "beverage_g", "ey_pct", "rdt", "grinder_rpm",
     "dripper_id", "paper", "drain_at_s",
     "iced", "chill_method", "ice_g", "ice_max", "chill_start", "chill_stop", "final_ratio", "serve", "serve_iced", "serve_water_g", "milk_drink", "milk_g",
-    "tasting_notes", ...F_COLS, "taste_balance", "taste_strength", "rating", "changed", "notes", "dialed_in",
+    "tasting_notes", ...F_COLS, "taste_balance", "taste_strength", "astringency", "rating", "changed", "notes", "dialed_in",
   ],
   Phases: ["brew_id", "kind", "n", "start_s", "water_g", "temp_c", "duration_s", "agitation", "agitation_timing", "agitation_at_s", "agitation_count", "valve", "note"],
   Settings: ["key", "value"],
@@ -103,6 +104,12 @@ export const DEFAULT_FIELDS: MethodField[] = [
     ["pressure", "Pressure / profile", "text", "bar"],
     ["basket", "Basket", "text"],
     ["puck_prep", "Puck prep", "text"],
+    ["first_drop_s", "First drops", "time"],
+    ["preinfusion_bar", "Pre-infusion pressure", "number", "bar"],
+    ["peak_bar", "Peak pressure", "number", "bar"],
+    ["tamp", "Tamp", "select", "", "Manual|Levelling|Calibrated"],
+    ["puck_screen", "Puck screen", "bool"],
+    ["wdt", "WDT", "bool"],
   ]),
   ...mf("coldbrew", [
     ["cb_method", "Method", "select", "", "Immersion|Slow drip"],
@@ -298,8 +305,24 @@ export interface Recipe { name: string; method: string; f: Rec; pours: Phase[]; 
 /** Sections that can be switched off for every method (the rest are the core of a brew). */
 export const OPTIONAL_SECTIONS: [string, string][] = [
   ["grind", "Grind"], ["total_s", "Brew time"], ["water_type", "Water used"], ["milk", "Black or milk"], ["dripper", "Dripper and paper"],
-  ["pours", "Pour phases"], ["presses", "Press phases"], ["chill", "Chilling (iced drinks)"], ["taste", "Tasting notes"], ["rating", "Rating and what changed"],
+  ["pours", "Pour phases"], ["pour_time", "Pour durations"], ["presses", "Press phases"], ["chill", "Chilling (iced drinks)"],
+  ["extraction", "TDS and extraction yield"], ["rdt", "RDT and grinder RPM"], ["taste", "Tasting notes"], ["rating", "Rating and what changed"],
+  ["astringency", "Astringency"],
 ];
+
+/** Whether an optional variable shows: never for normal humans, always when pretentious, as ticked for snobs. */
+export const shows = (s: Settings, key: string) =>
+  s.brew_mode === "pretentious" || (s.brew_mode === "advanced" && !s.hidden.includes(key));
+
+/** Starting numbers, shown as placeholders on a first brew. */
+export const STARTS: Record<string, { dose?: number; liquid?: number; ratio?: number; temp?: number }> = {
+  espresso: { dose: 18, liquid: 36, ratio: 2, temp: 93 },
+  filter: { dose: 15, ratio: 16, temp: 93 },
+  ice: { dose: 20, ratio: 16, temp: 93 },
+  aeropress: { dose: 15, liquid: 225, ratio: 15, temp: 90 },
+  coldbrew: { dose: 50, liquid: 400, ratio: 8, temp: 20 },
+  moka: { dose: 15, temp: 70 },
+};
 
 export const AGITATIONS = ["None", "Swirl", "Stir", "Rao spin", "Tap"];
 export const AGITATION_TIMING = [

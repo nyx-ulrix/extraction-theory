@@ -61,7 +61,7 @@ export default function Beans() {
 }
 
 function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; onSaved: () => void }) {
-  const { db, update, busy, setDirty } = useApp();
+  const { db, update, busy, setDirty, go } = useApp();
   const [f, setF] = useState<Rec>(bean);
   const [flav0] = useState<Flavour>(() => parseFlavour(bean.flavour, db.settings.axes));
   const [flav, setFlav] = useState<Flavour>(flav0);
@@ -128,7 +128,7 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
       <div className="stack">
         <BagFill onFill={fill} />
         <div className="grid-2">
-          <TextField label="Bean name" value={str(f.name)} onChange={set("name")} hint="Usually the farm or producer" />
+          <TextField label="Bean name" value={str(f.name)} onChange={set("name")} hint="What's on the front of the bag, for example Colombia Huila" />
           <TextField label="Roaster's name for it" value={str(f.product)} onChange={set("product")} hint="For example Halo or Nano" />
         </div>
         <div className="grid-2">
@@ -168,7 +168,11 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
           label="Roaster tasting notes" notes={str(f.roaster_notes)} onNotes={set("roaster_notes")}
           value={flav} onChange={setFlav} template={db.settings.axes}
         />
-        <p className="meta">Brews of this bean start from its radar axes.</p>
+        {!getKey(db.settings.ai_provider) && (
+          <p className="meta">
+            Optional: add an AI key in <button type="button" className="linkish" onClick={() => go("settings", "ai")}>Settings, AI</button> to fill this form from photos of the bag.
+          </p>
+        )}
       </div>
       {err && <Msg kind="error">{err}</Msg>}
       <div className="savebar">
@@ -181,18 +185,12 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
 
 /** Up to two photos of the bag (front and back), read with the user's own AI key to fill the form. */
 function BagFill({ onFill }: { onFill: (info: BagInfo) => void }) {
-  const { db, notify, go } = useApp();
+  const { db, notify } = useApp();
   const { ai_provider: provider, ai_model: model } = db.settings;
   const [shots, setShots] = useState<(Img & { url: string })[]>([]);
   const [reading, setReading] = useState(false);
   const inputId = useId();
-  if (!getKey(provider)) {
-    return (
-      <p className="meta">
-        Add an AI key in <button type="button" className="linkish" onClick={() => go("settings", "ai")}>Settings, AI</button> to fill this form from photos of the bag.
-      </p>
-    );
-  }
+  if (!getKey(provider)) return null;
   const add = async (files: FileList | null) => {
     const room = MAX_BAG_PHOTOS - shots.length;
     const picked = [...(files ?? [])].slice(0, room); // some Android pickers give no MIME type: let decoding decide

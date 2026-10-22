@@ -56,7 +56,7 @@ function savedMode(key: string): Mode {
   try { return localStorage.getItem(`et.shelf.${key}`) === "list" ? "list" : "cards"; } catch { return "cards"; }
 }
 type Sort = "recent" | "name" | "added" | "roasted";
-const SORTS: [Sort, string][] = [["recent", "Last brewed"], ["name", "Name"], ["added", "Date added"], ["roasted", "Date roasted"]];
+const SORTS: [Sort, string][] = [["recent", "Brewed"], ["name", "Name"], ["added", "Added"], ["roasted", "Roasted"]];
 function savedSort(key: string): Sort {
   try {
     const v = localStorage.getItem(`et.shelf.${key}.sort`);
@@ -138,7 +138,7 @@ export default function Shelf({ beans, storageKey, empty }: { beans: Rec[]; stor
       )}
       {panel === "sort" && (
         <div className="shelf-filters" id={sortId}>
-          <Segmented label="Sort by" value={sort} onChange={setSort} options={SORTS} />
+          <Segmented label="Sort by" full value={sort} onChange={setSort} options={SORTS} />
         </div>
       )}
 
