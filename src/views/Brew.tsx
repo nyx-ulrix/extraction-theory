@@ -313,19 +313,24 @@ export default function Brew() {
       <style href="et-brew" precedence="default">{CSS}</style>
       <div className="brew-form">
         <div className="stack">
-          <h1>{editing ? "Edit brew" : "Brew"}</h1>
+          {/* No saved recipes yet: the bookmark sits by the title, no empty dropdown. */}
+          <div className="brew-head">
+            <h1>{editing ? "Edit brew" : "Brew"}</h1>
+            {!db.settings.recipes.length && <IconButton icon={BookmarkSimple} label="Save as recipe" onClick={() => setNaming(true)} />}
+          </div>
           <div className="brew-methods">
             <Segmented label="Method" value={m.id} onChange={pickMethod}
               options={methods.map((x): [string, string, Icon] => [x.id, x.label, ICONS[x.id] ?? Flask])} />
           </div>
           {/* Saved recipes: load one into the form, or save this one under a name. */}
-          {/* No saved recipes yet: just the bookmark, no empty dropdown. */}
-          <div className={db.settings.recipes.length ? "brew-recipes" : "brew-recipes solo"}>
-            {db.settings.recipes.length > 0 && <SelectField label="Saved recipe" value="" placeholder="Load a saved recipe"
-              options={db.settings.recipes.map((r, i): [string, string] => [String(i), `${r.name} (${methods.find((x) => x.id === r.method)?.label ?? r.method})`])}
-              onChange={(v) => { const r = db.settings.recipes[Number(v)]; if (r) { setD((o) => applyRecipe(o, r)); notify(`Loaded ${r.name}`, "success"); } }} />}
-            <IconButton icon={BookmarkSimple} label="Save as recipe" onClick={() => setNaming(true)} />
-          </div>
+          {db.settings.recipes.length > 0 && (
+            <div className="brew-recipes">
+              <SelectField label="Saved recipe" value="" placeholder="Load a saved recipe"
+                options={db.settings.recipes.map((r, i): [string, string] => [String(i), `${r.name} (${methods.find((x) => x.id === r.method)?.label ?? r.method})`])}
+                onChange={(v) => { const r = db.settings.recipes[Number(v)]; if (r) { setD((o) => applyRecipe(o, r)); notify(`Loaded ${r.name}`, "success"); } }} />
+              <IconButton icon={BookmarkSimple} label="Save as recipe" onClick={() => setNaming(true)} />
+            </div>
+          )}
           <Dialog open={naming} onClose={() => setNaming(false)} title="Save as recipe">
             <div className="stack">
               <TextField label="Recipe name" value={recipeName} maxLength={40} placeholder="For example 4:6 V60, 92 °C" onChange={setRecipeName} />
@@ -411,7 +416,7 @@ const CSS = `
 .brew-form { display: grid; gap: 0; min-width: 0; }
 .brew-form > .stack:first-child { margin-bottom: 24px; }
 .brew-recipes { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
-.brew-recipes.solo { grid-template-columns: auto; justify-content: end; }
+.brew-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .brew-form > .section:not(.fold-section) { margin-bottom: 32px; }
 .brew-err { margin: 0; font-size: 12px; color: var(--error); }
 .readout { min-height: 44px; display: flex; align-items: center; }
