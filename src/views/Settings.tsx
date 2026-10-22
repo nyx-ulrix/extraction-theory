@@ -15,7 +15,7 @@ import {
 } from "../schema.ts";
 import { sheetUrl } from "../sheets.ts";
 import { fillGrinder, importData, saveGear, saveSettings } from "../store.ts";
-import { Button, Field, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../ui.tsx";
+import { Button, Dialog, Field, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../ui.tsx";
 import AxesEditor from "../components/AxesEditor.tsx";
 import importGuide from "../import-guide.md?raw";
 import { PAPERS } from "../papers.ts";
@@ -238,25 +238,39 @@ function Check({ label, on, onChange }: { label: string; on: boolean; onChange: 
 }
 
 /** On/off for every optional section and method extra, across all methods. Off = not shown in the brew form. */
+type Demotion = { hidden: string[]; layoutFix: (id: string, keys: string[]) => string[] };
+
 /**
- * Pretentious mode logs everything. Switching one variable off means you are merely a snob:
- * every method keeps its full layout and only that variable goes.
+ * Pretentious mode logs everything. Switching one variable off asks which lesser mode you are:
+ * Normal human, or I'm a snob with every method's full layout and only that variable gone.
  */
-function useToSnob(s: S, patch: Patch) {
-  const { db, notify } = useApp();
-  return (hidden: string[], layoutFix: (id: string, keys: string[]) => string[] = (_, k) => k) => {
-    patch({
-      brew_mode: "advanced",
-      hidden,
-      layout: Object.fromEntries(methodDefs(db.fields).map((m) => [m.id, layoutFix(m.id, layoutFor(m, db.fields, s))])),
-    });
-    notify("Pretentious means everything. You're now I'm a snob.", "info");
-  };
+function useToSnob(s: S, patch: Patch): [(hidden: string[], layoutFix?: Demotion["layoutFix"]) => void, ReactNode] {
+  const { db } = useApp();
+  const [pending, setPending] = useState<Demotion | null>(null);
+  const ask = (hidden: string[], layoutFix: Demotion["layoutFix"] = (_, k) => k) => setPending({ hidden, layoutFix });
+  const snob = (p: Demotion) => patch({
+    brew_mode: "advanced",
+    hidden: p.hidden,
+    layout: Object.fromEntries(methodDefs(db.fields).map((m) => [m.id, p.layoutFix(m.id, layoutFor(m, db.fields, s))])),
+  });
+  const dialog = (
+    <Dialog open={!!pending} onClose={() => setPending(null)} title="Not pretentious enough">
+      <div className="stack">
+        <p>Pretentious logs every variable. Switch one off and you'll have to settle for something less.</p>
+        <div className="stack" style={{ gap: 8 }}>
+          <Button onClick={() => { if (pending) snob(pending); setPending(null); }}>You're just snobby (I'm a snob)</Button>
+          <Button ghost onClick={() => { patch({ brew_mode: "basic" }); setPending(null); }}>Training wheels (Normal human)</Button>
+          <Button ghost onClick={() => setPending(null)}>Stay pretentious</Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+  return [ask, dialog];
 }
 
 function Optional({ s, patch }: { s: S; patch: Patch }) {
   const { db } = useApp();
-  const toSnob = useToSnob(s, patch);
+  const [toSnob, demote] = useToSnob(s, patch);
   const strict = s.brew_mode === "pretentious";
   // Rating and what changed are one section in the form, so they switch together.
   const set = (key: string, on: boolean) => {
@@ -270,8 +284,9 @@ function Optional({ s, patch }: { s: S; patch: Patch }) {
     .filter(([, fs]) => fs.length);
   return (
     <Section title="Variables to log">
+      {demote}
       <p className="meta">{strict
-        ? "Pretentious logs all of it. Untick anything and you drop to I'm a snob."
+        ? "Pretentious logs all of it. Untick anything and you'll be asked to step down."
         : "Tick what you want in the brew form. Bean, dose and the ice brew's chilling always show. Saved values are kept either way."}</p>
       <div className="checks">
         {OPTIONAL_SECTIONS.map(([k, label]) => <Check key={k} label={label} on={isOn(k)} onChange={(on) => set(k, on)} />)}
@@ -318,7 +333,7 @@ function Layout({ s, patch }: { s: S; patch: Patch }) {
     [k[i], k[i + d]] = [k[i + d], k[i]];
     apply(k, (x) => visible.includes(x));
   };
-  const toSnob = useToSnob(s, patch);
+  const [toSnob, demote] = useToSnob(s, patch);
   const show = (key: string, on: boolean) => {
     if (s.brew_mode === "pretentious") {
       if (!on) toSnob([], (id, keys) => (id === m.id ? order.filter((k) => k !== key) : keys));
@@ -331,6 +346,7 @@ function Layout({ s, patch }: { s: S; patch: Patch }) {
     <Section title="Brew form layout" actions={
       <IconButton icon={ArrowCounterClockwise} label="Reset layout" disabled={!s.layout[m.id]} onClick={reset} />
     }>
+      {demote}
       <SelectField label="Method" value={m.id} options={defs.map((x): [string, string] => [x.id, x.label])} onChange={(v) => v && setMid(v)} />
       <div className="list">
         {order.map((k, i) => {
