@@ -3,7 +3,7 @@ import { PAPER_NAMES } from "../../papers.ts";
 import { FloppyDisk } from "@phosphor-icons/react";
 import { num } from "../../calc.ts";
 import { useApp } from "../../ctx.ts";
-import { str, withF, type Draft, type Up } from "../../brew.ts";
+import { pastValues, str, withF, type Draft, type Up } from "../../brew.ts";
 import type { DripperStyle, Gear } from "../../schema.ts";
 import { newId, saveGear, type Db } from "../../store.ts";
 import { Dialog, IconButton, Section, SelectField, TextField, TimeField } from "../../ui.tsx";
@@ -40,7 +40,7 @@ export default function Dripper({ d, up }: { d: Draft; up: Up }) {
 
 /** Papers you've used (newest first, so a new one rises to the top), then your papers, then everything else. */
 function papers(db: Db): string[] {
-  const used = [...db.brews].sort((a, b) => (Number(b.brew_date) || 0) - (Number(a.brew_date) || 0)).map((b) => str(b.paper).trim()).filter(Boolean);
+  const used = pastValues(db, "paper");
   const saved = db.gear.filter((g) => g.type === "paper").map((g) => g.name);
   const seen = new Set<string>();
   return [...used, ...db.settings.my_papers, ...PAPER_NAMES, ...saved].filter((n) => !seen.has(n.toLowerCase()) && !!seen.add(n.toLowerCase()));

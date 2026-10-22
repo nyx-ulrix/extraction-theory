@@ -4,6 +4,7 @@ import {
   type Gear, type MethodField, type Phase, type Rec, type Settings,
 } from "./schema.ts";
 import * as sh from "./sheets.ts";
+import { defaultGrinder } from "./brew.ts";
 
 export interface Db {
   id: string;
@@ -118,9 +119,10 @@ export async function loadDb(): Promise<Db> {
     const order = esp.find((f) => f.key === "preinfusion_s")?.order ?? 0;
     const added = DEFAULT_FIELDS.filter((f) => f.method === "espresso" && (f.key === "presoak_s" || f.key === "hold_s"))
       .map((f, i) => ({ ...f, order: order + i * 0.5 }));
-    await sh.deleteRows(id, headers, "Methods", "key", ["preinfusion_s"]);
+    // Add first: if the delete then fails, the next load sees pre-soak and leaves both, never neither.
     await sh.append(id, headers, "Methods", added as unknown as Rec[]);
-    fields = [...fields.filter((f) => f.key !== "preinfusion_s"), ...added];
+    await sh.deleteWhere(id, "Methods", { method: "espresso", key: "preinfusion_s" });
+    fields = [...fields.filter((f) => !(f.method === "espresso" && f.key === "preinfusion_s")), ...added];
   }
   return {
     id,
@@ -202,6 +204,9 @@ function cells(o: Record<string, unknown>, skip: string[]): Rec {
 }
 const serial = (v: unknown, fallback: number) => {
   if (typeof v === "number" && Number.isFinite(v)) return v;
+  // A bare YYYY-MM-DD is a local date (new Date() would read it as UTC midnight, the day before west of UTC).
+  const ymd = typeof v === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim()) : null;
+  if (ymd) return toSerial(new Date(+ymd[1], +ymd[2] - 1, +ymd[3]));
   const d = typeof v === "string" ? new Date(v) : null;
   return d && !Number.isNaN(d.getTime()) ? toSerial(d) : fallback;
 };
@@ -222,6 +227,9 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
   const { beans = [], brews = [] } = raw as { beans?: unknown[]; brews?: unknown[] };
   if (!Array.isArray(beans) || !Array.isArray(brews)) throw new Error("beans and brews must be lists.");
   if (beans.length > 500 || brews.length > 2000) throw new Error("Import is too large.");
+  // Checked before anything is written: without a key a brew would be added again on every re-import.
+  const keyless = (brews as Record<string, unknown>[]).findIndex((b) => !b || typeof b !== "object" || !str(b.import_key));
+  if (keyless >= 0) throw new Error(`Brew ${keyless + 1} has no import_key. Every brew needs one.`);
   const now = toSerial(new Date());
 
   const refs = new Map<string, string>();
@@ -236,8 +244,9 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
     if (b.ref != null) refs.set(str(b.ref), id);
     if (found && b.match) {
       const patch: Rec = {
-        ...cells(b, ["ref", "id", "created", "roast_date", "flavour", "match"]), id,
+        ...cells(b, ["ref", "id", "created", "roast_date", "frozen_date", "flavour", "match"]), id,
         ...(b.roast_date ? { roast_date: serial(b.roast_date, now) } : {}),
+        ...(b.frozen_date ? { frozen_date: serial(b.frozen_date, now) } : {}),
         ...flavourCells(b.flavour, db.settings.axes),
       };
       await sh.upsert(db.id, db.headers, "Beans", patch);
@@ -246,9 +255,10 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
     }
     if (found) continue;
     newBeans.push({
-      ...cells(b, ["ref", "id", "created", "roast_date", "flavour"]),
+      ...cells(b, ["ref", "id", "created", "roast_date", "frozen_date", "flavour"]),
       id, created: now,
       ...(b.roast_date ? { roast_date: serial(b.roast_date, now) } : {}),
+        ...(b.frozen_date ? { frozen_date: serial(b.frozen_date, now) } : {}),
       ...flavourCells(b.flavour, db.settings.axes),
     });
   }
@@ -275,7 +285,8 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
       if (cur) {
         const beanId = b.bean_ref != null ? refs.get(str(b.bean_ref)) : undefined;
         const patch: Rec = {
-          ...cells(b, ["id", "created", "bean_ref", "bean_id", "phases", "flavour", "update", "import_key"]), id: cur.id,
+          ...cells(b, ["id", "created", "brew_date", "bean_ref", "bean_id", "phases", "flavour", "update", "import_key"]), id: cur.id,
+          ...(b.brew_date ? { brew_date: serial(b.brew_date, now) } : {}),
           ...(beanId ? { bean_id: beanId } : {}), ...flavourCells(b.flavour, db.settings.axes),
         };
         await sh.upsert(db.id, db.headers, "Brews", patch);
@@ -290,6 +301,7 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
     newBrews.push({
       ...cells(b, ["id", "created", "brew_date", "bean_ref", "bean_id", "phases", "flavour", "update", "delete"]),
       id, created: now, brew_date: serial(b.brew_date, now), bean_id: beanId ?? null,
+      grinder_id: str(b.grinder_id) || defaultGrinder({ ...db, brews: [...db.brews, ...newBrews] }, beanId) || null,
       ...flavourCells(b.flavour, db.settings.axes),
     });
     const ph = Array.isArray(b.phases) ? (b.phases as Record<string, unknown>[]) : [];

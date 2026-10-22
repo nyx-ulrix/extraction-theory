@@ -129,7 +129,7 @@ Use this to add coffees and brews to Extraction Theory in one go. You can fill t
 | `bean_ref` | The `ref` of a bean in this same import. |
 | `brew_date` | `YYYY-MM-DDTHH:MM` local time. Left out = now. |
 | `method` | One of `espresso`, `filter`, `ice` (ice brew), `coldbrew`, `moka`, `aeropress`. |
-| `grinder_id` | Leave out to use the coffee's usual grinder. |
+| `grinder_id` | Leave out: the brew gets the grinder of that coffee's last brew, or your default grinder. |
 | `grind_setting` | As text, the way your grinder shows it: `"25"`, or `"2.4.1"` for rotation dials. |
 | `grind_um` | Grind size in microns, only if you measured it. |
 | `dose_g` | Coffee in, grams. |

@@ -28,7 +28,8 @@ type Patch = (p: Partial<S>) => void;
 export default function Settings() {
   const { db, update, busy, setDirty, arg, go, back } = useApp();
   const [s, setS] = useState<S>(db.settings);
-  const patch: Patch = (p) => setS((x) => ({ ...x, ...p }));
+  const edited = useRef(new Set<string>());
+  const patch: Patch = (p) => { Object.keys(p).forEach((k) => edited.current.add(k)); setS((x) => ({ ...x, ...p })); };
   // Settings reloaded from the sheet (the app opens on its saved copy first): follow them unless edited here.
   const base = useRef(db.settings);
   useEffect(() => {
@@ -44,8 +45,13 @@ export default function Settings() {
     ? "Each preset needs a name and a pattern like 1:2:3."
     : s.axes.some((a) => !a.label.trim()) ? "Each radar axis needs a label." : "";
   const save = async () => {
-    const next = { ...s, axes: cleanAxes(s.axes) };
-    if (await update((d) => saveSettings(d, next), "Settings saved")) setS(next);
+    // Only the keys changed on this page: anything updated elsewhere since it opened stays as it is.
+    const mine = Object.fromEntries([...edited.current].map((k) => [k, s[k as keyof S]]));
+    let next: S = s;
+    if (await update((d) => {
+      next = { ...d.settings, ...mine, axes: cleanAxes(edited.current.has("axes") ? s.axes : d.settings.axes) };
+      return saveSettings(d, next);
+    }, "Settings saved")) { edited.current.clear(); setS(next); }
   };
 
   // Layered: a short list of categories; each opens its own page (arg), and back returns to the list.

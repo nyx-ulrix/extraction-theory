@@ -95,7 +95,7 @@ function build({ label, brew, phases }: TimelineItem): Model {
   }
 
   const ev: [string, number | null][] = [
-    ["Pre-soak", soak], ["Hold", soak != null && n("hold_s") != null ? pre : null], ["Preinfusion", soak == null && n("hold_s") == null ? pre : null],
+    ["Pre-soak", soak], ["Hold", n("hold_s") != null ? pre : null], ["Preinfusion", soak == null && n("hold_s") == null ? pre : null],
     ["First flow", n("first_flow_s")], ["Drain", n("drain_at_s")], ["End", total],
   ];
   m.events = ev.filter(([, t]) => isNum(t)).map(([text, t]) => ({ t: t!, text }));

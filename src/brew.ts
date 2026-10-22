@@ -110,6 +110,12 @@ export function loadFrom(db: Db, b: Rec, d: Draft): Draft {
 
 const latest = (rows: Rec[]) => rows.sort((a, b) => (num(b.brew_date) ?? 0) - (num(a.brew_date) ?? 0))[0];
 
+/** Distinct values typed into `key` across brews, most recent brew first. */
+export function pastValues(db: Db, key: string): string[] {
+  const rows = [...db.brews].sort((a, b) => (num(b.brew_date) ?? 0) - (num(a.brew_date) ?? 0));
+  return [...new Set(rows.map((b) => str(b[key]).trim()).filter(Boolean))];
+}
+
 /** This coffee's grinder: the one its last brew used, else the first of the user's grinders. */
 export function defaultGrinder(db: Db, beanId: unknown): string | null {
   const used = latest(db.brews.filter((b) => b.bean_id === beanId && b.grinder_id));

@@ -62,6 +62,7 @@ export function TimeField({ label, value, onChange, hint }: { label: string; val
       <input
         id={id} className="input num" inputMode="numeric" placeholder="0:00" value={text} aria-invalid={bad}
         onChange={(e) => type(e.target.value)}
+        onBlur={() => { const s = parseTime(text); if (s != null) setText(fmtTime(s)); }}
       />
     </Field>
   );
@@ -100,7 +101,7 @@ export function SelectField({ label, value, options, onChange, placeholder = "Ch
   const known = v === "" || pairs.some(([p]) => p === v);
   // Derived each render so a custom value arriving later (prefill) still shows as typed text.
   const [typingState, setTyping] = useState(false);
-  const typing = !!other && (typingState || !known);
+  const typing = !!other && ((typingState && !(v && known)) || !known);
   return (
     <Field label={label} hint={hint} id={id}>
       <select

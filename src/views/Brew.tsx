@@ -7,7 +7,7 @@ import { DateField } from "../components/DateField.tsx";
 import { useApp } from "../ctx.ts";
 import { isFinished } from "../group.ts";
 import {
-  beanRecipe, buildRecord, DRAFT_KEY, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
+  beanRecipe, buildRecord, DRAFT_KEY, pastValues, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
 import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, frozenOn, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
 import { addBrew, newId, saveBean, type Db } from "../store.ts";
@@ -33,6 +33,9 @@ const ymd = (serial: unknown) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+/** What would replace an unlogged draft: an earlier brew (Brew again) or a coffee's last recipe. */
+type Pending = { brew?: Rec; beanId?: string };
+
 /** Brew again: the earlier brew's recipe, remembering its date for the notice. */
 const again = (db: Db, b: Rec, fallback: string): Draft => ({ ...loadFrom(db, b, emptyDraft(str(b.method) || fallback)), from: ymd(b.brew_date) });
 
@@ -45,11 +48,10 @@ export default function Brew() {
     const b = arg && !beanArg ? db.brews.find((x) => x.id === arg) : undefined;
     const saved = restoreDraft();
     // A touched draft is not replaced without asking.
-    if (b && saved?.touched) return { d: saved, pending: b };
+    if (b && saved?.touched) return { d: saved, pending: { brew: b } as Pending };
     if (beanArg) {
-      const last = db.brews.filter((x) => x.bean_id === beanArg).sort((x, y) => (num(y.brew_date) ?? 0) - (num(x.brew_date) ?? 0))[0];
-      if (saved?.touched && last) return { d: saved, pending: last };
-      return { d: beanRecipe(db, saved?.touched ? saved : emptyDraft(methods[0].id), beanArg), pending: undefined };
+      if (saved?.touched) return { d: saved, pending: { beanId: beanArg } as Pending };
+      return { d: beanRecipe(db, emptyDraft(methods[0].id), beanArg), pending: undefined };
     }
     let d = b ? again(db, b, methods[0].id) : saved ?? emptyDraft(methods[0].id);
     const open = db.beans.filter((x) => !isFinished(x.finished));
@@ -57,10 +59,10 @@ export default function Brew() {
       const newest = open.reduce((a, x) => ((num(x.created) ?? 0) > (num(a.created) ?? 0) ? x : a));
       d = beanRecipe(db, d, str(newest.id));
     }
-    return { d, pending: undefined };
+    return { d, pending: undefined as Pending | undefined };
   });
   const [d, setD] = useState<Draft>(init.d);
-  const [pending, setPending] = useState<Rec | undefined>(init.pending);
+  const [pending, setPending] = useState<Pending | undefined>(init.pending);
   const [hideNote, setHideNote] = useState(false);
   const [tried, setTried] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,7 +99,13 @@ export default function Brew() {
 
   // Bean and method changes do not count as edits, so an untouched form keeps prefilling.
   const pickMethod = (id: string) => { setHideNote(false); setD((o) => prefill(db, { ...o, method: id })); };
-  const pickBean = (id: string) => { setHideNote(false); setD((o) => (id ? beanRecipe(db, o, id) : withF({ bean_id: null })(o))); };
+  // Another coffee loads its last recipe; over unlogged edits, ask first.
+  const pickBean = (id: string) => {
+    setHideNote(false);
+    if (!id) return setD(withF({ bean_id: null }));
+    if (d.touched) return setPending({ beanId: id });
+    setD((o) => beanRecipe(db, o, id));
+  };
   // The roast date lives on the coffee, so setting it here sets it everywhere.
   const setRoast = (v: number | null) => { if (bean) update((x) => saveBean(x, { id: bean.id, roast_date: v }), "Roast date saved"); };
   const clearLoaded = () => setD((o) => ({ ...emptyDraft(o.method), date: o.date, f: { bean_id: o.f.bean_id }, touched: true }));
@@ -159,7 +167,7 @@ export default function Brew() {
               onChange={(e) => setD((o) => ({ ...o, date: e.target.value || emptyDraft(o.method).date, dateSet: !!e.target.value }))} />
           </div>
           <div className="grid-2">
-            <DateField label="Roast date" value={num(bean?.roast_date)} onChange={setRoast} disabled={!bean || busy} />
+            <DateField label="Roast date" value={num(bean?.roast_date)} onChange={setRoast} disabled={!bean} commitOnBlur />
             <Readout label={frozenOn(bean) != null
               ? <span className="frozen-label">Days off roast<Snowflake size={14} weight="bold" aria-label="to the day it was frozen" /></span>
               : "Days off roast"}>{num(rec.days_off_roast) ?? "-"}</Readout>
@@ -172,7 +180,7 @@ export default function Brew() {
         <Section key={b} title="Water used">
           {/* Waters you've used before, newest first; "Other" adds a new one, which then joins the list. */}
           <SelectField label="Water used" value={str(d.f.water_type)} other placeholder="None" onChange={(v) => up(withF({ water_type: v }))}
-            options={[...new Set([...db.brews].reverse().map((x) => str(x.water_type).trim()).filter(Boolean))]} />
+            options={pastValues(db, "water_type")} />
         </Section>
       );
       case "milk": {
@@ -281,11 +289,21 @@ export default function Brew() {
         </div>
       </aside>
       <Dialog open={!!pending} onClose={() => setPending(undefined)} title="Replace your unsaved draft?">
-        <p>Brew again loads the brew from {ymd(pending?.brew_date)} over the edits you have not logged.</p>
+        <p>
+          {pending?.brew
+            ? `Brew again loads the brew from ${ymd(pending.brew.brew_date)} over the edits you have not logged.`
+            : `Switching to ${str(db.beans.find((x) => x.id === pending?.beanId)?.name) || "this coffee"} loads its last recipe over the edits you have not logged.`}
+        </p>
         <div className="row">
           <span className="spacer" />
-          <Button ghost onClick={() => setPending(undefined)}>Keep draft</Button>
-          <Button onClick={() => { if (pending) setD(again(db, pending, methods[0].id)); setPending(undefined); }}>Replace</Button>
+          {pending?.beanId
+            ? <Button ghost onClick={() => { setD(withF({ bean_id: pending.beanId })); setPending(undefined); }}>Keep my edits</Button>
+            : <Button ghost onClick={() => setPending(undefined)}>Keep draft</Button>}
+          <Button onClick={() => {
+            if (pending?.brew) setD(again(db, pending.brew, methods[0].id));
+            else if (pending?.beanId) setD((o) => beanRecipe(db, o, pending.beanId!));
+            setPending(undefined);
+          }}>Load recipe</Button>
         </div>
       </Dialog>
     </div>

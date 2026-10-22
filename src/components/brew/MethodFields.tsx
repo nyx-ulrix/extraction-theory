@@ -1,6 +1,6 @@
 import { num } from "../../calc.ts";
 import { useApp } from "../../ctx.ts";
-import { fieldShown, str, withF, type Draft, type Up } from "../../brew.ts";
+import { fieldShown, pastValues, str, withF, type Draft, type Up } from "../../brew.ts";
 import type { MethodField } from "../../schema.ts";
 import { NumField, Section, SelectField, TextField, TimeField, Toggle } from "../../ui.tsx";
 
@@ -9,7 +9,7 @@ export default function MethodFields({ title, fields, d, up }: { title: string; 
   const { db } = useApp();
   const set = (key: string) => (v: string | number | boolean | null) => up(withF({ [key]: v }));
   // Text fields (puck prep, basket, pressure...) offer what you have entered before, newest first.
-  const used = (key: string) => [...new Set([...db.brews].reverse().map((b) => str(b[key]).trim()).filter(Boolean))];
+  const used = (key: string) => pastValues(db, key);
   return (
     <Section title={title}>
       <div className="grid-2">

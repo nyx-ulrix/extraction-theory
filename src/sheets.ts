@@ -192,4 +192,21 @@ export async function deleteRows(id: string, _headers: Headers, tab: Tab, idKey:
   await api(`${SHEETS}/${id}:batchUpdate`, { method: "POST", body: JSON.stringify({ requests }) });
 }
 
+/** Delete rows whose cells equal every value in `match` (for tabs keyed by more than one column). */
+export async function deleteWhere(id: string, tab: Tab, match: Record<string, string>) {
+  const all = await api<{ values?: Cell[][] }>(`${SHEETS}/${id}/values/${range(tab, "A:ZZ")}?valueRenderOption=UNFORMATTED_VALUE`);
+  const [head = [], ...rest] = all.values ?? [];
+  const cols = Object.entries(match).map(([k, v]) => [head.map(String).indexOf(k), v] as const);
+  if (cols.some(([c]) => c < 0)) return;
+  const rows = rest.map((r, i) => (cols.every(([c, v]) => String(r[c] ?? "") === v) ? i + 1 : -1)).filter((i) => i > 0);
+  if (!rows.length) return;
+  const meta = await api<{ sheets: { properties: { sheetId: number; title: string } }[] }>(`${SHEETS}/${id}?fields=sheets.properties(sheetId,title)`);
+  const sheetId = meta.sheets.find((s) => s.properties.title === tab)?.properties.sheetId;
+  if (sheetId == null) return;
+  const requests = rows.sort((a, b) => b - a).map((i) => ({
+    deleteDimension: { range: { sheetId, dimension: "ROWS", startIndex: i, endIndex: i + 1 } },
+  }));
+  await api(`${SHEETS}/${id}:batchUpdate`, { method: "POST", body: JSON.stringify({ requests }) });
+}
+
 export const sheetUrl =(id: string) => `https://docs.google.com/spreadsheets/d/${id}/edit`;
