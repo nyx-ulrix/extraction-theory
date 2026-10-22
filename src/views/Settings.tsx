@@ -94,10 +94,10 @@ export default function Settings() {
       {arg === "brewing" && <Brewing s={s} patch={patch} />}
       {arg === "form" && (<>
         <Section title="Brew form">
-          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "Basic"], ["advanced", "Advanced"]]} onChange={(brew_mode) => patch({ brew_mode })} />
+          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "Normal human"], ["advanced", "I'm a snob"]]} onChange={(brew_mode) => patch({ brew_mode })} />
           <p className="meta">{s.brew_mode === "basic"
-            ? "Basic shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Switch to Advanced to choose every variable yourself."
-            : "Advanced shows what you tick below, in the order you set."}</p>
+            ? "Normal human shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Pick I'm a snob to choose every variable yourself."
+            : "I'm a snob shows what you tick below, in the order you set."}</p>
         </Section>
         {s.brew_mode === "advanced" && <><Optional s={s} patch={patch} /><Layout s={s} patch={patch} /></>}
       </>)}
