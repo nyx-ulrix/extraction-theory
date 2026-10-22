@@ -11,7 +11,8 @@ const g = (v: Num) => (v == null ? null : `${v} g`);
 export default function Recipe({ d, up, m, err }: { d: Draft; up: Up; m: MethodDef; err?: string }) {
   const { db } = useApp();
   // Basic mode leaves brew time out (Aeropress works it out from the presses either way).
-  const showTime = db.settings.brew_mode === "advanced" && !db.settings.hidden.includes("total_s");
+  const mode = db.settings.brew_mode;
+  const showTime = mode === "pretentious" || (mode === "advanced" && !db.settings.hidden.includes("total_s"));
   const f = d.f;
   const dose = num(f.dose_g);
   const temp = <NumField label={m.tempLabel} unit="°C" value={num(f.temp_c)} onChange={(v) => up(withF({ temp_c: v }))} />;

@@ -38,7 +38,11 @@ export default function Grind({ d, up }: { d: Draft; up: Up }) {
         options={grinders.map((x) => [x.id, [x.brand, x.name].filter(Boolean).join(" ")])}
         onChange={(v) => up(withF({ grinder_id: v || null }))}
       />
-      <div className="grid-2">{db.settings.grind_first === "microns" ? [umField, settingField] : [settingField, umField]}</div>
+      {/* Pretentious mode: the burr gap in microns, nothing else. */}
+      {db.settings.brew_mode === "pretentious"
+        ? <NumField label="Grind size" unit="µm" min={0} value={num(d.f.grind_um)} placeholder={est != null ? String(est) : undefined}
+            hint="Microns only. Clicks are for normal humans." onChange={(v) => up(withF({ grind_um: v }))} />
+        : <div className="grid-2">{db.settings.grind_first === "microns" ? [umField, settingField] : [settingField, umField]}</div>}
       <GrinderDialog open={adding} onClose={() => setAdding(false)} onSaved={(g) => up(withF({ grinder_id: g.id }))} />
     </Section>
   );

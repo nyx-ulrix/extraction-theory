@@ -19,7 +19,7 @@ export const TABS = {
   Methods: ["method", "key", "label", "type", "unit", "options", "show_if", "order"],
   Brews: [
     "id", "created", "brew_date", "method", "bean_id", "grinder_id", "grind_setting", "grind_clicks", "grind_um",
-    "dose_g", "water_g", "yield_g", "ratio", "temp_c", "total_s", "water_type", "days_off_roast",
+    "dose_g", "water_g", "yield_g", "ratio", "temp_c", "total_s", "water_type", "water_gh_ppm", "water_kh_ppm", "water_tds_ppm", "days_off_roast",
     "dripper_id", "paper", "drain_at_s",
     "iced", "chill_method", "ice_g", "ice_max", "chill_start", "chill_stop", "final_ratio", "serve", "serve_iced", "serve_water_g", "milk_drink", "milk_g",
     "tasting_notes", ...F_COLS, "taste_balance", "taste_strength", "rating", "changed", "notes", "dialed_in",
@@ -196,7 +196,7 @@ export interface Settings {
   /** Optional sections and method fields switched off everywhere (Settings, Brew form). Required ones always show. */
   hidden: string[];
   /** Basic shows the essentials for each method; advanced shows what is ticked in Settings, Brew form. */
-  brew_mode: "basic" | "advanced";
+  brew_mode: "basic" | "advanced" | "pretentious";
   /** Saved recipes: a method and its recipe (no coffee, date or verdict), loaded into the brew form by name. */
   recipes: Recipe[];
   /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
@@ -283,7 +283,9 @@ export function layoutFor(m: MethodDef, fields: MethodField[], s: Settings): str
   // Preinfusion became pre-soak and hold: a saved layout keeps its place for them.
   const saved = s.layout[m.id]?.flatMap((k) => (k === "preinfusion_s" ? ["presoak_s", "hold_s"] : [k])).filter((k) => avail.includes(k));
   const required = ["bean", "recipe", ...(m.chill === "required" ? ["chill"] : [])];
-  if (s.brew_mode !== "advanced") return (BASIC[m.id] ?? BASIC_OTHER).filter((k) => avail.includes(k));
+  if (s.brew_mode === "basic") return (BASIC[m.id] ?? BASIC_OTHER).filter((k) => avail.includes(k));
+  // Pretentious: everything, in the saved order, whatever was switched off.
+  if (s.brew_mode === "pretentious") return [...(saved?.length ? saved : []), ...avail.filter((k) => !saved?.includes(k))];
   const keys = (saved?.length ? saved : avail).filter((k) => required.includes(k) || !s.hidden.includes(k));
   return [...required.filter((k) => !keys.includes(k)), ...keys];
 }

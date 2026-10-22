@@ -93,10 +93,16 @@ export default function Brew() {
   const missBean = !d.f.bean_id;
   const missDose = !num(d.f.dose_g);
   const missChill = m.chill === "required" && !str(d.f.chill_method).trim();
+  // Pretentious mode will not log a brew without the grind in microns and the water's makeup.
+  const mode = db.settings.brew_mode;
+  const missMicrons = mode === "pretentious" && num(d.f.grind_um) == null;
+  const missWater = mode === "pretentious" && (!str(d.f.water_type).trim() || num(d.f.water_gh_ppm) == null || num(d.f.water_kh_ppm) == null);
   const errBean = tried && missBean ? "Pick a bean" : undefined;
   const errDose = tried && missDose ? "Enter the dose" : undefined;
   const errChill = tried && missChill ? "Choose a chill method" : undefined;
-  const errors = [errBean, errDose, errChill].filter(Boolean).join(". ");
+  const errMicrons = tried && missMicrons ? "Enter the grind in microns" : undefined;
+  const errWater = tried && missWater ? "Enter the water, its GH and its KH" : undefined;
+  const errors = [errBean, errDose, errChill, errMicrons, errWater].filter(Boolean).join(". ");
 
   if (!db.beans.length) {
     return (
@@ -123,9 +129,10 @@ export default function Brew() {
 
   async function save() {
     setTried(true);
-    const missing = [missBean && "Pick a bean", missDose && "Enter the dose", missChill && "Choose a chill method"].filter(Boolean);
+    const missing = [missBean && "Pick a bean", missDose && "Enter the dose", missChill && "Choose a chill method",
+      missMicrons && "Enter the grind in microns", missWater && "Enter the water, its GH and its KH"].filter(Boolean);
     if (missing.length) {
-      setOpened((o) => ({ ...o, ...(missBean ? { "Bean and date": true } : {}), ...(missDose ? { "Recipe": true } : {}), ...(missChill ? { Chilling: true } : {}) }));
+      setOpened((o) => ({ ...o, ...(missBean ? { "Bean and date": true } : {}), ...(missDose ? { "Recipe": true } : {}), ...(missChill ? { Chilling: true } : {}), ...(missMicrons ? { Grind: true } : {}), ...(missWater ? { "Water used": true } : {}) }));
       notify(`${missing.join(". ")}.`, "error");
       requestAnimationFrame(() => document.querySelector(".brew-form [role=alert]")?.scrollIntoView({ block: "center" }));
       return;
@@ -199,9 +206,21 @@ export default function Brew() {
       case "recipe": return <Recipe key={b} d={d} up={up} m={m} err={errDose} />;
       case "water_type": return (
         <Section key={b} title="Water used">
-          {/* Waters you've used before, newest first; "Other" adds a new one, which then joins the list. */}
-          <SelectField label="Water used" value={str(d.f.water_type)} other placeholder="None" onChange={(v) => up(withF({ water_type: v }))}
-            options={pastValues(db, "water_type")} />
+          {/* Waters you've used before, newest first; "Other" adds a new one, which then joins the list.
+              Picking a water you've logged before brings its makeup with it. */}
+          <SelectField label="Water used" value={str(d.f.water_type)} other placeholder="None" options={pastValues(db, "water_type")}
+            onChange={(v) => {
+              const last = [...db.brews].filter((x) => str(x.water_type) === v).sort((a, c) => (num(c.brew_date) ?? 0) - (num(a.brew_date) ?? 0))[0];
+              up(withF({ water_type: v, ...(last ? { water_gh_ppm: num(last.water_gh_ppm), water_kh_ppm: num(last.water_kh_ppm), water_tds_ppm: num(last.water_tds_ppm) } : {}) }));
+            }} />
+          {mode !== "basic" && (
+            <div className="grid-3">
+              <NumField label="GH" unit="ppm" min={0} value={num(d.f.water_gh_ppm)} hint="General hardness, as CaCO3" onChange={(v) => up(withF({ water_gh_ppm: v }))} />
+              <NumField label="KH" unit="ppm" min={0} value={num(d.f.water_kh_ppm)} hint="Alkalinity, as CaCO3" onChange={(v) => up(withF({ water_kh_ppm: v }))} />
+              <NumField label="TDS" unit="ppm" min={0} value={num(d.f.water_tds_ppm)} hint="Optional" onChange={(v) => up(withF({ water_tds_ppm: v }))} />
+            </div>
+          )}
+          {errWater && <p className="brew-err" role="alert">{errWater}</p>}
         </Section>
       );
       case "milk": {
@@ -264,10 +283,10 @@ export default function Brew() {
   const extrasSet = db.fields.filter((x) => x.method === m.id && str(d.f[x.key]) !== "").length;
   const summary: Record<string, string> = {
     "Bean and date": [str(bean?.name), d.date.slice(0, 10)].filter(Boolean).join(", "),
-    Grind: [str(d.f.grind_setting), grinderName].filter(Boolean).join(" on "),
+    Grind: mode === "pretentious" ? (num(d.f.grind_um) != null ? `${num(d.f.grind_um)} µm` : "") : [str(d.f.grind_setting), grinderName].filter(Boolean).join(" on "),
     "Recipe": [dose != null && liquid != null ? `${dose} to ${liquid} g` : "", ratio != null ? `1:${ratio}` : "", num(rec.temp_c) != null ? `${num(rec.temp_c)} °C` : ""].filter(Boolean).join(", "),
     [`${m.label} details`]: extrasSet ? `${extrasSet} set` : "",
-    "Water used": str(d.f.water_type),
+    "Water used": [str(d.f.water_type), num(d.f.water_gh_ppm) != null ? `GH ${num(d.f.water_gh_ppm)}` : "", num(d.f.water_kh_ppm) != null ? `KH ${num(d.f.water_kh_ppm)}` : ""].filter(Boolean).join(", "),
     Milk: [str(d.f.milk_drink), num(d.f.milk_g) != null ? `${num(d.f.milk_g)} g` : ""].filter(Boolean).join(", "),
     Black: num(d.f.serve_water_g) != null ? `${num(d.f.serve_water_g)} g water` : "Straight",
     "Dripper and paper": [str(dripper?.name), str(d.f.paper)].filter(Boolean).join(", "),

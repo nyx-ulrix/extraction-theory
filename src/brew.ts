@@ -293,6 +293,9 @@ export function buildRecord(d: Draft, db: Db, m: MethodDef, template: AxisDef[])
       ? pressTimes(presses.map((p) => ({ start: p.start_s, duration: p.duration_s }))).total
       : m.time === "none" ? null : n("total_s"),
     water_type: s("water_type"),
+    water_gh_ppm: n("water_gh_ppm"),
+    water_kh_ppm: n("water_kh_ppm"),
+    water_tds_ppm: n("water_tds_ppm"),
     iced: m.id === "coldbrew" ? null : cold,
     serve: espressoStyle(m) ? serveOf(f) : null,
     serve_iced: espressoStyle(m) ? cold : null,

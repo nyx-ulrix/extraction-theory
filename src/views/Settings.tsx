@@ -94,12 +94,13 @@ export default function Settings() {
       {arg === "brewing" && <Brewing s={s} patch={patch} />}
       {arg === "form" && (<>
         <Section title="Brew form">
-          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "Normal human"], ["advanced", "I'm a snob"]]} onChange={(brew_mode) => patch({ brew_mode })} />
+          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "Normal human"], ["advanced", "I'm a snob"], ["pretentious", "Pretentious"]]} onChange={(brew_mode) => patch({ brew_mode })} />
           <p className="meta">{s.brew_mode === "basic"
             ? "Normal human shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Pick I'm a snob to choose every variable yourself."
-            : "I'm a snob shows what you tick below, in the order you set."}</p>
+            : s.brew_mode === "advanced" ? "I'm a snob shows what you tick below, in the order you set."
+            : "Pretentious shows every variable, takes grind size in microns only, and won't log a brew without the water's GH and KH."}</p>
         </Section>
-        {s.brew_mode === "advanced" && <><Optional s={s} patch={patch} /><Layout s={s} patch={patch} /></>}
+        {s.brew_mode !== "basic" && <><Optional s={s} patch={patch} /><Layout s={s} patch={patch} /></>}
       </>)}
       {arg === "chart" && (
         <>
@@ -237,27 +238,49 @@ function Check({ label, on, onChange }: { label: string; on: boolean; onChange: 
 }
 
 /** On/off for every optional section and method extra, across all methods. Off = not shown in the brew form. */
+/**
+ * Pretentious mode logs everything. Switching one variable off means you are merely a snob:
+ * every method keeps its full layout and only that variable goes.
+ */
+function useToSnob(s: S, patch: Patch) {
+  const { db, notify } = useApp();
+  return (hidden: string[], layoutFix: (id: string, keys: string[]) => string[] = (_, k) => k) => {
+    patch({
+      brew_mode: "advanced",
+      hidden,
+      layout: Object.fromEntries(methodDefs(db.fields).map((m) => [m.id, layoutFix(m.id, layoutFor(m, db.fields, s))])),
+    });
+    notify("Pretentious means everything. You're now I'm a snob.", "info");
+  };
+}
+
 function Optional({ s, patch }: { s: S; patch: Patch }) {
   const { db } = useApp();
+  const toSnob = useToSnob(s, patch);
+  const strict = s.brew_mode === "pretentious";
   // Rating and what changed are one section in the form, so they switch together.
   const set = (key: string, on: boolean) => {
     const keys = key === "rating" ? ["rating", "notes"] : [key];
+    if (strict) { if (!on) toSnob(keys); return; }
     patch({ hidden: on ? s.hidden.filter((k) => !keys.includes(k)) : [...new Set([...s.hidden, ...keys])] });
   };
+  const isOn = (k: string) => strict || !s.hidden.includes(k);
   const byMethod = methodDefs(db.fields)
     .map((m) => [m, db.fields.filter((f) => f.method === m.id)] as const)
     .filter(([, fs]) => fs.length);
   return (
     <Section title="Variables to log">
-      <p className="meta">Tick what you want in the brew form. Bean, dose and the ice brew's chilling always show. Saved values are kept either way.</p>
+      <p className="meta">{strict
+        ? "Pretentious logs all of it. Untick anything and you drop to I'm a snob."
+        : "Tick what you want in the brew form. Bean, dose and the ice brew's chilling always show. Saved values are kept either way."}</p>
       <div className="checks">
-        {OPTIONAL_SECTIONS.map(([k, label]) => <Check key={k} label={label} on={!s.hidden.includes(k)} onChange={(on) => set(k, on)} />)}
+        {OPTIONAL_SECTIONS.map(([k, label]) => <Check key={k} label={label} on={isOn(k)} onChange={(on) => set(k, on)} />)}
       </div>
       {byMethod.map(([m, fs]) => (
         <div key={m.id} className="stack" style={{ gap: 8 }}>
           <h3 className="label">{m.label} details</h3>
           <div className="checks">
-            {fs.map((f) => <Check key={f.key} label={f.label} on={!s.hidden.includes(f.key)} onChange={(on) => set(f.key, on)} />)}
+            {fs.map((f) => <Check key={f.key} label={f.label} on={isOn(f.key)} onChange={(on) => set(f.key, on)} />)}
           </div>
         </div>
       ))}
@@ -295,7 +318,14 @@ function Layout({ s, patch }: { s: S; patch: Patch }) {
     [k[i], k[i + d]] = [k[i + d], k[i]];
     apply(k, (x) => visible.includes(x));
   };
-  const show = (key: string, on: boolean) => apply(order, (x) => (x === key ? on : visible.includes(x)));
+  const toSnob = useToSnob(s, patch);
+  const show = (key: string, on: boolean) => {
+    if (s.brew_mode === "pretentious") {
+      if (!on) toSnob([], (id, keys) => (id === m.id ? order.filter((k) => k !== key) : keys));
+      return;
+    }
+    apply(order, (x) => (x === key ? on : visible.includes(x)));
+  };
 
   return (
     <Section title="Brew form layout" actions={
