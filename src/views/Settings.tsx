@@ -97,7 +97,8 @@ export default function Settings() {
         <Section title="Brew form">
           <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "I have a life"], ["advanced", "I'm a snob"], ["pretentious", "Pretentious"]]} onChange={(brew_mode) => {
             if (brew_mode === "pretentious" && lockedHours > 0) return notify(`You stepped down. Pretentious unlocks in ${lockedHours} h.`, "info");
-            patch({ brew_mode });
+            const leaving = db.settings.brew_mode === "pretentious" && brew_mode !== "pretentious";
+            patch(leaving ? { brew_mode, pretentious_lock: Date.now() } : { brew_mode });
           }} />
           <p className="meta">{s.brew_mode === "basic"
             ? "I have a life shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Pick I'm a snob to choose which fields show."

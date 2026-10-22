@@ -78,7 +78,8 @@ export const fieldShown = (fld: MethodField, f: Rec) => {
 };
 
 // Never copied into a new brew: identity, date, derived values, tasting and verdict.
-const SKIP = new Set(["id", "created", "brew_date", "grind_clicks", "days_off_roast", "tasting_notes", "flavour", "rating", "taste_balance", "taste_strength", "changed", "notes", "dialed_in"]);
+const SKIP = new Set(["id", "created", "brew_date", "grind_clicks", "days_off_roast", "tasting_notes", "flavour", "rating", "taste_balance", "taste_strength", "changed", "notes", "dialed_in",
+  "tds_pct", "beverage_g", "ey_pct", "astringency"]);
 
 /** Draft with the recipe and phases of an earlier brew. */
 export function loadFrom(db: Db, b: Rec, d: Draft): Draft {
@@ -86,12 +87,13 @@ export function loadFrom(db: Db, b: Rec, d: Draft): Draft {
   for (const [k, v] of Object.entries(b)) if (!SKIP.has(k) && !k.startsWith("f_")) f[k] = v;
   // grind_um is only kept when the user typed it, not when it was the estimate.
   const grinder = db.gear.find((g) => g.id === b.grinder_id);
-  if (grinder) {
+  if (grinder && db.settings.brew_mode !== "pretentious") {
     const dial = toDial(grinder);
     const clicks = num(b.grind_clicks) ?? (dial.dial_type === "stepless" ? null : dialToClicks(str(b.grind_setting), dial));
     if (num(b.grind_um) === estimateMicrons(clicks, dial)) delete f.grind_um;
   }
   const ph = db.phases.filter((p) => p.brew_id === b.id).sort((a, c) => a.n - c.n).map(kp);
+  if (ph.some((p) => p.kind === "pour")) delete f.water_g;
   const presses = ph.filter((p) => p.kind === "press");
   const water = num(b.water_g), ice = num(b.ice_g);
   return {
@@ -161,7 +163,7 @@ export function applyRecipe(d: Draft, r: Recipe): Draft {
 /** A logged brew back in the form for editing: recipe, phases, date and verdict, all as saved. */
 export function editDraft(db: Db, b: Rec, fallbackMethod: string): Draft {
   const d = loadFrom(db, b, emptyDraft(str(b.method) || fallbackMethod));
-  const keep = ["tasting_notes", "rating", "taste_balance", "taste_strength", "changed", "notes", "dialed_in"];
+  const keep = ["tasting_notes", "rating", "taste_balance", "taste_strength", "changed", "notes", "dialed_in", "tds_pct", "beverage_g", "astringency"];
   const at = num(b.brew_date);
   const local = at == null ? null : fromSerial(at);
   const date = local ? new Date(local.getTime() - local.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : d.date;

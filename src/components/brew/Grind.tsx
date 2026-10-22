@@ -7,7 +7,7 @@ import { shows, type Gear } from "../../schema.ts";
 import { newId, saveGear } from "../../store.ts";
 import { Dialog, IconButton, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../../ui.tsx";
 
-export default function Grind({ d, up }: { d: Draft; up: Up }) {
+export default function Grind({ d, up, err }: { d: Draft; up: Up; err?: string }) {
   const { db } = useApp();
   const [adding, setAdding] = useState(false);
   const all = db.gear.filter((g) => g.type === "grinder");
@@ -52,6 +52,7 @@ export default function Grind({ d, up }: { d: Draft; up: Up }) {
           <NumField label="Grinder RPM" min={0} step={1} value={num(d.f.grinder_rpm)} hint="Variable-speed grinders" onChange={(v) => up(withF({ grinder_rpm: v }))} />
         </div>
       )}
+      {err && <p className="brew-err" role="alert">{err}</p>}
       <GrinderDialog open={adding} onClose={() => setAdding(false)} onSaved={(g) => up(withF({ grinder_id: g.id }))} />
     </Section>
   );

@@ -82,7 +82,13 @@ export default function Brew() {
   const up: Up = (fn) => setD((o) => ({ ...fn(o), touched: true }));
   const bean = db.beans.find((b) => b.id === d.f.bean_id);
   const template = parseFlavour(bean?.flavour, db.settings.axes).axes;
-  const { rec, phases } = buildRecord(d, db, m, template);
+  const layoutKeys = layoutFor(m, db.fields, db.settings);
+  const counted = {
+    ...d,
+    pours: layoutKeys.includes("pours") ? d.pours : [],
+    f: db.settings.brew_mode === "pretentious" ? { ...d.f, grind_setting: null } : d.f,
+  };
+  const { rec, phases } = buildRecord(counted, db, m, template);
   const dripper = db.gear.find((g) => g.id === d.f.dripper_id);
   const iced = isIced(d.f, m);
   const serve = serveOf(d.f);
@@ -96,8 +102,9 @@ export default function Brew() {
   // Pretentious mode will not log a brew without the grind in microns and the water's makeup.
   const mode = db.settings.brew_mode;
   const basic = mode === "basic";
-  const missMicrons = mode === "pretentious" && num(d.f.grind_um) == null;
-  const missWater = mode === "pretentious" && (!str(d.f.water_type).trim() || num(d.f.water_gh_ppm) == null || num(d.f.water_kh_ppm) == null);
+  const strict = mode === "pretentious" && !editing;
+  const missMicrons = strict && num(d.f.grind_um) == null;
+  const missWater = strict && (!str(d.f.water_type).trim() || num(d.f.water_gh_ppm) == null || num(d.f.water_kh_ppm) == null);
   const errBean = tried && missBean ? "Pick a bean" : undefined;
   const errDose = tried && missDose ? "Enter the dose" : undefined;
   const errChill = tried && missChill ? "Choose a chill method" : undefined;
@@ -157,7 +164,7 @@ export default function Brew() {
       ...o,
       date: emptyDraft(o.method).date,
       dateSet: false,
-      f: { ...o.f, tasting_notes: "", rating: null, taste_balance: null, taste_strength: null, changed: "", notes: "", dialed_in: false },
+      f: { ...o.f, tasting_notes: "", rating: null, taste_balance: null, taste_strength: null, changed: "", notes: "", dialed_in: false, tds_pct: null, beverage_g: null, astringency: null },
       flavour: null,
       touched: false,
       prefilled: false,
@@ -165,7 +172,6 @@ export default function Brew() {
     }));
   }
 
-  const layoutKeys = layoutFor(m, db.fields, db.settings);
   const layoutHasRating = layoutKeys.includes("rating");
   // Consecutive Methods-tab fields share one section.
   const own = db.fields.filter((f) => f.method === m.id);
@@ -203,7 +209,7 @@ export default function Brew() {
           </div>
         </Section>
       );
-      case "grind": return <Grind key={b} d={d} up={up} />;
+      case "grind": return <Grind key={b} d={d} up={up} err={errMicrons} />;
       case "recipe": return <Recipe key={b} d={d} up={up} m={m} err={errDose} />;
       case "water_type": return (
         <Section key={b} title="Water used">
@@ -212,7 +218,10 @@ export default function Brew() {
           <SelectField label="Water used" value={str(d.f.water_type)} other placeholder="None" options={pastValues(db, "water_type")}
             onChange={(v) => {
               const last = [...db.brews].filter((x) => str(x.water_type) === v).sort((a, c) => (num(c.brew_date) ?? 0) - (num(a.brew_date) ?? 0))[0];
-              up(withF({ water_type: v, ...(last ? { water_gh_ppm: num(last.water_gh_ppm), water_kh_ppm: num(last.water_kh_ppm), water_tds_ppm: num(last.water_tds_ppm) } : {}) }));
+              const known = v && last
+                ? Object.fromEntries(["water_gh_ppm", "water_kh_ppm", "water_tds_ppm"].map((k) => [k, num(last[k])]).filter(([, x]) => x != null))
+                : {};
+              up(withF({ water_type: v, ...known }));
             }} />
           {mode !== "basic" && (
             <div className="grid-3">
