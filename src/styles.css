@@ -277,11 +277,10 @@ details.fold-group > .fold-body { padding-left: 12px; border-left: 1px solid var
 .msg.info { background: var(--info-tint); border-color: var(--info); color: var(--text-strong); }
 .msg.warning { background: var(--warning-tint); border-color: var(--warning); color: var(--text-strong); }
 /* Phones: clear the tab bar plus the brew Log bar or Settings save bar. */
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 136px); z-index: 40; width: min(520px, calc(100% - 32px)); }
-@media (min-width: 768px) {
-  .toast { bottom: 24px; }
-  body:has(.savebar) .toast { bottom: 96px; }
-}
+/* Toasts: small, just under the top bar, clear of the save bar and tab bar. */
+.toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--nav-h) + env(safe-area-inset-top) + 8px); z-index: 40; width: min(400px, calc(100% - 32px)); }
+.toast .msg { padding: 4px 4px 4px 12px; font-size: 12px; gap: 6px; }
+.toast .icon-btn { width: 32px; height: 32px; min-width: 32px; }
 
 /* Sticky save bar: sits above the phone tab bar, at the bottom edge from tablet up. */
 .savebar {
