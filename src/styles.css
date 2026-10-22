@@ -361,8 +361,11 @@ input[type="date"], input[type="datetime-local"] { width: 100%; min-width: 0; }
 }
 
 /* Brew form: each section folds; under its title, the summary line shows its key values while closed. */
-.fold-section { padding: 14px 0; gap: 16px; }
+/* Block, not grid: a closed fold must not keep gaps for its hidden contents. */
+.fold-section { display: block; padding: 12px 0; }
 .fold-section[open] { padding-bottom: 24px; }
+.fold-section[open] > summary { margin-bottom: 16px; }
+.fold-section > :not(summary) + :not(summary) { margin-top: 16px; }
 .fold-section > summary {
   cursor: pointer; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "title mark" "meta mark"; align-items: center; column-gap: 12px; min-height: 44px;
