@@ -230,6 +230,7 @@ export default function Brew() {
               <NumField label="TDS" unit="ppm" min={0} value={num(d.f.water_tds_ppm)} hint="Optional" onChange={(v) => up(withF({ water_tds_ppm: v }))} />
             </div>
           )}
+          {mode === "pretentious" && <p className="hint">PPM, because I can taste whether a coffee is Kyoho grape and not normal grapes.</p>}
           {errWater && <p className="brew-err" role="alert">{errWater}</p>}
         </Section>
       );
