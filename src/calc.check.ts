@@ -54,6 +54,9 @@ assert.equal(c.finalRatio(20, 180, null, true), null);
 // Times
 assert.equal(c.parseTime("1:45"), 105);
 assert.equal(c.parseTime("45"), 45);
+assert.equal(c.parseTime("230"), 150);
+assert.equal(c.parseTime("330"), 210);
+assert.equal(c.parseTime("1230"), 750);
 assert.equal(c.parseTime("1:x"), null);
 assert.equal(c.fmtTime(105), "1:45");
 

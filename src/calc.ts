@@ -73,6 +73,8 @@ export function num(v: unknown): Num {
 export function parseTime(s: string): Num {
   const t = s.trim();
   if (!t) return null;
+  // Typed without a colon: the last two digits are seconds, so 230 is 2:30 and 45 is 0:45.
+  if (/^\d{3,}$/.test(t)) return Number(t.slice(0, -2)) * 60 + Number(t.slice(-2));
   const parts = t.split(":");
   if (parts.length > 3) return null;
   let total = 0;

@@ -49,11 +49,19 @@ export function TimeField({ label, value, onChange, hint }: { label: string; val
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   const bad = text.trim() !== "" && parseTime(text) == null;
+  // Just type the digits: 230 shows as 2:30, 45 stays 0:45 seconds.
+  const type = (raw: string) => {
+    const digits = /^[\d:]*$/.test(raw) ? raw.replace(/:/g, "") : null;
+    const shown = digits != null && digits.length >= 3 ? `${Number(digits.slice(0, -2))}:${digits.slice(-2)}` : raw;
+    setText(shown);
+    const s = parseTime(shown);
+    if (s != null || !shown.trim()) onChange(s);
+  };
   return (
-    <Field label={label} hint={hint ?? "m:ss"} error={bad ? "Use m:ss, for example 2:45" : undefined} id={id}>
+    <Field label={label} hint={hint ?? "Type the digits: 230 is 2:30, 45 is 0:45"} error={bad ? "Type the time as digits, for example 245 for 2:45" : undefined} id={id}>
       <input
         id={id} className="input num" inputMode="numeric" placeholder="0:00" value={text} aria-invalid={bad}
-        onChange={(e) => { setText(e.target.value); const s = parseTime(e.target.value); if (s != null || !e.target.value.trim()) onChange(s); }}
+        onChange={(e) => type(e.target.value)}
       />
     </Field>
   );
