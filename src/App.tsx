@@ -95,6 +95,19 @@ function ThemeButton() {
   return <IconButton icon={dark ? Sun : Moon} label={dark ? "Switch to light theme" : "Switch to dark theme"} onClick={() => setTheme(dark ? "light" : "dark")} tipAlign="end" />;
 }
 
+// Last copy of the sheet on this device, so the app opens straight into your coffees even after
+// Google's 1-hour access token has run out. Cleared on sign out.
+const CACHE = "et.cache";
+function readCache(): Db | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(CACHE) ?? "null") as Db | null;
+    return d?.id && Array.isArray(d.beans) && Array.isArray(d.brews) && d.settings ? d : null;
+  } catch { return null; }
+}
+function writeCache(d: Db) {
+  try { localStorage.setItem(CACHE, JSON.stringify(d)); } catch { /* storage full or blocked: next start loads from the sheet */ }
+}
+
 export default function App() {
   const [phase, setPhase] = useState<"out" | "loading" | "error" | "in">("out");
   const [signing, setSigning] = useState(false);
@@ -142,18 +155,34 @@ export default function App() {
     await load();
   };
 
-  // A token saved from an earlier visit is still valid: skip the sign-in screen.
+  const setData = useCallback((d: Db) => {
+    dbRef.current = d;
+    setDb(d);
+    writeCache(d);
+  }, []);
+
+  // Signed in before on this device: open straight into the cached coffees, then refresh from the
+  // sheet in the background while the token is valid, or after the next tap renews it.
+  const [authed, setAuthed] = useState(hasToken);
   useEffect(() => {
-    if (hasToken()) load();
+    const cached = hadSession() ? readCache() : null;
+    if (cached) {
+      dbRef.current = cached;
+      setDb(cached);
+      setPhase("in");
+      if (hasToken()) refresh();
+    } else if (hasToken()) load();
+    // Notice the token running out while the app stays open.
+    const t = setInterval(() => setAuthed(hasToken()), 30_000);
+    return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const load = async () => {
     setPhase("loading");
     try {
-      const d = await loadDb();
-      dbRef.current = d;
-      setDb(d);
+      setData(await loadDb());
+      setAuthed(true);
       setPhase("in");
     } catch (e) {
       // A saved session Google no longer accepts: back to the one-tap sign-in, not an error page.
@@ -163,6 +192,30 @@ export default function App() {
     }
   };
 
+  // Quiet reload behind the cached copy; nothing changes on screen unless the sheet did.
+  const refresh = async () => {
+    try {
+      setData(await loadDb());
+      setAuthed(true);
+    } catch (e) {
+      if (e instanceof AuthError) setAuthed(false);
+      else notify(`Showing your saved copy. ${errMsg(e)}`, "error");
+    }
+  };
+
+  // Token expired: the next tap anywhere renews it. Google only opens its window during a tap, and
+  // with consent already given it closes by itself.
+  useEffect(() => {
+    if (phase !== "in" || authed || !gisReady) return;
+    const renew = () => {
+      signIn().then(() => { setAuthed(true); refresh(); }, () => { /* closed or blocked: try again on the next tap */ });
+    };
+    // click, not pointerdown: on touch screens only the end of a tap counts as a gesture for pop-ups.
+    window.addEventListener("click", renew, { capture: true, once: true });
+    return () => window.removeEventListener("click", renew, { capture: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, authed, gisReady]);
+
   const update = useCallback<AppCtx["update"]>(async (fn, done) => {
     const cur = dbRef.current;
     if (!cur) return false;
@@ -170,9 +223,8 @@ export default function App() {
     try {
       // Token ran out while the app was open: saves come from a click, so the popup is allowed here.
       if (!hasToken()) await signIn();
-      const next = await fn(cur);
-      dbRef.current = next;
-      setDb(next);
+      setAuthed(true);
+      setData(await fn(cur));
       if (done) notify(done, "success");
       return true;
     } catch (e) {
@@ -182,7 +234,7 @@ export default function App() {
     } finally {
       setBusy(false);
     }
-  }, [notify]);
+  }, [notify, setData]);
 
   const reauth = async () => {
     try {

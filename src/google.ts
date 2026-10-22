@@ -100,13 +100,14 @@ export function preload(): Promise<void> {
  * Call from a click handler after `preload` resolved. Opens the popup synchronously,
  * because browsers only allow it during the user gesture.
  */
+let inflight: Promise<void> | null = null;
 export function signIn(): Promise<void> {
   if (!client) return Promise.reject(new Error("Google sign-in is still loading. Try again in a moment."));
-  return new Promise((resolve, reject) => {
-    pending?.reject(new Error("Superseded by a new sign-in"));
+  // One tap can ask twice (renew-on-tap plus a save): share the one window instead of opening two.
+  return (inflight ??= new Promise<void>((resolve, reject) => {
     pending = { resolve, reject };
     client!.requestAccessToken({ prompt: "" });
-  });
+  }).finally(() => { inflight = null; }));
 }
 
 export function signOut() {
@@ -114,7 +115,7 @@ export function signOut() {
   token = null;
   expires = 0;
   // Drop data tied to this account. AI keys stay: they are a per-device choice.
-  for (const k of ["et.draft", "et.sheetId", SESSION, KNOWN]) {
+  for (const k of ["et.draft", "et.sheetId", "et.cache", SESSION, KNOWN]) {
     try { localStorage.removeItem(k); } catch { /* storage blocked */ }
   }
 }
