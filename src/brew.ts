@@ -3,7 +3,7 @@ import {
   cleanAxes, cleanLayers, daysOffRoast, dialToClicks, fromSerial, estimateMicrons, finalRatio, iceSplit, num, pressTimes, profile, round,
   solveRatio, toSerial, type AxisDef, type Dial, type Flavour, type Num,
 } from "./calc.ts";
-import { frozenOn, newPhase, TABS, type Gear, type MethodDef, type MethodField, type Phase, type Rec } from "./schema.ts";
+import { frozenOn, newPhase, TABS, type Gear, type MethodDef, type MethodField, type Phase, type Rec, type Recipe } from "./schema.ts";
 import type { Db } from "./store.ts";
 
 /** A phase with a stable React key. The key is dropped on save. */
@@ -120,6 +120,36 @@ export function isIced(f: Rec, m: MethodDef): boolean {
 /** Espresso-style drinks are served black or with milk. */
 export const espressoStyle = (m: MethodDef) => m.id === "espresso" || m.id === "moka";
 export const serveOf = (f: Rec): "black" | "milk" => (str(f.serve) === "milk" || (!str(f.serve) && str(f.milk_drink)) ? "milk" : "black");
+
+// A recipe leaves out the coffee, the verdict and anything worked out from the coffee.
+const NOT_RECIPE = new Set(["bean_id", "tasting_notes", "rating", "taste_balance", "taste_strength", "changed", "notes", "dialed_in", "flavour"]);
+
+/** The form's recipe, ready to save under a name. */
+export function toRecipe(d: Draft, name: string): Recipe {
+  const strip = (p: DPhase): Phase => { const { k: _k, ...rest } = p; return rest; };
+  return {
+    name: name.trim().slice(0, 40),
+    method: d.method,
+    f: Object.fromEntries(Object.entries(d.f).filter(([k, v]) => !NOT_RECIPE.has(k) && v != null && v !== "")),
+    pours: d.pours.map(strip),
+    presses: d.presses.map(strip),
+  };
+}
+
+/** A saved recipe into the form, keeping its coffee, date and verdict. */
+export function applyRecipe(d: Draft, r: Recipe): Draft {
+  const keep = Object.fromEntries(Object.entries(d.f).filter(([k]) => NOT_RECIPE.has(k)));
+  return {
+    ...d,
+    method: r.method,
+    f: { ...keep, ...r.f },
+    pours: r.pours.map(kp),
+    presses: r.presses.length ? r.presses.map(kp) : [kp(newPhase("press", 1))],
+    touched: true,
+    prefilled: false,
+    from: undefined,
+  };
+}
 
 /** A logged brew back in the form for editing: recipe, phases, date and verdict, all as saved. */
 export function editDraft(db: Db, b: Rec, fallbackMethod: string): Draft {

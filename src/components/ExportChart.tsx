@@ -49,8 +49,13 @@ function fonts(): Promise<string> {
     `@font-face{font-family:"Space Mono";font-weight:400;src:url(${a}) format("woff2")}@font-face{font-family:"Space Mono";font-weight:700;src:url(${b}) format("woff2")}`));
 }
 
+const PREFS = "et.export";
+function savedPrefs(): Partial<Opts> {
+  try { return JSON.parse(localStorage.getItem(PREFS) ?? "{}") as Partial<Opts>; } catch { return {}; }
+}
+
 interface Opts {
-  art: "radar" | "blob"; rounded: boolean; grid: boolean; coffee: boolean; roast: boolean; notes: boolean; brewId: string;
+  art: "radar" | "blob"; rounded: boolean; grid: boolean; labels: boolean; coffee: boolean; roast: boolean; notes: boolean; brewId: string;
   /** Background: the app theme's, none (transparent PNG), or a palette colour. */
   bg: "theme" | "none" | "colour"; bgColour: string;
 }
@@ -60,11 +65,16 @@ export default function ExportChart({ bean, fl, open, onClose }: { bean: Rec; fl
   const s = db.settings;
   const brews = useMemo(() => db.brews.filter((b) => b.bean_id === bean.id).sort((a, b) => (num(b.brew_date) ?? 0) - (num(a.brew_date) ?? 0)), [db.brews, bean.id]);
   const defs = methodDefs(db.fields);
-  const [o, setO] = useState<Opts>({
-    art: s.page_art, rounded: s.page_shape === "rounded", grid: s.page_grid, coffee: true, roast: true, notes: true, brewId: str(brews[0]?.id),
-    bg: "theme", bgColour: "#F3F2EF",
+  // Starts from the choices last used on this device (the brew is always the latest).
+  const [o, setO] = useState<Opts>(() => ({
+    art: s.page_art, rounded: s.page_shape === "rounded", grid: s.page_grid, labels: true, coffee: true, roast: true, notes: true,
+    bg: "theme", bgColour: "#F3F2EF", ...savedPrefs(), brewId: str(brews[0]?.id),
+  }));
+  const set = (p: Partial<Opts>) => setO((x) => {
+    const next = { ...x, ...p };
+    try { const { brewId: _skip, ...keep } = next; localStorage.setItem(PREFS, JSON.stringify(keep)); } catch { /* storage blocked */ }
+    return next;
   });
-  const set = (p: Partial<Opts>) => setO((x) => ({ ...x, ...p }));
   const chartRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState("");
   const [working, setWorking] = useState(false);
@@ -123,6 +133,7 @@ export default function ExportChart({ bean, fl, open, onClose }: { bean: Rec; fl
           <Segmented label="Chart" full value={o.art} options={[["radar", "Spider"], ["blob", "Blob"]]} onChange={(art) => set({ art })} />
           {o.art === "radar" && <Segmented label="Shape" full value={o.rounded ? "rounded" : "sharp"} options={[["sharp", "Sharp"], ["rounded", "Rounded"]]} onChange={(v) => set({ rounded: v === "rounded" })} />}
           {o.art === "radar" && <Segmented label="Chart lines" full value={o.grid ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ grid: v === "show" })} />}
+          {o.art === "radar" && <Segmented label="Axis labels" full value={o.labels ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ labels: v === "show" })} />}
           <Toggle label="Coffee details" checked={o.coffee} onChange={(coffee) => set({ coffee })} />
           {o.coffee && <Toggle label="Roast date" checked={o.roast} onChange={(roast) => set({ roast })} />}
           <Toggle label="Tasting notes" checked={o.notes} onChange={(notes) => set({ notes })} />
@@ -145,7 +156,7 @@ export default function ExportChart({ bean, fl, open, onClose }: { bean: Rec; fl
       <div ref={chartRef} aria-hidden style={{ position: "absolute", left: -10000, top: 0, width: CHART }}>
         {o.art === "blob"
           ? <Fingerprint axes={fl.axes} layers={fl.layers} size={CHART} dense animate={false} />
-          : <Radar axes={fl.axes} layers={fl.layers} size={CHART} legend={false} emptyText="" rounded={o.rounded} grid={o.grid} pitch={2.3} animate={false} />}
+          : <Radar axes={fl.axes} layers={fl.layers} size={CHART} legend={false} emptyText="" rounded={o.rounded} grid={o.grid} labels={o.labels} pitch={2.3} animate={false} />}
       </div>
     </Dialog>
   );

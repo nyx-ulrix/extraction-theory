@@ -169,6 +169,7 @@ function ChartStyle({ s, patch }: { s: S; patch: Patch }) {
 }
 
 function Brewing({ s, patch }: { s: S; patch: Patch }) {
+  const { db } = useApp();
   const setPreset = (i: number, p: Partial<Preset>) => patch({ presets: s.presets.map((x, j) => (j === i ? { ...x, ...p } : x)) });
   return (
     <Section title="Brewing">
@@ -184,6 +185,20 @@ function Brewing({ s, patch }: { s: S; patch: Patch }) {
         {s.presets.length ? s.presets.map((p, i) => (
           <PresetRow key={i} p={p} onChange={(x) => setPreset(i, x)} onRemove={() => patch({ presets: s.presets.filter((_, j) => j !== i) })} />
         )) : <p>No presets. Add one to split pours in one tap.</p>}
+      </div>
+      <div className="stack">
+        <span className="label">Saved recipes</span>
+        {s.recipes.length ? (
+          <div className="list">
+            {s.recipes.map((r, i) => (
+              <div className="lrow" key={`${r.name}-${i}`}>
+                <span>{r.name}</span>
+                <span className="meta" style={{ flex: "none" }}>{methodDefs(db.fields).find((m) => m.id === r.method)?.label ?? r.method}</span>
+                <IconButton icon={Trash} label={`Delete ${r.name}`} variant="danger" onClick={() => patch({ recipes: s.recipes.filter((_, j) => j !== i) })} />
+              </div>
+            ))}
+          </div>
+        ) : <p>No saved recipes. In the brew form, use the bookmark next to Recipe to save one.</p>}
       </div>
     </Section>
   );

@@ -95,6 +95,8 @@ function parseSettings(rows: Rec[]): Settings {
   s.my_grinders = s.my_grinders.filter((x) => typeof x === "string" && x);
   s.my_papers = s.my_papers.filter((x) => typeof x === "string" && x);
   s.hidden = s.hidden.filter((x) => typeof x === "string" && x);
+  s.recipes = s.recipes.filter((r) => r && typeof r.name === "string" && r.name && typeof r.method === "string" && r.f && typeof r.f === "object")
+    .map((r) => ({ ...r, pours: Array.isArray(r.pours) ? r.pours : [], presses: Array.isArray(r.presses) ? r.presses : [] }));
   return s;
 }
 

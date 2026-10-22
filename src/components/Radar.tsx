@@ -30,8 +30,10 @@ function extreme(hex: string) {
 
 export default function Radar({
   axes, layers, onChange, selected = null, onSelect, size = 420, legend = true, title = "Flavour radar",
-  emptyText = "Add tasting notes to draw layers.", rounded: roundedProp, grid: gridProp, pitch = 3.4, animate = true,
+  emptyText = "Add tasting notes to draw layers.", rounded: roundedProp, grid: gridProp, pitch = 3.4, animate = true, labels = true,
 }: {
+  /** false leaves out the axis names (image export). */
+  labels?: boolean;
   /** false draws the finished chart straight away (image export). */
   animate?: boolean;
   /** Halftone dot spacing in chart units; smaller is denser. */
@@ -139,12 +141,12 @@ export default function Radar({
             <g key={a.key}>
               {grid && <line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={1} />}
               {grid && <circle cx={x} cy={y} r={5} fill={ink(a.color)} stroke={extreme(ink(a.color)) ? "var(--text)" : "none"} strokeWidth={1} />}
-              <text
+              {labels && <text
                 transform={`translate(${lx.toFixed(2)} ${ly.toFixed(2)}) rotate(${((i / n) * 360).toFixed(2)})`}
                 textAnchor="middle" fontSize={fs} letterSpacing="0.2em" fill="var(--text)"
               >
                 {a.label.toUpperCase()}
-              </text>
+              </text>}
             </g>
           );
         })}

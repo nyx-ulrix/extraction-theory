@@ -1,16 +1,16 @@
 import { useEffect, useId, useState } from "react";
 import {
-  ArrowsDownUp, Coffee, Drop, Eraser, Flame, FloppyDisk, Flask, Funnel, Plant, Snowflake, Star, X, type Icon,
+  ArrowsDownUp, BookmarkSimple, Coffee, Drop, Eraser, Flame, FloppyDisk, Flask, Funnel, Plant, Snowflake, Star, X, type Icon,
 } from "@phosphor-icons/react";
 import { fromSerial, num, parseFlavour, toSerial } from "../calc.ts";
 import { DateField } from "../components/DateField.tsx";
 import { useApp } from "../ctx.ts";
 import { isFinished } from "../group.ts";
 import {
-  beanRecipe, buildRecord, DRAFT_KEY, editDraft, espressoStyle, isIced, pastValues, serveOf, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
+  applyRecipe, beanRecipe, buildRecord, DRAFT_KEY, editDraft, espressoStyle, isIced, pastValues, serveOf, toRecipe, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
 import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, frozenOn, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
-import { addBrew, newId, saveBean, saveBrew, type Db } from "../store.ts";
+import { addBrew, newId, saveBean, saveBrew, saveSettings, type Db } from "../store.ts";
 import { Button, Dialog, FoldCtx, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import Timeline from "../components/Timeline.tsx";
 import Chill from "../components/brew/Chill.tsx";
@@ -88,6 +88,8 @@ export default function Brew() {
   const serve = serveOf(d.f);
   // Every section is a fold, closed by default except the verdict; a closed one still shows its key values.
   const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const [naming, setNaming] = useState(false);
+  const [recipeName, setRecipeName] = useState("");
   const missBean = !d.f.bean_id;
   const missDose = !num(d.f.dose_g);
   const missChill = m.chill === "required" && !str(d.f.chill_method).trim();
@@ -289,6 +291,27 @@ export default function Brew() {
             <Segmented label="Method" value={m.id} onChange={pickMethod}
               options={methods.map((x): [string, string, Icon] => [x.id, x.label, ICONS[x.id] ?? Flask])} />
           </div>
+          {/* Saved recipes: load one into the form, or save this one under a name. */}
+          <div className="brew-recipes">
+            <SelectField label="Recipe" value="" placeholder={db.settings.recipes.length ? "Load a saved recipe" : "No saved recipes yet"}
+              options={db.settings.recipes.map((r, i): [string, string] => [String(i), `${r.name} (${methods.find((x) => x.id === r.method)?.label ?? r.method})`])}
+              onChange={(v) => { const r = db.settings.recipes[Number(v)]; if (r) { setD((o) => applyRecipe(o, r)); notify(`Loaded ${r.name}`, "success"); } }} />
+            <IconButton icon={BookmarkSimple} label="Save as recipe" onClick={() => setNaming(true)} />
+          </div>
+          <Dialog open={naming} onClose={() => setNaming(false)} title="Save as recipe">
+            <div className="stack">
+              <TextField label="Recipe name" value={recipeName} maxLength={40} placeholder="For example 4:6 V60, 92 °C" onChange={setRecipeName} />
+              <p className="meta">Saves the method and recipe. The coffee, date and tasting notes are not part of it. A recipe with the same name is replaced.</p>
+              <div className="row" style={{ justifyContent: "flex-end" }}>
+                <Button ghost onClick={() => setNaming(false)}>Cancel</Button>
+                <Button icon={BookmarkSimple} disabled={!recipeName.trim() || busy} onClick={async () => {
+                  const r = toRecipe(d, recipeName);
+                  const ok = await update((x) => saveSettings(x, { ...x.settings, recipes: [...x.settings.recipes.filter((y) => y.name !== r.name), r] }), `Saved ${r.name}`);
+                  if (ok) { setNaming(false); setRecipeName(""); }
+                }}>Save</Button>
+              </div>
+            </div>
+          </Dialog>
           {/* The two choices that decide which sections show: hot or iced, and (espresso style) black or milk. */}
           <div className="grid-2 brew-switches">
             {m.chill !== "required" && m.id !== "coldbrew" && (
@@ -357,7 +380,10 @@ export default function Brew() {
 // Laptop: form left, sticky preview right.
 const CSS = `
 .brew { display: grid; gap: 32px; }
-.brew-form { display: grid; gap: 32px; min-width: 0; }
+.brew-form { display: grid; gap: 0; min-width: 0; }
+.brew-form > .stack:first-child { margin-bottom: 24px; }
+.brew-recipes { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.brew-form > .section:not(.fold-section) { margin-bottom: 32px; }
 .brew-err { margin: 0; font-size: 12px; color: var(--error); }
 .readout { min-height: 44px; display: flex; align-items: center; }
 .phase { border: 1px solid var(--border-soft); padding: 12px; display: grid; gap: 12px; }

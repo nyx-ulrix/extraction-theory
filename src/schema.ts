@@ -195,6 +195,8 @@ export interface Settings {
   my_papers: string[];
   /** Optional sections and method fields switched off everywhere (Settings, Brew form). Required ones always show. */
   hidden: string[];
+  /** Saved recipes: a method and its recipe (no coffee, date or verdict), loaded into the brew form by name. */
+  recipes: Recipe[];
   /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
   card_art: "radar" | "blob";
   /** Chart on a coffee's own page, chosen apart from the card art. */
@@ -223,6 +225,7 @@ export const DEFAULT_SETTINGS: Settings = {
   my_grinders: [],
   my_papers: [],
   hidden: [],
+  recipes: [],
 };
 
 /**
@@ -266,6 +269,8 @@ export function layoutFor(m: MethodDef, fields: MethodField[], s: Settings): str
   const keys = (saved?.length ? saved : avail).filter((k) => required.includes(k) || !s.hidden.includes(k));
   return [...required.filter((k) => !keys.includes(k)), ...keys];
 }
+
+export interface Recipe { name: string; method: string; f: Rec; pours: Phase[]; presses: Phase[] }
 
 /** Sections that can be switched off for every method (the rest are the core of a brew). */
 export const OPTIONAL_SECTIONS: [string, string][] = [
