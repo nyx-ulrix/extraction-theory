@@ -95,6 +95,7 @@ Reference: coloured dots per axis with labels set around the ring.
 - Values 0 to 10 in half steps, so points sit between rings.
 - Each tasting note is its own layer, in a colour from the 64-colour palette (AI picked, or a stable palette colour from the note name), overridable per note.
 - **Risograph print.** Charts (radar, card spider charts, cup fingerprints, legend swatches, palette picker) draw every colour as a vivid riso ink: same hue, saturation pushed to 0.72 + 0.45 x s (max 1), lightness held to 0.45 to 0.60 on paper and 0.60 to 0.72 (neon) on the dark theme; greys and black stay neutral, black becomes light grey `#E8E6E1` on dark. Stored colours never change (`ink()` in `src/palette.ts`).
+- Entrance: when a chart first appears, every point of every note travels out from the centre along its own axis, each note and each point starting a little apart (notes up to 350 ms, points up to 250 more), 900 ms per point with a quick start and slow settle (ease-out quart), so the shapes morph into place rather than zoom. Off with reduced motion (`src/components/grow.ts`).
 - Each layer is a dense, regular halftone dot screen in its ink (dots 0.34 x pitch radius on a 45 degree grid, about 3px pitch on screen), no outline. Layers overprint: `mix-blend-mode: multiply` on paper, `screen` on dark, so overlaps read like stacked ink.
 - Layer points are draggable along their axis by mouse, touch and keyboard (arrow keys move half a step), with a visible focus ring on the active point.
 - Legend below: square swatch and note name per layer.

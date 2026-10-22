@@ -4,7 +4,8 @@ import { clamp10, type AxisDef, type Layer } from "../calc.ts";
 import { Ctx } from "../ctx.ts";
 import { shapePath } from "./shape.ts";
 import { ink } from "../palette.ts";
-import { InkShape, growDelay } from "./Fingerprint.tsx";
+import { InkShape } from "./Fingerprint.tsx";
+import { useGrow } from "./grow.ts";
 
 const R = 150; // radius of value 10
 const DOT_R = R + 16; // axis dot at the outer end of each spoke
@@ -60,7 +61,7 @@ export default function Radar({
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ axis: number | null; id: number } | null>(null);
   const handles = useRef<(SVGGElement | null)[]>([]);
-  const delays = useRef<string[]>([]); // one random grow-in delay per note layer, kept for the chart's life
+  const grow = useGrow();
   const [focus, setFocus] = useState<number | null>(null);
   const sel = selected != null && layers[selected] ? selected : null;
   const editable = !!onChange && sel != null;
@@ -157,19 +158,18 @@ export default function Radar({
         <g>
         {order.map((li) => {
           const l = layers[li];
-          const d = shapePath(axes.map((a, i) => xy(i, n, rad(l.v[a.key] ?? 0))), rounded);
+          const d = shapePath(axes.map((a, i) => xy(i, n, rad(l.v[a.key] ?? 0) * grow(li, i))), rounded);
           return (
             <g
               key={li}
-              className="grow"
               opacity={sel != null && li !== sel ? 0.4 : 1}
               onClick={onSelect ? () => onSelect(li) : undefined}
-              style={{ cursor: onSelect ? "pointer" : undefined, animationDelay: (delays.current[li] ??= growDelay()) }}
+              style={{ cursor: onSelect ? "pointer" : undefined }}
             >
-              <InkShape d={d} color={l.color} pitch={pitch} grow={false} />
+              <InkShape d={d} color={l.color} pitch={pitch} />
               {axes.map((a, i) => {
                 if (rounded && sel !== li) return null; // the art style shows clean shapes; points only on the note being edited
-                const [x, y] = xy(i, n, rad(l.v[a.key] ?? 0));
+                const [x, y] = xy(i, n, rad(l.v[a.key] ?? 0) * grow(li, i));
                 return <circle key={a.key} cx={x} cy={y} r={3} fill={ink(l.color)} />;
               })}
             </g>

@@ -8,6 +8,7 @@ import type { Rec } from "../schema.ts";
 import { Marquee, Segmented, SelectField } from "../ui.tsx";
 import { shapePath, sharp, type Pt } from "./shape.ts";
 import Fingerprint, { InkShape } from "./Fingerprint.tsx";
+import { useGrow } from "./grow.ts";
 import { str, when } from "../views/History.tsx";
 import { ink } from "../palette.ts";
 
@@ -16,6 +17,7 @@ function MiniRadar({ axes, layers, rounded, grid }: { axes: AxisDef[]; layers: L
   const n = axes.length;
   const MIN = rounded ? 0.16 : 0; // same soft-shape mapping as the full radar and the cup fingerprint
   const rad = (v: number) => 40 * (MIN + (1 - MIN) * (v / 10));
+  const grow = useGrow();
   const pt = (i: number, r: number): Pt => {
     const a = (i / n) * Math.PI * 2 - Math.PI / 2;
     return [Math.cos(a) * r, Math.sin(a) * r];
@@ -31,7 +33,7 @@ function MiniRadar({ axes, layers, rounded, grid }: { axes: AxisDef[]; layers: L
         return grid ? <g key={a.key}><line x1={0} y1={0} x2={x} y2={y} stroke="var(--border-soft)" strokeWidth={0.6} /><circle cx={x} cy={y} r={2.4} fill={ink(a.color)} stroke="var(--text)" strokeWidth={0.4} /></g> : null;
       })}
       {layers.map((l, k) => (
-        <InkShape key={k} d={shapePath(axes.map((a, i) => pt(i, rad(l.v[a.key] ?? 0))), rounded)} color={l.color} pitch={2.4} />
+        <InkShape key={k} d={shapePath(axes.map((a, i) => pt(i, rad(l.v[a.key] ?? 0) * grow(k, i))), rounded)} color={l.color} pitch={2.4} />
       ))}
     </svg>
   );
