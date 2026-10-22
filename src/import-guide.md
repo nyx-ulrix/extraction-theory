@@ -137,6 +137,8 @@ Use this to add coffees and brews to Extraction Theory in one go. You can fill t
 | `ratio` | Optional; the app works it out from dose and yield or water. |
 | `temp_c` | Water temperature, °C. |
 | `total_s` | Shot or brew time in seconds (2:45 is 165). |
+| `paper` | Filter paper as "Brand Model", for example `"Sibarist FAST Cone M"`, `"CAFEC Abaca+ Cone 1 Cup"`, `"Hario V60 02 White"`. |
+| `dripper_id` | Leave out; pick the dripper in the app. |
 | `water_type` | For example `"K2"`, `"Third Wave Water"`. |
 | `serve` | `espresso`, `black` or `milk`. With `black`: `serve_iced` true/false and `serve_water_g`. With `milk`: `milk_drink` (one of `Dirty`, `Cold milk`, `Cold milk with ice`, `Flat white`, `Latte`, `Cappuccino`) and `milk_g`. |
 | `chill_method` | `Ice drip`, `Hyperchiller` or `Shaken`. Ice brew: `ice_g` grams of ice, or `ice_max` true for "as much as fits". |

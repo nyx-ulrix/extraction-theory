@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { PAPER_NAMES } from "../../papers.ts";
 import { FloppyDisk } from "@phosphor-icons/react";
 import { num } from "../../calc.ts";
 import { useApp } from "../../ctx.ts";
 import { str, withF, type Draft, type Up } from "../../brew.ts";
 import type { DripperStyle, Gear } from "../../schema.ts";
-import { newId, saveGear } from "../../store.ts";
+import { newId, saveGear, type Db } from "../../store.ts";
 import { Dialog, IconButton, Section, SelectField, TextField, TimeField } from "../../ui.tsx";
 import Readout from "./Readout.tsx";
 
@@ -27,14 +28,22 @@ export default function Dripper({ d, up }: { d: Draft; up: Up }) {
         />
         <Readout label="Style">{dr ? styleLabel(dr.style) : null}</Readout>
         <SelectField
-          label="Filter paper" value={str(d.f.paper)} other
-          options={db.gear.filter((g) => g.type === "paper").map((g) => g.name)} onChange={(v) => up(withF({ paper: v }))}
+          label="Filter paper" value={str(d.f.paper)} other placeholder="None"
+          options={papers(db)} onChange={(v) => up(withF({ paper: v }))}
         />
         {drains && <TimeField label="Drain at" value={num(d.f.drain_at_s)} onChange={(v) => up(withF({ drain_at_s: v }))} />}
       </div>
       <DripperDialog open={adding} onClose={() => setAdding(false)} onSaved={(g) => up(withF({ dripper_id: g.id }))} />
     </Section>
   );
+}
+
+/** Papers you've used (newest first), then the specialty list by brand, then any saved on the sheet. */
+function papers(db: Db): string[] {
+  const used = [...db.brews].reverse().map((b) => str(b.paper).trim()).filter(Boolean);
+  const saved = db.gear.filter((g) => g.type === "paper").map((g) => g.name);
+  const seen = new Set<string>();
+  return [...used, ...PAPER_NAMES, ...saved].filter((n) => !seen.has(n.toLowerCase()) && !!seen.add(n.toLowerCase()));
 }
 
 /** Add-dripper dialog. Closes itself after a save. */
