@@ -197,6 +197,8 @@ export interface Settings {
   hidden: string[];
   /** Basic shows the essentials for each method; advanced shows what is ticked in Settings, Brew form. */
   brew_mode: "basic" | "advanced" | "pretentious";
+  /** When stepped down from Pretentious (ms since epoch), it stays locked for 24 hours after. */
+  pretentious_lock: number;
   /** Saved recipes: a method and its recipe (no coffee, date or verdict), loaded into the brew form by name. */
   recipes: Recipe[];
   /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
@@ -228,6 +230,7 @@ export const DEFAULT_SETTINGS: Settings = {
   my_papers: [],
   hidden: [],
   brew_mode: "basic",
+  pretentious_lock: 0,
   recipes: [],
 };
 

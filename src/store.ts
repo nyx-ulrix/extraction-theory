@@ -96,6 +96,7 @@ function parseSettings(rows: Rec[]): Settings {
   s.my_papers = s.my_papers.filter((x) => typeof x === "string" && x);
   s.hidden = s.hidden.filter((x) => typeof x === "string" && x);
   if (!["basic", "advanced", "pretentious"].includes(s.brew_mode)) s.brew_mode = "basic";
+  if (typeof s.pretentious_lock !== "number" || !Number.isFinite(s.pretentious_lock)) s.pretentious_lock = 0;
   s.recipes = s.recipes.filter((r) => r && typeof r.name === "string" && r.name && typeof r.method === "string" && r.f && typeof r.f === "object")
     .map((r) => ({ ...r, pours: Array.isArray(r.pours) ? r.pours : [], presses: Array.isArray(r.presses) ? r.presses : [] }));
   return s;

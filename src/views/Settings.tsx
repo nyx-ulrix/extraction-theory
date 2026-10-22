@@ -26,8 +26,9 @@ import { IconLink, setTheme, useTheme } from "../App.tsx";
 type Patch = (p: Partial<S>) => void;
 
 export default function Settings() {
-  const { db, update, busy, setDirty, arg, go, back } = useApp();
+  const { db, update, busy, setDirty, arg, go, back, notify } = useApp();
   const [s, setS] = useState<S>(db.settings);
+  const lockedHours = Math.ceil((s.pretentious_lock + LOCK_MS - Date.now()) / 3_600_000);
   const edited = useRef(new Set<string>());
   const patch: Patch = (p) => { Object.keys(p).forEach((k) => edited.current.add(k)); setS((x) => ({ ...x, ...p })); };
   // Settings reloaded from the sheet (the app opens on its saved copy first): follow them unless edited here.
@@ -94,11 +95,15 @@ export default function Settings() {
       {arg === "brewing" && <Brewing s={s} patch={patch} />}
       {arg === "form" && (<>
         <Section title="Brew form">
-          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "Normal human"], ["advanced", "I'm a snob"], ["pretentious", "Pretentious"]]} onChange={(brew_mode) => patch({ brew_mode })} />
+          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "Normal human"], ["advanced", "I'm a snob"], ["pretentious", "Pretentious"]]} onChange={(brew_mode) => {
+            if (brew_mode === "pretentious" && lockedHours > 0) return notify(`You stepped down. Pretentious unlocks in ${lockedHours} h.`, "info");
+            patch({ brew_mode });
+          }} />
           <p className="meta">{s.brew_mode === "basic"
             ? "Normal human shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Pick I'm a snob to choose every variable yourself."
             : s.brew_mode === "advanced" ? "I'm a snob shows what you tick below, in the order you set."
             : "Pretentious shows every variable, takes grind size in microns only, and won't log a brew without the water's GH and KH."}</p>
+          {lockedHours > 0 && s.brew_mode !== "pretentious" && <p className="meta">You stepped down from Pretentious. It unlocks in {lockedHours} h.</p>}
         </Section>
         {s.brew_mode !== "basic" && <><Optional s={s} patch={patch} /><Layout s={s} patch={patch} /></>}
       </>)}
@@ -238,6 +243,8 @@ function Check({ label, on, onChange }: { label: string; on: boolean; onChange: 
 }
 
 /** On/off for every optional section and method extra, across all methods. Off = not shown in the brew form. */
+const LOCK_MS = 24 * 3_600_000;
+
 type Demotion = { hidden: string[]; layoutFix: (id: string, keys: string[]) => string[] };
 
 /**
@@ -250,16 +257,17 @@ function useToSnob(s: S, patch: Patch): [(hidden: string[], layoutFix?: Demotion
   const ask = (hidden: string[], layoutFix: Demotion["layoutFix"] = (_, k) => k) => setPending({ hidden, layoutFix });
   const snob = (p: Demotion) => patch({
     brew_mode: "advanced",
+    pretentious_lock: Date.now(),
     hidden: p.hidden,
     layout: Object.fromEntries(methodDefs(db.fields).map((m) => [m.id, p.layoutFix(m.id, layoutFor(m, db.fields, s))])),
   });
   const dialog = (
     <Dialog open={!!pending} onClose={() => setPending(null)} title="Not pretentious enough">
       <div className="stack">
-        <p>Pretentious logs every variable. Switch one off and you'll have to settle for something less.</p>
+        <p>Pretentious logs every variable. Switch one off and you'll have to settle for something less, and Pretentious stays locked for 24 hours.</p>
         <div className="stack" style={{ gap: 8 }}>
           <Button onClick={() => { if (pending) snob(pending); setPending(null); }}>You're just snobby (I'm a snob)</Button>
-          <Button ghost onClick={() => { patch({ brew_mode: "basic" }); setPending(null); }}>Training wheels (Normal human)</Button>
+          <Button ghost onClick={() => { patch({ brew_mode: "basic", pretentious_lock: Date.now() }); setPending(null); }}>Training wheels (Normal human)</Button>
           <Button ghost onClick={() => setPending(null)}>Stay pretentious</Button>
         </div>
       </div>
