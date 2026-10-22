@@ -129,6 +129,7 @@ Use this to add coffees and brews to Extraction Theory in one go. You can fill t
 | `bean_ref` | The `ref` of a bean in this same import. |
 | `brew_date` | `YYYY-MM-DDTHH:MM` local time. Left out = now. |
 | `method` | One of `espresso`, `filter`, `ice` (ice brew), `coldbrew`, `moka`, `aeropress`. |
+| `iced` | `true` for an iced drink, `false` for hot. Ice brew is always iced. Chilling fields only count when iced. |
 | `grinder_id` | Leave out: the brew gets the grinder of that coffee's last brew, or your default grinder. |
 | `grind_setting` | As text, the way your grinder shows it: `"25"`, or `"2.4.1"` for rotation dials. |
 | `grind_um` | Grind size in microns, only if you measured it. |
@@ -141,7 +142,7 @@ Use this to add coffees and brews to Extraction Theory in one go. You can fill t
 | `paper` | Filter paper as "Brand Model", for example `"Sibarist FAST Cone M"`, `"CAFEC Abaca+ Cone 1 Cup"`, `"Hario V60 02 White"`. |
 | `dripper_id` | Leave out; pick the dripper in the app. |
 | `water_type` | For example `"K2"`, `"Third Wave Water"`. |
-| `serve` | `espresso`, `black` or `milk`. With `black`: `serve_iced` true/false and `serve_water_g`. With `milk`: `milk_drink` (one of `Dirty`, `Cold milk`, `Cold milk with ice`, `Flat white`, `Latte`, `Cappuccino`) and `milk_g`. |
+| `serve` | Espresso and moka only: `black` or `milk`. With `black`: `serve_water_g` (water added, for an americano). With `milk`: `milk_drink` (one of `Dirty`, `Cold milk`, `Cold milk with ice`, `Flat white`, `Latte`, `Cappuccino`) and `milk_g`. |
 | `chill_method` | `Ice drip`, `Hyperchiller` or `Shaken`. Ice brew: `ice_g` grams of ice, or `ice_max` true for "as much as fits". |
 | `tasting_notes` | What you tasted, as text. Brews have no chart of their own. |
 | `rating` | 1 to 5. |

@@ -110,6 +110,17 @@ export function loadFrom(db: Db, b: Rec, d: Draft): Draft {
 
 const latest = (rows: Rec[]) => rows.sort((a, b) => (num(b.brew_date) ?? 0) - (num(a.brew_date) ?? 0))[0];
 
+/** Ice brew is always iced; cold brew is neither; otherwise the Hot / Iced switch (older brews: an iced serve or a chill). */
+export function isIced(f: Rec, m: MethodDef): boolean {
+  if (m.chill === "required") return true;
+  if (m.id === "coldbrew") return false;
+  if (f.iced != null && f.iced !== "") return f.iced === true || str(f.iced) === "true";
+  return f.serve_iced === true || str(f.serve_iced) === "true" || !!str(f.chill_method);
+}
+/** Espresso-style drinks are served black or with milk. */
+export const espressoStyle = (m: MethodDef) => m.id === "espresso" || m.id === "moka";
+export const serveOf = (f: Rec): "black" | "milk" => (str(f.serve) === "milk" || (!str(f.serve) && str(f.milk_drink)) ? "milk" : "black");
+
 /** A logged brew back in the form for editing: recipe, phases, date and verdict, all as saved. */
 export function editDraft(db: Db, b: Rec, fallbackMethod: string): Draft {
   const d = loadFrom(db, b, emptyDraft(str(b.method) || fallbackMethod));
@@ -219,7 +230,9 @@ export function buildRecord(d: Draft, db: Db, m: MethodDef, template: AxisDef[])
   const lastClosed = pours[pours.length - 1]?.valve === "closed";
   const drains = style === "immersion" || (style === "hybrid" && lastClosed);
 
-  const chill = m.chill ? s("chill_method") : null;
+  const cold = isIced(f, m);
+  // Chilling only applies to iced drinks.
+  const chill = m.chill && cold ? s("chill_method") : null;
   const iced = !!chill && ICE_CHILLS.includes(chill);
   const iceMax = iced && !!f.ice_max;
   const ice = iced && !iceMax ? n("ice_g") : null;
@@ -250,11 +263,12 @@ export function buildRecord(d: Draft, db: Db, m: MethodDef, template: AxisDef[])
       ? pressTimes(presses.map((p) => ({ start: p.start_s, duration: p.duration_s }))).total
       : m.time === "none" ? null : n("total_s"),
     water_type: s("water_type"),
-    serve: s("serve") ?? (s("milk_drink") ? "milk" : null),
-    serve_iced: s("serve") === "black" ? !!f.serve_iced : null,
-    serve_water_g: s("serve") === "black" ? n("serve_water_g") : null,
-    milk_drink: s("serve") === "milk" || (!s("serve") && s("milk_drink")) ? s("milk_drink") : null,
-    milk_g: s("serve") === "milk" || (!s("serve") && s("milk_drink")) ? n("milk_g") : null,
+    iced: m.id === "coldbrew" ? null : cold,
+    serve: espressoStyle(m) ? serveOf(f) : null,
+    serve_iced: espressoStyle(m) ? cold : null,
+    serve_water_g: espressoStyle(m) && serveOf(f) === "black" ? n("serve_water_g") : null,
+    milk_drink: espressoStyle(m) && serveOf(f) === "milk" ? s("milk_drink") : null,
+    milk_g: espressoStyle(m) && serveOf(f) === "milk" ? n("milk_g") : null,
     // A frozen coffee stops resting on the day it went in the freezer.
     days_off_roast: daysOffRoast(num(bean?.roast_date), Math.min(serial ?? Infinity, frozenOn(bean) ?? Infinity)),
     dripper_id: dripper ? dripper.id : null,

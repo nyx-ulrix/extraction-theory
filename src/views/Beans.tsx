@@ -68,6 +68,8 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
   const [err, setErr] = useState("");
   const dateId = useId();
   const set = (k: string) => (v: Cell) => setF((p) => ({ ...p, [k]: v }));
+  // Values from your other coffees, so repeats are a pick rather than retyping.
+  const used = (k: string) => [...new Set(db.beans.map((b) => str(b[k]).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const dirty = KEYS.some((k) => str(f[k]) !== str(bean[k])) || JSON.stringify(flav) !== JSON.stringify(flav0);
   useEffect(() => {
     setDirty(dirty);
@@ -130,12 +132,12 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
           <TextField label="Roaster's name for it" value={str(f.product)} onChange={set("product")} hint="For example Halo or Nano" />
         </div>
         <div className="grid-2">
-          <TextField label="Roastery" value={str(f.roastery)} onChange={set("roastery")} />
-          <TextField label="Origin" value={str(f.origin)} onChange={set("origin")} />
+          <SelectField label="Roastery" value={str(f.roastery)} other placeholder="Choose" options={used("roastery")} onChange={set("roastery")} />
+          <SelectField label="Origin" value={str(f.origin)} other placeholder="Choose" options={used("origin")} onChange={set("origin")} />
         </div>
         <div className="grid-2">
-          <TextField label="Farm / producer" value={str(f.farm)} onChange={set("farm")} />
-          <TextField label="Variety" value={str(f.variety)} onChange={set("variety")} />
+          <SelectField label="Farm / producer" value={str(f.farm)} other placeholder="Choose" options={used("farm")} onChange={set("farm")} />
+          <SelectField label="Variety" value={str(f.variety)} other placeholder="Choose" options={used("variety")} onChange={set("variety")} />
         </div>
         <div className="grid-2">
           <NumField label="Altitude low" unit="m" min={0} value={num(f.altitude_low_m)} onChange={set("altitude_low_m")} />

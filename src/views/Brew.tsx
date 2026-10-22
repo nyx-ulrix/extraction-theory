@@ -7,7 +7,7 @@ import { DateField } from "../components/DateField.tsx";
 import { useApp } from "../ctx.ts";
 import { isFinished } from "../group.ts";
 import {
-  beanRecipe, buildRecord, DRAFT_KEY, editDraft, pastValues, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
+  beanRecipe, buildRecord, DRAFT_KEY, editDraft, espressoStyle, isIced, pastValues, serveOf, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
 import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, frozenOn, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
 import { addBrew, newId, saveBean, saveBrew, type Db } from "../store.ts";
@@ -82,6 +82,13 @@ export default function Brew() {
   const template = parseFlavour(bean?.flavour, db.settings.axes).axes;
   const { rec, phases } = buildRecord(d, db, m, template);
   const dripper = db.gear.find((g) => g.id === d.f.dripper_id);
+  const iced = isIced(d.f, m);
+  const serve = serveOf(d.f);
+  // Extras (method details, water) start folded unless one is already filled in.
+  const [more, setMore] = useState(() => {
+    const extras = ["water_type", ...db.fields.filter((x) => x.method === init.d.method).map((x) => x.key)];
+    return extras.some((k) => str(init.d.f[k]) !== "");
+  });
   const missBean = !d.f.bean_id;
   const missDose = !num(d.f.dose_g);
   const missChill = m.chill === "required" && !str(d.f.chill_method).trim();
@@ -168,7 +175,7 @@ export default function Brew() {
             options={db.beans
               .filter((x) => !isFinished(x.finished) || x.id === d.f.bean_id) // finished bags drop out
               .map((x) => [str(x.id), [x.name, x.roastery].map(str).filter(Boolean).join(" - ")])}
-            hint="Finished bags are hidden. Mark a bag as finished in History or Beans." />
+            hint="Finished bags are hidden." />
           {errBean && <p className="brew-err" role="alert">{errBean}</p>}
           {/* Date and time is wide on phones: it gets its own row so it never runs into the next column. */}
           <div className="field">
@@ -194,41 +201,30 @@ export default function Brew() {
         </Section>
       );
       case "milk": {
-        // Serve and milk only apply to espresso-style drinks.
-        if (m.id !== "espresso" && m.id !== "moka") return null;
-        // How the cup was served: straight, black (hot or iced, with water) or as a milk drink.
-        const serve = str(d.f.serve) || (str(d.f.milk_drink) ? "milk" : "");
-        return (
-          <Section key={b} title="Serve">
-            <Segmented label="Served as" value={serve || "none"} full
-              options={[["none", "Not set"], ["espresso", "Espresso"], ["black", "Black"], ["milk", "Milk drink"]]}
-              onChange={(v) => up(withF(v === "milk"
-                ? { serve: v, milk_drink: str(d.f.milk_drink) || MILK_DRINKS[0], milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[MILK_DRINKS[0]] ?? null }
-                : { serve: v === "none" ? "" : v, milk_drink: "", milk_g: null }))} />
-            {serve === "black" && (
-              <div className="grid-2">
-                <Segmented label="Temperature" value={d.f.serve_iced ? "iced" : "hot"} options={[["hot", "Hot"], ["iced", "Iced"]]}
-                  onChange={(v) => up(withF({ serve_iced: v === "iced" }))} />
-                <NumField label="Water" unit="g" min={0} value={num(d.f.serve_water_g)} onChange={(v) => up(withF({ serve_water_g: v }))} />
-              </div>
-            )}
-            {serve === "milk" && (
-              <div className="grid-2">
-                <SelectField label="Drink" value={str(d.f.milk_drink)} options={MILK_DRINKS} other
-                  onChange={(v) => {
-                    const drink = v || MILK_DRINKS[0];
-                    up(withF({ milk_drink: drink, milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[drink] ?? null }));
-                  }} />
-                <NumField label="Milk" unit="g" min={0} value={num(d.f.milk_g)} onChange={(v) => up(withF({ milk_g: v }))} />
-              </div>
-            )}
+        // Espresso-style only; Black or Milk is picked at the top of the form.
+        if (!espressoStyle(m)) return null;
+        return serve === "milk" ? (
+          <Section key={b} title="Milk">
+            <div className="grid-2">
+              <SelectField label="Drink" value={str(d.f.milk_drink)} options={MILK_DRINKS} other
+                onChange={(v) => {
+                  const drink = v || MILK_DRINKS[0];
+                  up(withF({ milk_drink: drink, milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[drink] ?? null }));
+                }} />
+              <NumField label="Milk" unit="g" min={0} value={num(d.f.milk_g)} onChange={(v) => up(withF({ milk_g: v }))} />
+            </div>
+          </Section>
+        ) : (
+          <Section key={b} title="Black">
+            <NumField label="Water added" unit="g" min={0} value={num(d.f.serve_water_g)} onChange={(v) => up(withF({ serve_water_g: v }))}
+              hint="For an americano or long black. Leave empty for a straight shot." />
           </Section>
         );
       }
       case "dripper": return <Dripper key={b} d={d} up={up} />;
       case "pours": return <Pours key={b} d={d} up={up} total={pourTotal(d, m)} hybrid={dripper?.style === "hybrid"} />;
       case "presses": return <Presses key={b} d={d} up={up} />;
-      case "chill": return <Chill key={b} d={d} up={up} m={m} err={errChill} />;
+      case "chill": return iced ? <Chill key={b} d={d} up={up} m={m} err={errChill} /> : null;
       // One chart per coffee (on its page); a brew keeps its tasting notes as text.
       case "taste": return (
         <Section key={b} title="Tasting notes">
@@ -271,6 +267,19 @@ export default function Brew() {
             <Segmented label="Method" value={m.id} onChange={pickMethod}
               options={methods.map((x): [string, string, Icon] => [x.id, x.label, ICONS[x.id] ?? Flask])} />
           </div>
+          {/* The two choices that decide which sections show: hot or iced, and (espresso style) black or milk. */}
+          <div className="grid-2 brew-switches">
+            {m.chill !== "required" && m.id !== "coldbrew" && (
+              <Segmented label="Drink" full value={iced ? "iced" : "hot"} options={[["hot", "Hot", Flame], ["iced", "Iced", Snowflake]]}
+                onChange={(v) => up(withF({ iced: v === "iced" }))} />
+            )}
+            {espressoStyle(m) && (
+              <Segmented label="Served" full value={serve} options={[["black", "Black", Coffee], ["milk", "Milk", Drop]]}
+                onChange={(v) => up(withF(v === "milk"
+                  ? { serve: "milk", milk_drink: str(d.f.milk_drink) || MILK_DRINKS[0], milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[str(d.f.milk_drink) || MILK_DRINKS[0]] ?? null }
+                  : { serve: "black", milk_drink: "", milk_g: null }))} />
+            )}
+          </div>
           {/* Only "Brew again" says where the recipe came from; the usual last-brew prefill is silent. */}
           {d.prefilled && d.from && !hideNote && (
             <Msg>
@@ -280,7 +289,19 @@ export default function Brew() {
             </Msg>
           )}
         </div>
-        {blocks.map(section)}
+        {(() => {
+          const extra = (b: string | MethodField[]) => Array.isArray(b) || b === "water_type";
+          const at = blocks.findIndex(extra);
+          const core = blocks.map((b, i) => (extra(b) ? null : section(b, i)));
+          if (at < 0) return core;
+          const folded = (
+            <details key="more" className="more-details" open={more} onToggle={(e) => setMore(e.currentTarget.open)}>
+              <summary>More details</summary>
+              <div className="stack">{blocks.map((b, i) => (extra(b) ? section(b, i) : null))}</div>
+            </details>
+          );
+          return [...core.slice(0, at), folded, ...core.slice(at)];
+        })()}
       </div>
       <aside className="brew-side" aria-label="Brew summary">
         <div className="brew-bar">
