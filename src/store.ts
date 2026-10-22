@@ -91,6 +91,7 @@ function parseSettings(rows: Rec[]): Settings {
   if (!["radar", "blob"].includes(s.card_art)) s.card_art = DEFAULT_SETTINGS.card_art;
   if (!["radar", "blob"].includes(s.page_art)) s.page_art = DEFAULT_SETTINGS.page_art;
   if (!s.layout || typeof s.layout !== "object" || Array.isArray(s.layout)) s.layout = {};
+  s.my_grinders = s.my_grinders.filter((x) => typeof x === "string" && x);
   return s;
 }
 
@@ -155,6 +156,14 @@ export async function deleteBean(db: Db, beanId: string): Promise<Db> {
     brews: db.brews.filter((b) => !gone.has(String(b.id))),
     phases: db.phases.filter((p) => !gone.has(String(p.brew_id))),
   };
+}
+
+/** Sets `grinderId` on every brew that has no grinder yet. */
+export async function fillGrinder(db: Db, grinderId: string): Promise<{ db: Db; count: number }> {
+  const patches = db.brews.filter((b) => !b.grinder_id).map((b) => ({ id: b.id, grinder_id: grinderId }));
+  await sh.upsertMany(db.id, db.headers, "Brews", patches);
+  const ids = new Set(patches.map((p) => p.id));
+  return { db: { ...db, brews: db.brews.map((b) => (ids.has(b.id) ? { ...b, grinder_id: grinderId } : b)) }, count: patches.length };
 }
 
 export async function saveGear(db: Db, g: Gear): Promise<Db> {

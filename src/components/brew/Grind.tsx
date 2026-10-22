@@ -10,8 +10,11 @@ import { Dialog, IconButton, NumField, Section, Segmented, SelectField, TextFiel
 export default function Grind({ d, up }: { d: Draft; up: Up }) {
   const { db } = useApp();
   const [adding, setAdding] = useState(false);
-  const grinders = db.gear.filter((g) => g.type === "grinder");
-  const g = grinders.find((x) => x.id === d.f.grinder_id);
+  const all = db.gear.filter((g) => g.type === "grinder");
+  // The user's own grinders (Settings, Gear), plus whatever this brew already uses.
+  const mine = db.settings.my_grinders;
+  const grinders = mine.length ? all.filter((g) => mine.includes(g.id) || g.id === d.f.grinder_id) : all;
+  const g = all.find((x) => x.id === d.f.grinder_id);
   const dial = g ? toDial(g) : null;
   const setting = str(d.f.grind_setting);
   const clicks = dial && dial.dial_type !== "stepless" ? dialToClicks(setting, dial) : null;

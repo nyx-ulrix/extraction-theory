@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft, ArrowsClockwise, CheckSquare, Coffee, Plant, Square, Target, X, type Icon, type IconProps,
+  ArrowLeft, ArrowsClockwise, CheckSquare, Coffee, Square, Target, X, type Icon, type IconProps,
 } from "@phosphor-icons/react";
-import { fmtTime, fromSerial, num, parseFlavour, round } from "../calc.ts";
+import { fmtTime, fromSerial, num, round } from "../calc.ts";
 import { dialedMethods, isFinished } from "../group.ts";
 import { useApp } from "../ctx.ts";
 import { AGITATION_TIMING, methodDefs, type MethodDef, type Phase, type Rec } from "../schema.ts";
 import { patchBrew, saveBean, type Db } from "../store.ts";
 import { Button, IconButton, Msg, Section, Segmented, SelectField } from "../ui.tsx";
-import Fingerprint from "../components/Fingerprint.tsx";
-import Radar from "../components/Radar.tsx";
 import Timeline from "../components/Timeline.tsx";
 
 /** "Dialed in" marker. Stars are kept for rating only. */
@@ -194,12 +192,8 @@ export function BrewList({ beanId }: { beanId: string }) {
             const m = methodOf(b.method, defs);
             const on = sel.includes(id);
             const rating = num(b.rating);
-            const fp = parseFlavour(b.flavour, db.settings.axes);
             return (
               <div className="item" key={id}>
-                <span style={{ width: 40, height: 40, flex: "none", display: "inline-flex" }}>
-                  <Fingerprint axes={fp.axes} layers={fp.layers} size={40} />
-                </span>
                 <button type="button" className="item-main" onClick={() => go("history", id)}>
                   <span className="item-title">
                     {[m.label, served(b)].filter(Boolean).join(", ")}
@@ -237,15 +231,8 @@ export function BrewList({ beanId }: { beanId: string }) {
 
 function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
   const { db, go, back, update, busy } = useApp();
-  const [overlay, setOverlay] = useState(false);
   const m = methodOf(brew.method, defs);
   const bean = db.beans.find((x) => x.id === brew.bean_id);
-  const fl = parseFlavour(brew.flavour, db.settings.axes);
-  const beanFl = bean ? parseFlavour(bean.flavour, db.settings.axes) : null;
-  const sameAxes = !!beanFl && beanFl.axes.map((a) => a.key).join() === fl.axes.map((a) => a.key).join();
-  const layers = overlay && sameAxes
-    ? [...fl.layers, ...beanFl!.layers.map((l) => ({ ...l, note: `Roaster: ${l.note}` }))]
-    : fl.layers;
   const dialed = yes(brew.dialed_in);
   const ps = params(brew, db, m).filter((p) => p[2] !== "");
 
@@ -270,25 +257,16 @@ function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
         <Button icon={ArrowsClockwise} onClick={() => go("brew", str(brew.id))}>Brew again</Button>
       </div>
 
-      <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
-        <Fingerprint axes={fl.axes} layers={fl.layers} size={96} />
-        <div className="stack" style={{ gap: 4, minWidth: 0 }}>
-          <h1>{beanName(db, brew.bean_id)}</h1>
-          <p className="meta num"><span>{m.label}</span><span>{stamp(brew.brew_date ?? brew.created)}</span></p>
-        </div>
+      <div className="stack" style={{ gap: 4, minWidth: 0 }}>
+        <h1>{beanName(db, brew.bean_id)}</h1>
+        <p className="meta num"><span>{m.label}</span><span>{stamp(brew.brew_date ?? brew.created)}</span></p>
       </div>
       {bean && <BagToggle bean={bean} />}
 
-      <Section
-        title="Flavour"
-        actions={bean && (
-          <IconButton icon={Plant} label={overlay ? "Hide roaster notes" : "Overlay roaster notes"} pressed={overlay} onClick={() => setOverlay(!overlay)} />
-        )}
-      >
-        {overlay && !sameAxes && <Msg>The roaster notes use different radar axes, so they cannot be overlaid.</Msg>}
-        {overlay && sameAxes && !beanFl!.layers.length && <Msg>This bean has no roaster flavour scores yet.</Msg>}
-        {layers.length ? <Radar axes={fl.axes} layers={layers} legend /> : <p>No flavour scores for this brew.</p>}
-      </Section>
+      {/* One chart per coffee, on its page; a brew keeps its tasting notes as text. */}
+      {str(brew.tasting_notes).trim() && (
+        <Section title="Tasting notes"><p>{str(brew.tasting_notes)}</p></Section>
+      )}
 
       <Section title="Timeline">
         <Timeline items={[{ label: m.label, method: m, brew, phases: phasesOf(db, brew.id) }]} />
@@ -321,8 +299,6 @@ function Compare({ pair, defs, onClear }: { pair: Rec[]; defs: MethodDef[]; onCl
   const [a, b] = [...pair].sort((x, y) => when(x) - when(y));
   const ma = methodOf(a.method, defs);
   const mb = methodOf(b.method, defs);
-  const fa = parseFlavour(a.flavour, db.settings.axes);
-  const fb = parseFlavour(b.flavour, db.settings.axes);
   const key = (p: P) => `${p[0]}|${p[1]}`;
   const pa = params(a, db, ma);
   const pb = params(b, db, mb);
@@ -331,16 +307,16 @@ function Compare({ pair, defs, onClear }: { pair: Rec[]; defs: MethodDef[]; onCl
   const diff = [...new Set([...pa, ...pb].map(key))]
     .map((k) => [k.split("|")[1], va.get(k) ?? "", vb.get(k) ?? ""] as const)
     .filter(([, x, y]) => x !== y);
-  const sides = [{ tag: "A", r: a, f: fa }, { tag: "B", r: b, f: fb }];
+  const sides = [{ tag: "A", r: a }, { tag: "B", r: b }];
 
   return (
     <div id="compare" ref={ref} style={{ scrollMarginTop: 72 }}>
       <Section title="Compare" actions={<IconButton icon={X} label="Clear compare" onClick={onClear} />}>
         <div className="split">
-          {sides.map(({ tag, r, f }) => (
+          {sides.map(({ tag, r }) => (
             <div key={tag} className="stack">
               <span className="label">{`${tag} ${beanName(db, r.bean_id)} ${stamp(r.brew_date ?? r.created)}`}</span>
-              {f.layers.length ? <Radar axes={f.axes} layers={f.layers} legend size={280} /> : <p>No flavour scores.</p>}
+              <p>{str(r.tasting_notes) || "No tasting notes."}</p>
             </div>
           ))}
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowLeft, Camera, FloppyDisk, MagicWand, PencilSimple, Plus, Target, Trash, X } from "@phosphor-icons/react";
+import { ArrowLeft, Camera, Coffee, FloppyDisk, MagicWand, PencilSimple, Plus, Target, Trash, X } from "@phosphor-icons/react";
 import { dialedMethods } from "../group.ts";
 import Radar from "../components/Radar.tsx";
 import Fingerprint from "../components/Fingerprint.tsx";
@@ -232,7 +232,7 @@ function BagFill({ onFill }: { onFill: (info: BagInfo) => void }) {
 
 /** One coffee: its facts, roaster's radar, bag status and full brew history. */
 function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
-  const { db, back, update, busy } = useApp();
+  const { db, back, update, busy, go } = useApp();
   const [confirm, setConfirm] = useState(false);
   const brewCount = db.brews.filter((b) => b.bean_id === bean.id).length;
   const fl = parseFlavour(bean.flavour, db.settings.axes);
@@ -276,6 +276,10 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
         <header><h2>Brew history</h2></header>
         <BrewList beanId={str(bean.id)} />
       </section>
+      {/* New brew of this coffee, starting from its last recipe. */}
+      <button type="button" className="fab" aria-label="New brew" data-tip="New brew" onClick={() => go("brew", `bean:${str(bean.id)}`)}>
+        <Coffee size={28} aria-hidden />
+      </button>
     </div>
   );
 }

@@ -111,18 +111,10 @@ Method (Ice drip / Hyperchiller / Shaken / Other), ice (g) or "as much ice as po
 - **Brew timeline**: lanes for water (bars per phase, colour by temp, running total line), agitation, valve, press, chilling, events. Two brews can be stacked on one time axis for comparison.
 - **Cup fingerprint**: once a brew's spider chart exists, its note layers are redrawn as small smooth see-through shapes, a visual fingerprint of that cup, at the top of the brew detail and beside each brew in History. No AI is involved. The sign-in screen has no hero image (logo only in the wordmark).
 
-## 7. AI (your own key)
-AI does two small jobs: picking a colour for each tasting note from the 64-colour palette, and reading a bean bag's label from up to two photos (front and back) to fill the bean form. It never sets radar values or draws any graphic. Defaults are each provider's cheapest model:
+## 7. AI (your own key) and bulk import
+AI does one small job: reading a bean bag's label from up to two photos (front and back) to fill the bean form, with the user's own key (Claude `claude-haiku-5-5` thinking off, OpenAI `gpt-5-nano`, or Gemini `gemini-2.5-flash-lite`, all with a structured-JSON schema). It never sets radar values or colours: note colours come from the 64-colour palette (a stable colour per note name) and the user's own picks.
 
-| Provider | Default model | Notes |
-|---|---|---|
-| Claude (default) | `claude-haiku-5-5` | Thinking off, effort low, structured JSON with the palette names as an enum |
-| OpenAI | `gpt-5-nano` | Strict JSON schema with the palette enum |
-| Gemini | `gemini-2.5-flash-lite` | JSON response |
-
-Runs automatically about 1.5 s after typing pauses, only for notes without a settled colour, as one small call; a palette button re-picks all on demand. Uses your own key, stored only in browser local storage; model editable. Unknown colour names are dropped. Colours are saved with the layers, so old radars never change.
-
-Bag auto-fill: "Auto-fill from the bag" at the top of the bean form takes up to 2 photos (shrunk to 1568 px JPEG on the device), sends them in one structured-JSON call, and fills only empty fields: name, roaster's name, roastery, origin, farm, variety, process, roast level, roast date, altitude and tasting notes (which become note layers with starter values). Only what is printed is used; anything not shown comes back empty.
+Bulk import: Settings, Import shows the JSON format and offers `src/import-guide.md` as a download. The guide is written so any AI chat can turn bag photos or notes into valid import JSON (allowed fields, values, dates, flavour layers with shared bitterness and body, phases as added water, match / update / delete, and what is not allowed).
 
 ## 8. Settings
 - Pour entry style (per pour / target weight; stored per pour either way).

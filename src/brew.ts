@@ -28,6 +28,8 @@ export interface Draft {
   prefilled: boolean;
   /** yyyy-mm-dd of the brew loaded with Brew again. */
   from?: string;
+  /** The user picked the brew date; otherwise it follows today. */
+  dateSet?: boolean;
 }
 export type Up = (fn: (d: Draft) => Draft) => void;
 
@@ -63,7 +65,7 @@ export function restoreDraft(): Draft | null {
     const o = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null");
     if (!o || typeof o.method !== "string" || !o.f || !Array.isArray(o.pours) || !Array.isArray(o.presses)) return null;
     const e = emptyDraft(o.method);
-    return { ...e, ...o, x: { ...e.x, ...o.x }, date: o.touched && typeof o.date === "string" ? o.date : e.date };
+    return { ...e, ...o, x: { ...e.x, ...o.x }, date: o.dateSet && typeof o.date === "string" ? o.date : e.date };
   } catch {
     return null;
   }
@@ -106,6 +108,28 @@ export function loadFrom(db: Db, b: Rec, d: Draft): Draft {
   };
 }
 
+const latest = (rows: Rec[]) => rows.sort((a, b) => (num(b.brew_date) ?? 0) - (num(a.brew_date) ?? 0))[0];
+
+/** This coffee's grinder: the one its last brew used, else the first of the user's grinders. */
+export function defaultGrinder(db: Db, beanId: unknown): string | null {
+  const used = latest(db.brews.filter((b) => b.bean_id === beanId && b.grinder_id));
+  return used ? str(used.grinder_id) : db.settings.my_grinders[0] ?? null;
+}
+
+/**
+ * Switch the form to a coffee: its last recipe (any method), keeping the brew date. A coffee with no
+ * brews yet starts blank on the current method, with its grinder chosen.
+ */
+export function beanRecipe(db: Db, d: Draft, beanId: string): Draft {
+  const last = latest(db.brews.filter((b) => b.bean_id === beanId));
+  const base: Draft = last
+    ? loadFrom(db, last, { ...d })
+    : { ...emptyDraft(d.method), date: d.date, dateSet: d.dateSet, f: { bean_id: beanId } };
+  const f: Rec = { ...base.f, bean_id: beanId };
+  if (!f.grinder_id) f.grinder_id = defaultGrinder(db, beanId);
+  return { ...base, f, touched: false };
+}
+
 /** If the form is untouched, load the latest brew of this bean and method. */
 export function prefill(db: Db, d: Draft): Draft {
   if (d.touched || !d.f.bean_id) return d;
@@ -113,6 +137,7 @@ export function prefill(db: Db, d: Draft): Draft {
     .filter((b) => b.bean_id === d.f.bean_id && b.method === d.method)
     .sort((a, b) => (num(b.brew_date) ?? 0) - (num(a.brew_date) ?? 0))[0];
   if (last) return loadFrom(db, last, d);
+  if (!d.f.grinder_id) d = { ...d, f: { ...d.f, grinder_id: defaultGrinder(db, d.f.bean_id) } };
   // Switched away from a loaded brew to a pair with no history: start clean.
   return d.prefilled ? { ...emptyDraft(d.method), date: d.date, f: { bean_id: d.f.bean_id } } : d;
 }

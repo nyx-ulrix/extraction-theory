@@ -1,9 +1,8 @@
 // Tasting notes text plus the editable radar: one layer per note, optional per-coffee axes.
 // The user sets every value by dragging. AI only picks palette colours for the notes.
 import { useEffect, useRef, useState } from "react";
-import { Palette, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { cleanLayers, splitNotes, type AxisDef, type Flavour, type Layer, type Values } from "../calc.ts";
-import { getKey, pickColours } from "../ai.ts";
 import { noteColour } from "../palette.ts";
 import { useApp } from "../ctx.ts";
 import { IconButton } from "../ui.tsx";
@@ -37,18 +36,11 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
   template: AxisDef[];
   label?: string;
 }) {
-  const { db, notify } = useApp();
-  const { ai_provider: provider, ai_model: model } = db.settings;
-  const [busy, setBusy] = useState(false);
+  const { notify } = useApp();
   const [editAxes, setEditAxes] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
   const { axes, layers } = value;
   const cur = sel != null ? layers[sel] : undefined;
-
-  // Latest value for async colour replies; notes whose colour is settled (AI or by hand) are never auto-recoloured.
-  const latest = useRef(value);
-  latest.current = value;
-  const settled = useRef(new Set(value.layers.map((l) => low(l.note))));
 
   // The first layer to appear is selected, so its drag handles show straight away.
   const hadLayers = useRef(layers.length > 0);
@@ -89,46 +81,16 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
     setSel(next.length - 1);
   };
   const rename = (at: number, text: string) => {
-    if (settled.current.has(low(layers[at].note))) settled.current.add(low(text));
     commit(layers.map((l, i) => (i === at ? { ...l, note: text.slice(0, 40) } : l)));
   };
 
-  const recolour = async (targets: string[], manual: boolean) => {
-    if (!targets.length) return;
-    targets.forEach((n) => settled.current.add(low(n)));
-    setBusy(true);
-    try {
-      const got = await pickColours(targets, provider, model);
-      const v = latest.current;
-      onChange({ axes: v.axes, layers: v.layers.map((l) => ({ ...l, color: got.get(low(l.note)) ?? l.color })) });
-    } catch (e) {
-      notify(e instanceof Error ? e.message : String(e), "error");
-    } finally {
-      setBusy(false);
-    }
-    if (manual) setSel(null);
-  };
-
-  // Auto colour: once typing pauses, ask for colours of new notes only (one small call).
-  const noteKey = layers.map((l) => low(l.note)).join("|");
-  useEffect(() => {
-    if (!getKey(provider)) return;
-    const pending = latest.current.layers.map((l) => l.note).filter((n) => !settled.current.has(low(n)));
-    if (!pending.length) return;
-    const t = setTimeout(() => recolour(pending, false), 1500);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteKey, provider]);
-
   const setColour = (at: number, color: string) => {
-    settled.current.add(low(layers[at].note));
     setLayers(layers.map((l, i) => (i === at ? { ...l, color } : l)));
   };
   const remove = (at: number) => {
     commit(layers.filter((_, i) => i !== at));
     setSel(null);
   };
-  const hasKey = !!getKey(provider);
 
   return (
     <div className="stack">
@@ -157,17 +119,10 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
             <IconButton icon={Plus} label="Add note" tipAlign="end" disabled={!draft.trim()} onClick={addDraft} />
           </div>
         </div>
-        <span className="hint">{hasKey ? "One note per field. Each becomes a layer, coloured automatically." : "One note per field. Each becomes a layer."}</span>
+        <span className="hint">One note per field. Each becomes a layer with a colour from the palette; tap the swatch to change it.</span>
       </div>
       <div className="row">
-        {hasKey && (
-          <IconButton
-            icon={Palette} label={busy ? "Picking colours..." : "Pick colours with AI"} disabled={busy || !layers.length}
-            onClick={() => recolour(layers.map((l) => l.note), true)}
-          />
-        )}
         <IconButton icon={PencilSimple} label="Edit axes" pressed={editAxes} onClick={() => setEditAxes(!editAxes)} />
-        {busy && <span className="muted" role="status" style={{ fontSize: 12 }}>Picking colours...</span>}
       </div>
       {editAxes && <AxesEditor axes={axes} onChange={setAxes} template={template} />}
 

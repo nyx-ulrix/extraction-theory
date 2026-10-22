@@ -315,3 +315,24 @@ label.btn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--text-strong); text-decoration: underline; cursor: pointer; }
 /* Coffee with no flavour notes yet: its stand-in chart is greyed out. */
 .card.ghost .mini-radar, .card.ghost .card-blob { filter: grayscale(1); opacity: 0.45; }
+
+/* Floating action: bottom right, above the phone tab bar. */
+.fab {
+  position: fixed; right: 16px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); z-index: 30;
+  width: 60px; height: 60px; display: grid; place-items: center; cursor: pointer;
+  background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border);
+}
+.fab:hover { background: var(--btn-hover); }
+.fab:active { transform: translateY(1px); }
+.fab:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+@media (min-width: 768px) { .fab { right: 24px; bottom: 24px; } }
+.page:has(> .fab) { padding-bottom: 96px; }
+
+/* Date that may be missing: 00/00/0000 stands in until one is picked. */
+.date-field { position: relative; display: block; }
+.date-field.empty input:not(:focus) { color: transparent; }
+.date-field .date-blank { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text); pointer-events: none; }
+.date-field.empty input:focus + .date-blank { display: none; }
+
+/* Code sample (import format): scrolls sideways rather than wrapping. */
+pre.code { margin: 0; padding: 12px; overflow-x: auto; border: 1px solid var(--border-soft); background: var(--bg-subtle); font: 400 12px/1.5 var(--mono); color: var(--text-strong); }

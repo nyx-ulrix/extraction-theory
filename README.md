@@ -28,9 +28,9 @@ npx wrangler deploy                              # set GOOGLE_CLIENT_ID, ALLOWED
 npx wrangler secret put GOOGLE_CLIENT_SECRET     # the OAuth client's secret from Google Cloud
 ```
 
-## Flavour AI (optional)
+## Bulk import and AI (optional)
 
-Paste your own Claude, OpenAI or Gemini key in Settings and each tasting note gets a colour picked from the palette (cheapest model by default). AI does nothing else: you shape the radar yourself. The key stays in your browser's local storage and is sent only to that provider.
+Settings, Import takes JSON. Download the import guide there (`src/import-guide.md`) and give it to any AI chat with photos of your bags or your notes; it writes the JSON for you. In the app itself, AI only fills a new bean from bag photos, with your own Claude, OpenAI or Gemini key (stored in your browser, sent only to that provider). You shape the radar and pick colours yourself.
 
 ## License
 

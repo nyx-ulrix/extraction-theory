@@ -1,7 +1,5 @@
-// AI does two small jobs with the user's own key: picks a palette colour for each tasting note, and reads
-// a bean bag's label from photos to fill the bean form. Radar values are always set by the user.
-// Defaults are each provider's cheapest model.
-import { PALETTE, PALETTE_NAMES, paletteHex } from "./palette.ts";
+// AI does one small job with the user's own key: reading a bean bag's label from photos to fill the
+// bean form. Radar values and note colours are always the user's. Defaults are each provider's cheapest model.
 
 export type Provider = "claude" | "openai" | "gemini";
 export const PROVIDERS: { id: Provider; label: string; model: string; keyUrl: string }[] = [
@@ -21,27 +19,6 @@ export function setKey(p: Provider, key: string) {
     else localStorage.removeItem(keyName(p));
   } catch { /* storage blocked: key lasts this session only */ }
 }
-
-const COLOURS = `For each coffee tasting note, pick the ONE colour from this palette that people most associate with that flavour.
-Palette (name: hex): ${PALETTE.map(([n, h]) => `${n}: ${h}`).join("; ")}.
-Prefer mid-tone colours that stay visible on white and on near-black. Reply with JSON only, using the palette names exactly.`;
-
-const COLOUR_SCHEMA = {
-  type: "object",
-  properties: {
-    notes: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: { note: { type: "string" }, colour: { type: "string", enum: PALETTE_NAMES } },
-        required: ["note", "colour"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["notes"],
-  additionalProperties: false,
-};
 
 export interface Img { type: string; data: string } // base64, no data: prefix
 interface Req { system: string; schema: object; name: string; text: string; images?: Img[] }
@@ -120,24 +97,6 @@ const gemini: Call = async (model, key, { system, schema, text: input, images = 
   if (!r.ok) throw new Error(`Gemini error: ${j.error?.message ?? r.status}`);
   return j.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 };
-
-/** Notes -> palette hex per note (keyed by lowercase note). Unknown names are dropped. */
-export async function pickColours(notes: string[], provider: Provider, model: string): Promise<Map<string, string>> {
-  const key = getKey(provider);
-  if (!key) throw new Error("Add an API key in Settings first.");
-  const list = notes.map((n) => n.trim()).filter(Boolean).slice(0, 12);
-  if (!list.length) return new Map();
-  const parsed = await ask<{ notes?: { note?: unknown; colour?: unknown }[] }>(provider, model, key, {
-    system: COLOURS, schema: COLOUR_SCHEMA, name: "note_colours", text: list.map((n) => n.slice(0, 40)).join("\n"),
-  });
-  const out = new Map<string, string>();
-  for (const it of parsed.notes ?? []) {
-    const hex = paletteHex(String(it.colour ?? ""));
-    if (hex) out.set(String(it.note ?? "").trim().toLowerCase(), hex);
-  }
-  if (!out.size) throw new Error("No colours came back. Try again.");
-  return out;
-}
 
 async function ask<T>(provider: Provider, model: string, key: string, req: Req): Promise<T> {
   const m = model || PROVIDERS.find((p) => p.id === provider)!.model;

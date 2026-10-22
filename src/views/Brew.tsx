@@ -3,15 +3,15 @@ import {
   ArrowsDownUp, Coffee, Drop, Eraser, Flame, FloppyDisk, Flask, Funnel, Plant, Snowflake, Star, X, type Icon,
 } from "@phosphor-icons/react";
 import { fromSerial, num, parseFlavour, toSerial } from "../calc.ts";
+import { DateField } from "../components/DateField.tsx";
 import { useApp } from "../ctx.ts";
 import { isFinished } from "../group.ts";
 import {
-  buildRecord, DRAFT_KEY, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
+  beanRecipe, buildRecord, DRAFT_KEY, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
 import { MILK_DEFAULT_G, MILK_DRINKS, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
-import { addBrew, newId, type Db } from "../store.ts";
+import { addBrew, newId, saveBean, type Db } from "../store.ts";
 import { Button, Dialog, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
-import FlavourEditor from "../components/FlavourEditor.tsx";
 import Timeline from "../components/Timeline.tsx";
 import Chill from "../components/brew/Chill.tsx";
 import Dripper from "../components/brew/Dripper.tsx";
@@ -40,15 +40,22 @@ export default function Brew() {
   const { db, update, busy, go, arg, notify } = useApp();
   const methods = methodDefs(db.fields);
   const [init] = useState(() => {
-    const b = arg ? db.brews.find((x) => x.id === arg) : undefined;
+    // arg: a brew id (Brew again) or "bean:<id>" (new brew from a coffee's page).
+    const beanArg = arg?.startsWith("bean:") ? arg.slice(5) : undefined;
+    const b = arg && !beanArg ? db.brews.find((x) => x.id === arg) : undefined;
     const saved = restoreDraft();
     // A touched draft is not replaced without asking.
     if (b && saved?.touched) return { d: saved, pending: b };
+    if (beanArg) {
+      const last = db.brews.filter((x) => x.bean_id === beanArg).sort((x, y) => (num(y.brew_date) ?? 0) - (num(x.brew_date) ?? 0))[0];
+      if (saved?.touched && last) return { d: saved, pending: last };
+      return { d: beanRecipe(db, saved?.touched ? saved : emptyDraft(methods[0].id), beanArg), pending: undefined };
+    }
     let d = b ? again(db, b, methods[0].id) : saved ?? emptyDraft(methods[0].id);
     const open = db.beans.filter((x) => !isFinished(x.finished));
     if (!d.f.bean_id && open.length) {
       const newest = open.reduce((a, x) => ((num(x.created) ?? 0) > (num(a.created) ?? 0) ? x : a));
-      d = prefill(db, withF({ bean_id: newest.id })(d));
+      d = beanRecipe(db, d, str(newest.id));
     }
     return { d, pending: undefined };
   });
@@ -68,7 +75,6 @@ export default function Brew() {
   const up: Up = (fn) => setD((o) => ({ ...fn(o), touched: true }));
   const bean = db.beans.find((b) => b.id === d.f.bean_id);
   const template = parseFlavour(bean?.flavour, db.settings.axes).axes;
-  const flavour = d.flavour ?? { axes: template, layers: [] };
   const { rec, phases } = buildRecord(d, db, m, template);
   const dripper = db.gear.find((g) => g.id === d.f.dripper_id);
   const missBean = !d.f.bean_id;
@@ -91,7 +97,9 @@ export default function Brew() {
 
   // Bean and method changes do not count as edits, so an untouched form keeps prefilling.
   const pickMethod = (id: string) => { setHideNote(false); setD((o) => prefill(db, { ...o, method: id })); };
-  const pickBean = (id: string) => { setHideNote(false); setD((o) => prefill(db, withF({ bean_id: id || null })(o))); };
+  const pickBean = (id: string) => { setHideNote(false); setD((o) => (id ? beanRecipe(db, o, id) : withF({ bean_id: null })(o))); };
+  // The roast date lives on the coffee, so setting it here sets it everywhere.
+  const setRoast = (v: number | null) => { if (bean) update((x) => saveBean(x, { id: bean.id, roast_date: v }), "Roast date saved"); };
   const clearLoaded = () => setD((o) => ({ ...emptyDraft(o.method), date: o.date, f: { bean_id: o.f.bean_id }, touched: true }));
 
   async function save() {
@@ -113,6 +121,7 @@ export default function Brew() {
     setD((o) => ({
       ...o,
       date: emptyDraft(o.method).date,
+      dateSet: false,
       f: { ...o.f, tasting_notes: "", rating: null, taste_balance: null, taste_strength: null, changed: "", notes: "", dialed_in: false },
       flavour: null,
       touched: false,
@@ -143,13 +152,14 @@ export default function Brew() {
               .map((x) => [str(x.id), [x.name, x.roastery].map(str).filter(Boolean).join(" - ")])}
             hint="Finished bags are hidden. Mark a bag as finished in History or Beans." />
           {errBean && <p className="brew-err" role="alert">{errBean}</p>}
-          <div className="grid-2">
+          <div className="grid-3">
             <div className="field">
               <label className="label" htmlFor={dateId}>Brew date</label>
               <input id={dateId} className="input" type="datetime-local" value={d.date}
-                onChange={(e) => setD((o) => ({ ...o, date: e.target.value }))} />
+                onChange={(e) => setD((o) => ({ ...o, date: e.target.value || emptyDraft(o.method).date, dateSet: !!e.target.value }))} />
             </div>
-            <Readout label="Days off roast">{num(rec.days_off_roast)}</Readout>
+            <DateField label="Roast date" value={num(bean?.roast_date)} onChange={setRoast} disabled={!bean || busy} />
+            <Readout label="Days off roast">{num(rec.days_off_roast) ?? "-"}</Readout>
           </div>
         </Section>
       );
@@ -194,12 +204,11 @@ export default function Brew() {
       case "pours": return <Pours key={b} d={d} up={up} total={pourTotal(d, m)} hybrid={dripper?.style === "hybrid"} />;
       case "presses": return <Presses key={b} d={d} up={up} />;
       case "chill": return <Chill key={b} d={d} up={up} m={m} err={errChill} />;
+      // One chart per coffee (on its page); a brew keeps its tasting notes as text.
       case "taste": return (
-        <Section key={b} title="Tasting notes and radar">
-          <FlavourEditor
-            notes={str(d.f.tasting_notes)} onNotes={(v: string) => up(withF({ tasting_notes: v }))}
-            value={flavour} onChange={(fl) => up((o) => ({ ...o, flavour: fl }))} template={template}
-          />
+        <Section key={b} title="Tasting notes">
+          <TextField label="Tasting notes" multiline value={str(d.f.tasting_notes)} onChange={(v) => up(withF({ tasting_notes: v }))}
+            hint="What you tasted in this cup. The coffee's flavour chart is on its page." />
         </Section>
       );
       case "rating": return (

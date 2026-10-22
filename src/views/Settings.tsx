@@ -14,9 +14,10 @@ import {
   SECTIONS, availableKeys, layoutFor, methodDefs, type DripperStyle, type Gear, type Preset, type Settings as S,
 } from "../schema.ts";
 import { sheetUrl } from "../sheets.ts";
-import { importData, saveGear, saveSettings } from "../store.ts";
+import { fillGrinder, importData, saveGear, saveSettings } from "../store.ts";
 import { Button, Field, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../ui.tsx";
 import AxesEditor from "../components/AxesEditor.tsx";
+import importGuide from "../import-guide.md?raw";
 import { DripperDialog } from "../components/brew/Dripper.tsx";
 import { GrinderDialog } from "../components/brew/Grind.tsx";
 import { IconLink, setTheme, useTheme } from "../App.tsx";
@@ -87,7 +88,7 @@ export default function Settings() {
           </Section>
         </>
       )}
-      {arg === "gear" && (<><Drippers /><Grinders /></>)}
+      {arg === "gear" && (<><MyGrinders s={s} patch={patch} /><Drippers /><Grinders /></>)}
       {arg === "ai" && <Ai s={s} patch={patch} />}
       {arg === "data" && <ImportData />}
       {arg === "account" && <Account />}
@@ -108,7 +109,7 @@ const CATS: [string, string, string, Icon][] = [
   ["form", "Brew form", "Which sections each method shows, in what order", Rows],
   ["chart", "Flavour chart", "Chart shape, chart lines, card and page art, radar axes", ChartPolar],
   ["gear", "Gear", "Drippers and grinders", Wrench],
-  ["ai", "AI", "Your API key: note colours and bag photo auto-fill", Palette],
+  ["ai", "AI", "Your API key for filling a bean from bag photos", Palette],
   ["data", "Import", "Add beans and brews from JSON", Database],
   ["account", "Account", "Your sheet, theme, install app, sign out", UserCircle],
 ];
@@ -317,6 +318,44 @@ function DripperRow({ g }: { g: Gear }) {
 
 const DIALS: [DialType, string][] = [["clicks", "Clicks"], ["rotation", "Rotation"], ["stepless", "Stepless"]];
 
+/** The grinders this user owns. The brew form lists only these; the default goes on coffees not brewed yet. */
+function MyGrinders({ s, patch }: { s: S; patch: Patch }) {
+  const { db, update, busy } = useApp();
+  const all = db.gear.filter((g) => g.type === "grinder");
+  const label = (id: string) => { const g = all.find((x) => x.id === id); return g ? [g.brand, g.name].filter(Boolean).join(" ") : id; };
+  const brands = [...new Set(all.map((g) => g.brand || "Other"))];
+  const mine = s.my_grinders;
+  const toggle = (id: string) => patch({ my_grinders: mine.includes(id) ? mine.filter((x) => x !== id) : [...mine, id] });
+  const saved = db.settings.my_grinders[0];
+  const missing = db.brews.filter((b) => !b.grinder_id).length;
+  return (
+    <Section title="My grinders">
+      <p className="meta">Pick the grinders you have. The brew form lists only these. Each coffee keeps the grinder of its last brew; a coffee you haven't brewed yet starts on your default.</p>
+      {brands.map((b) => (
+        <div key={b} className="field">
+          <span className="label">{b}</span>
+          <div className="row">
+            {all.filter((g) => (g.brand || "Other") === b).map((g) => (
+              <button key={g.id} type="button" className="chip" aria-pressed={mine.includes(g.id)} onClick={() => toggle(g.id)}>{g.name}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      {mine.length > 1 && (
+        <SelectField label="Default grinder" value={mine[0]} options={mine.map((id) => [id, label(id)])}
+          onChange={(id) => patch({ my_grinders: [id, ...mine.filter((x) => x !== id)] })} />
+      )}
+      {saved && missing > 0 && (
+        <div>
+          <Button ghost disabled={busy} onClick={() => update(async (d) => (await fillGrinder(d, saved)).db, `${label(saved)} set on ${missing} brews`)}>
+            Use {label(saved)} on {missing} {missing === 1 ? "brew" : "brews"} with no grinder
+          </Button>
+        </div>
+      )}
+    </Section>
+  );
+}
+
 function Grinders() {
   const { db } = useApp();
   const [adding, setAdding] = useState(false);
@@ -373,8 +412,8 @@ function GrinderRow({ g }: { g: Gear }) {
 function Ai({ s, patch }: { s: S; patch: Patch }) {
   const p = PROVIDERS.find((x) => x.id === s.ai_provider) ?? PROVIDERS[0];
   return (
-    <Section title="Note colours (AI)">
-      <p className="muted">Optional. Picks a palette colour for each tasting note. Nothing else uses AI.</p>
+    <Section title="Bag photo auto-fill (AI)">
+      <p className="muted">Optional. Reads up to two photos of a bag to fill the bean form. Nothing else uses AI; for bulk imports, use the guide in Import.</p>
       <Segmented label="Provider" value={p.id} options={PROVIDERS.map((x): [Provider, string] => [x.id, x.label])}
         onChange={(ai_provider) => patch({ ai_provider, ai_model: "" })} />
       <TextField label="Model" value={s.ai_model} placeholder={p.model} hint="Leave empty for the cheapest default." onChange={(ai_model) => patch({ ai_model })} />
@@ -404,6 +443,16 @@ function KeyField({ p }: { p: (typeof PROVIDERS)[number] }) {
   );
 }
 
+// One source for the format: the guide file, also shown here (its JSON template) and offered as a download.
+const TEMPLATE = /```json\n([\s\S]*?)```/.exec(importGuide)?.[1] ?? "";
+function downloadGuide() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([importGuide], { type: "text/markdown" }));
+  a.download = "extraction-theory-import-guide.md";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 /** Paste a JSON export (beans and brews) to add it to the sheet. Re-running skips rows already imported. */
 function ImportData() {
   const { update, busy, notify } = useApp();
@@ -421,7 +470,14 @@ function ImportData() {
   };
   return (
     <section className="section">
-      <Fold title="Import" level="section">
+      <Section title="Import">
+        <p className="meta">Add many coffees and brews at once as JSON. Download the guide for the format and rules: fill it by hand, or give it to any AI chat with photos of your bags or your notes and paste back what it writes.</p>
+        <div className="row">
+          <Button ghost icon={DownloadSimple} onClick={downloadGuide}>Import guide (.md)</Button>
+        </div>
+        <Fold title="Format" level="group">
+          <pre className="code">{TEMPLATE}</pre>
+        </Fold>
         <TextField label="Import data (JSON)" multiline value={text} onChange={setText} placeholder='{"beans": [], "brews": []}'
           hint='Beans match existing ones by name and roastery. Brews already imported are skipped; add "update": true to change one or "delete": true to remove it.' />
         <div className="row" style={{ justifyContent: "flex-end" }}>
@@ -432,7 +488,7 @@ function ImportData() {
           </label>
           <IconButton icon={UploadSimple} label="Import into my sheet" variant="solid" tipAlign="end" disabled={busy || !text.trim()} onClick={run} />
         </div>
-      </Fold>
+      </Section>
     </section>
   );
 }
