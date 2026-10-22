@@ -6,6 +6,7 @@ import { Ctx, type AppCtx, type View } from "./ctx.ts";
 import { AuthError, hadSession, hasToken, preload, resume, signIn } from "./google.ts";
 import { sheetUrl } from "./sheets.ts";
 import { loadDb, type Db } from "./store.ts";
+import { DEFAULT_SETTINGS } from "./schema.ts";
 import { Button, Dialog, IconButton, Msg } from "./ui.tsx";
 import Home from "./views/Home.tsx";
 import Brew from "./views/Brew.tsx";
@@ -101,7 +102,9 @@ const CACHE = "et.cache";
 function readCache(): Db | null {
   try {
     const d = JSON.parse(localStorage.getItem(CACHE) ?? "null") as Db | null;
-    return d?.id && Array.isArray(d.beans) && Array.isArray(d.brews) && d.settings ? d : null;
+    if (!d?.id || !Array.isArray(d.beans) || !Array.isArray(d.brews) || !d.settings) return null;
+    // A copy saved by an older version may lack newer settings: fill them with defaults.
+    return { ...d, settings: { ...DEFAULT_SETTINGS, ...d.settings } };
   } catch { return null; }
 }
 function writeCache(d: Db) {

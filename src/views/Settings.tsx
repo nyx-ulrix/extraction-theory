@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   ArrowCounterClockwise, ArrowDown, ArrowLeft, ArrowUp, CaretDown, CaretRight, ChartPolar, Database, DownloadSimple, Drop,
   FloppyDisk, GithubLogo, Globe, LinkedinLogo, Palette, Plus, Rows, SignOut, Table, Trash, UploadSimple, UserCircle, Wrench, type Icon,
@@ -28,6 +28,12 @@ export default function Settings() {
   const { db, update, busy, setDirty, arg, go, back } = useApp();
   const [s, setS] = useState<S>(db.settings);
   const patch: Patch = (p) => setS((x) => ({ ...x, ...p }));
+  // Settings reloaded from the sheet (the app opens on its saved copy first): follow them unless edited here.
+  const base = useRef(db.settings);
+  useEffect(() => {
+    setS((x) => (JSON.stringify(x) === JSON.stringify(base.current) ? db.settings : x));
+    base.current = db.settings;
+  }, [db.settings]);
   const dirty = JSON.stringify(s) !== JSON.stringify(db.settings);
   useEffect(() => {
     setDirty(dirty);
