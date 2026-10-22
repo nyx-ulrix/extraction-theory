@@ -50,7 +50,7 @@ function fonts(): Promise<string> {
 }
 
 interface Opts {
-  art: "radar" | "blob"; rounded: boolean; grid: boolean; coffee: boolean; notes: boolean; brewId: string;
+  art: "radar" | "blob"; rounded: boolean; grid: boolean; coffee: boolean; roast: boolean; notes: boolean; brewId: string;
   /** Background: the app theme's, none (transparent PNG), or a palette colour. */
   bg: "theme" | "none" | "colour"; bgColour: string;
 }
@@ -61,7 +61,7 @@ export default function ExportChart({ bean, fl, open, onClose }: { bean: Rec; fl
   const brews = useMemo(() => db.brews.filter((b) => b.bean_id === bean.id).sort((a, b) => (num(b.brew_date) ?? 0) - (num(a.brew_date) ?? 0)), [db.brews, bean.id]);
   const defs = methodDefs(db.fields);
   const [o, setO] = useState<Opts>({
-    art: s.page_art, rounded: s.page_shape === "rounded", grid: s.page_grid, coffee: true, notes: true, brewId: str(brews[0]?.id),
+    art: s.page_art, rounded: s.page_shape === "rounded", grid: s.page_grid, coffee: true, roast: true, notes: true, brewId: str(brews[0]?.id),
     bg: "theme", bgColour: "#F3F2EF",
   });
   const set = (p: Partial<Opts>) => setO((x) => ({ ...x, ...p }));
@@ -124,6 +124,7 @@ export default function ExportChart({ bean, fl, open, onClose }: { bean: Rec; fl
           {o.art === "radar" && <Segmented label="Shape" full value={o.rounded ? "rounded" : "sharp"} options={[["sharp", "Sharp"], ["rounded", "Rounded"]]} onChange={(v) => set({ rounded: v === "rounded" })} />}
           {o.art === "radar" && <Segmented label="Chart lines" full value={o.grid ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ grid: v === "show" })} />}
           <Toggle label="Coffee details" checked={o.coffee} onChange={(coffee) => set({ coffee })} />
+          {o.coffee && <Toggle label="Roast date" checked={o.roast} onChange={(roast) => set({ roast })} />}
           <Toggle label="Tasting notes" checked={o.notes} onChange={(notes) => set({ notes })} />
         </div>
         <div className="row" style={{ alignItems: "flex-end" }}>
@@ -182,7 +183,7 @@ function compose(chart: SVGSVGElement, o: Opts, bean: Rec, fl: Flavour, brew: Re
     const sub = [bean.roastery, bean.origin, bean.process, bean.variety].map(str).filter(Boolean).join(" · ");
     if (sub) wrap(sub, 26).forEach((l) => line(l, 26, text));
     const roast = stamp(bean.roast_date);
-    if (roast) line(`Roasted ${roast}`, 22, text);
+    if (roast && o.roast) line(`Roasted ${roast}`, 22, text);
     y += 16;
   }
 
