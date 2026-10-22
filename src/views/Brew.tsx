@@ -125,7 +125,7 @@ export default function Brew() {
     setTried(true);
     const missing = [missBean && "Pick a bean", missDose && "Enter the dose", missChill && "Choose a chill method"].filter(Boolean);
     if (missing.length) {
-      setOpened((o) => ({ ...o, ...(missBean ? { "Bean and date": true } : {}), ...(missDose ? { "Dose, ratio, temp, time": true } : {}), ...(missChill ? { Chilling: true } : {}) }));
+      setOpened((o) => ({ ...o, ...(missBean ? { "Bean and date": true } : {}), ...(missDose ? { "Recipe": true } : {}), ...(missChill ? { Chilling: true } : {}) }));
       notify(`${missing.join(". ")}.`, "error");
       requestAnimationFrame(() => document.querySelector(".brew-form [role=alert]")?.scrollIntoView({ block: "center" }));
       return;
@@ -265,7 +265,7 @@ export default function Brew() {
   const summary: Record<string, string> = {
     "Bean and date": [str(bean?.name), d.date.slice(0, 10)].filter(Boolean).join(", "),
     Grind: [str(d.f.grind_setting), grinderName].filter(Boolean).join(" on "),
-    "Dose, ratio, temp, time": [dose != null && liquid != null ? `${dose} to ${liquid} g` : "", ratio != null ? `1:${ratio}` : "", num(rec.temp_c) != null ? `${num(rec.temp_c)} °C` : ""].filter(Boolean).join(", "),
+    "Recipe": [dose != null && liquid != null ? `${dose} to ${liquid} g` : "", ratio != null ? `1:${ratio}` : "", num(rec.temp_c) != null ? `${num(rec.temp_c)} °C` : ""].filter(Boolean).join(", "),
     [`${m.label} details`]: extrasSet ? `${extrasSet} set` : "",
     "Water used": str(d.f.water_type),
     Milk: [str(d.f.milk_drink), num(d.f.milk_g) != null ? `${num(d.f.milk_g)} g` : ""].filter(Boolean).join(", "),

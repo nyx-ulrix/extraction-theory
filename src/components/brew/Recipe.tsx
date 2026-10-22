@@ -70,7 +70,7 @@ export default function Recipe({ d, up, m, err }: { d: Draft; up: Up; m: MethodD
     }
   }
   return (
-    <Section title="Dose, ratio, temp, time">
+    <Section title="Recipe">
       <div className="grid-3">
         {body}
         {temp}

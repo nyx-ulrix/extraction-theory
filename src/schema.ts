@@ -238,7 +238,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export const SECTIONS: Record<string, string> = {
   bean: "Bean and date",
   grind: "Grind",
-  recipe: "Dose, ratio, temp, time",
+  recipe: "Recipe",
   water_type: "Water used",
   milk: "Black or milk (espresso and moka)",
   dripper: "Dripper and paper",
