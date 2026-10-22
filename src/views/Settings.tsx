@@ -206,7 +206,7 @@ function Brewing({ s, patch }: { s: S; patch: Patch }) {
               </div>
             ))}
           </div>
-        ) : <p>No saved recipes. In the brew form, use the bookmark next to Recipe to save one.</p>}
+        ) : <p>No saved recipes. In the brew form, use the bookmark next to Saved recipe to save one.</p>}
       </div>
     </Section>
   );

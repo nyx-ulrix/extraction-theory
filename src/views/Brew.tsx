@@ -294,7 +294,7 @@ export default function Brew() {
           </div>
           {/* Saved recipes: load one into the form, or save this one under a name. */}
           <div className="brew-recipes">
-            <SelectField label="Recipe" value="" placeholder={db.settings.recipes.length ? "Load a saved recipe" : "No saved recipes yet"}
+            <SelectField label="Saved recipe" value="" placeholder={db.settings.recipes.length ? "Load a saved recipe" : "No saved recipes yet"}
               options={db.settings.recipes.map((r, i): [string, string] => [String(i), `${r.name} (${methods.find((x) => x.id === r.method)?.label ?? r.method})`])}
               onChange={(v) => { const r = db.settings.recipes[Number(v)]; if (r) { setD((o) => applyRecipe(o, r)); notify(`Loaded ${r.name}`, "success"); } }} />
             <IconButton icon={BookmarkSimple} label="Save as recipe" onClick={() => setNaming(true)} />
