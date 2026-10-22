@@ -95,12 +95,12 @@ export default function Settings() {
       {arg === "brewing" && <Brewing s={s} patch={patch} />}
       {arg === "form" && (<>
         <Section title="Brew form">
-          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "Normal human"], ["advanced", "I'm a snob"], ["pretentious", "Pretentious"]]} onChange={(brew_mode) => {
+          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "I have a life"], ["advanced", "I'm a snob"], ["pretentious", "Pretentious"]]} onChange={(brew_mode) => {
             if (brew_mode === "pretentious" && lockedHours > 0) return notify(`You stepped down. Pretentious unlocks in ${lockedHours} h.`, "info");
             patch({ brew_mode });
           }} />
           <p className="meta">{s.brew_mode === "basic"
-            ? "Normal human shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Pick I'm a snob to choose which fields show."
+            ? "I have a life shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Pick I'm a snob to choose which fields show."
             : s.brew_mode === "advanced" ? "I'm a snob shows what you tick below, in the order you set."
             : "Pretentious shows every variable, takes grind size in microns only, and won't log a brew without the water's GH and KH."}</p>
           {lockedHours > 0 && s.brew_mode !== "pretentious" && <p className="meta">You stepped down from Pretentious. It unlocks in {lockedHours} h.</p>}
@@ -249,7 +249,7 @@ type Demotion = { hidden: string[]; layoutFix: (id: string, keys: string[]) => s
 
 /**
  * Pretentious mode logs everything. Switching one variable off asks which lesser mode you are:
- * Normal human, or I'm a snob with every method's full layout and only that variable gone.
+ * I have a life, or I'm a snob with every method's full layout and only that variable gone.
  */
 function useToSnob(s: S, patch: Patch): [(hidden: string[], layoutFix?: Demotion["layoutFix"]) => void, ReactNode] {
   const { db } = useApp();
@@ -267,7 +267,7 @@ function useToSnob(s: S, patch: Patch): [(hidden: string[], layoutFix?: Demotion
         <p>Pretentious logs every variable. Switch one off and you'll have to settle for something less, and Pretentious stays locked for 24 hours.</p>
         <div className="stack" style={{ gap: 8 }}>
           <Button onClick={() => { if (pending) snob(pending); setPending(null); }}>You're just snobby (I'm a snob)</Button>
-          <Button ghost onClick={() => { patch({ brew_mode: "basic", pretentious_lock: Date.now() }); setPending(null); }}>Training wheels (Normal human)</Button>
+          <Button ghost onClick={() => { patch({ brew_mode: "basic", pretentious_lock: Date.now() }); setPending(null); }}>Training wheels (I have a life)</Button>
           <Button ghost onClick={() => setPending(null)}>Stay pretentious</Button>
         </div>
       </div>

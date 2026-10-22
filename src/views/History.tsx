@@ -269,7 +269,7 @@ function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
         <Section title="Tasting notes"><p>{str(brew.tasting_notes)}</p></Section>
       )}
 
-      {/* Nothing timed (a Normal human espresso, say): no empty timeline. */}
+      {/* Nothing timed (an I have a life espresso, say): no empty timeline. */}
       {(num(brew.total_s) != null || phasesOf(db, brew.id).length > 0 || num(brew.steep_h) != null) && (
         <Section title="Timeline">
           <Timeline items={[{ label: m.label, method: m, brew, phases: phasesOf(db, brew.id) }]} />

@@ -310,7 +310,7 @@ export const OPTIONAL_SECTIONS: [string, string][] = [
   ["astringency", "Astringency"],
 ];
 
-/** Whether an optional variable shows: never for normal humans, always when pretentious, as ticked for snobs. */
+/** Whether an optional variable shows: never for I have a life, always when pretentious, as ticked for snobs. */
 export const shows = (s: Settings, key: string) =>
   s.brew_mode === "pretentious" || (s.brew_mode === "advanced" && !s.hidden.includes(key));
 

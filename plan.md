@@ -121,10 +121,10 @@ Bulk import: Settings, Import shows the JSON format and offers `src/import-guide
 - Grind input shown first (setting / microns).
 - Split presets: 4:6 Kasuya (`2:2:2:2:2`), `1:2:3:3`, even thirds.
 - Radar axis template.
-- Brew form mode (every account starts on Normal human):
-  - Normal human: the essentials per method (grind, dose and ratio, temperature; pour-overs add pours, dripper and paper; espresso adds shot time), with starting-number placeholders and plain hints.
+- Brew form mode (every account starts on I have a life):
+  - I have a life: the essentials per method (grind, dose and ratio, temperature; pour-overs add pours, dripper and paper; espresso adds shot time), with starting-number placeholders and plain hints.
   - I'm a snob: the "Variables to log" checklist (TDS and extraction yield, pour durations, RDT and grinder RPM, astringency, water GH/KH, espresso first drops, pressures, tamp, puck screen, WDT, and more) and the layout below.
-  - Pretentious: every variable on, grind in microns only, no brew logged without water, GH and KH. Unticking anything asks "Not pretentious enough": step down to I'm a snob or Normal human, and Pretentious stays locked for 24 hours.
+  - Pretentious: every variable on, grind in microns only, no brew logged without water, GH and KH. Unticking anything asks "Not pretentious enough": step down to I'm a snob or I have a life, and Pretentious stays locked for 24 hours.
 - Brew form layout per method: choose visible sections / fields and their order. Bean, recipe and (ice brew) chilling are required.
 - Drippers and their style sliders.
 - Grinders: um per step and zero point.

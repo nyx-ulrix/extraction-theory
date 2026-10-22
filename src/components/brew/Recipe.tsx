@@ -12,7 +12,7 @@ export default function Recipe({ d, up, m, err }: { d: Draft; up: Up; m: MethodD
   const { db } = useApp();
   const st = db.settings;
   const basic = st.brew_mode === "basic";
-  // Normal humans get the espresso shot time only (Aeropress works time out from the presses either way).
+  // I have a life gets the espresso shot time only (Aeropress works time out from the presses either way).
   const showTime = shows(st, "total_s") || (basic && m.time === "shot");
   const start = STARTS[m.id] ?? {};
   const ph = (v?: number) => (v == null ? undefined : String(v));
