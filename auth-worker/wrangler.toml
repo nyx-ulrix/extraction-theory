@@ -1,0 +1,8 @@
+name = "extraction-theory-auth"
+main = "index.js"
+compatibility_date = "2026-09-01"
+routes = [{ pattern = "et-auth.liewjiaen.com", custom_domain = true }]
+
+[vars]
+GOOGLE_CLIENT_ID = "715190347401-7gf93u19u95g2h59tckftojm1m670028.apps.googleusercontent.com"
+ALLOWED_ORIGINS = "https://extractiontheory.liewjiaen.com,https://extraction-theory.web.app,https://extraction-theory.firebaseapp.com,http://localhost:5180"

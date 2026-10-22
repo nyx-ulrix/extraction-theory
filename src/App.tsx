@@ -3,7 +3,7 @@ import {
   ArrowClockwise, Books, Coffee, GearSix, GoogleLogo, House, Moon, SignIn, Sun, Table, X, type Icon,
 } from "@phosphor-icons/react";
 import { Ctx, type AppCtx, type View } from "./ctx.ts";
-import { AuthError, hadSession, hasToken, preload, signIn } from "./google.ts";
+import { AuthError, hadSession, hasToken, preload, resume, signIn } from "./google.ts";
 import { sheetUrl } from "./sheets.ts";
 import { loadDb, type Db } from "./store.ts";
 import { Button, Dialog, IconButton, Msg } from "./ui.tsx";
@@ -144,7 +144,9 @@ export default function App() {
     setErr("");
     setSigning(true);
     try {
-      if (!hasToken()) await signIn();
+      if (!hasToken() && !(await signIn())) {
+        notify("Signed in, but Google didn't allow staying signed in. Remove Extraction Theory at myaccount.google.com/connections, then sign in again.", "info");
+      }
     } catch (e) {
       setErr(errMsg(e));
       setPhase("out");
@@ -165,13 +167,20 @@ export default function App() {
   // sheet in the background while the token is valid, or after the next tap renews it.
   const [authed, setAuthed] = useState(hasToken);
   useEffect(() => {
-    const cached = hadSession() ? readCache() : null;
+    const known = hadSession();
+    const cached = known ? readCache() : null;
     if (cached) {
       dbRef.current = cached;
       setDb(cached);
       setPhase("in");
-      if (hasToken()) refresh();
-    } else if (hasToken()) load();
+    } else if (known) setPhase("loading");
+    (async () => {
+      // Expired token: the Worker renews it silently from its cookie.
+      if (!hasToken() && known) await resume();
+      if (hasToken()) return cached ? refresh() : load();
+      setAuthed(false);
+      if (!cached) setPhase("out");
+    })();
     // Notice the token running out while the app stays open.
     const t = setInterval(() => setAuthed(hasToken()), 30_000);
     return () => clearInterval(t);
@@ -208,7 +217,7 @@ export default function App() {
   useEffect(() => {
     if (phase !== "in" || authed || !gisReady) return;
     const renew = () => {
-      signIn().then(() => { setAuthed(true); refresh(); }, () => { /* closed or blocked: try again on the next tap */ });
+      resume().then((ok) => ok || signIn()).then(() => { setAuthed(true); refresh(); }, () => { /* closed or blocked: try again on the next tap */ });
     };
     // click, not pointerdown: on touch screens only the end of a tap counts as a gesture for pop-ups.
     window.addEventListener("click", renew, { capture: true, once: true });
@@ -221,8 +230,8 @@ export default function App() {
     if (!cur) return false;
     setBusy(true);
     try {
-      // Token ran out while the app was open: saves come from a click, so the popup is allowed here.
-      if (!hasToken()) await signIn();
+      // Token ran out while the app was open: renew silently, else sign in (saves come from a click).
+      if (!hasToken() && !(await resume())) await signIn();
       setAuthed(true);
       setData(await fn(cur));
       if (done) notify(done, "success");
