@@ -271,6 +271,11 @@ export const AGITATION_TIMING = [
 // "Dirty" = espresso over cold milk, no ice.
 export const MILK_DRINKS = ["Dirty", "Cold milk", "Cold milk with ice", "Flat white", "Latte", "Cappuccino"];
 export const MILK_DEFAULT_G: Record<string, number> = { Dirty: 75 };
+/** Body of the cup, stored in the taste_strength column. Older brews said weak / balanced / strong. */
+export const BODY_LEVELS: [string, string][] = [["low", "Low"], ["medium_low", "Medium low"], ["mid", "Mid"], ["medium_high", "Medium high"], ["high", "High"]];
+const OLD_BODY: Record<string, string> = { weak: "low", balanced: "mid", strong: "high" };
+export const bodyLevel = (v: unknown) => OLD_BODY[String(v ?? "")] ?? String(v ?? "");
+export const bodyLabel = (v: unknown) => BODY_LEVELS.find(([k]) => k === bodyLevel(v))?.[1] ?? "";
 export const CHILL_METHODS =["Ice drip", "Hyperchiller", "Shaken"];
 export const PROCESSES = ["Washed", "Natural", "Honey", "Anaerobic", "Carbonic maceration", "Wet hulled"];
 export const ROAST_LEVELS = ["Super light", "Light", "Medium light", "Medium", "Medium dark", "Dark"];

@@ -345,3 +345,6 @@ pre.code { margin: 0; padding: 12px; overflow-x: auto; border: 1px solid var(--b
 }
 .add-row:hover { background: var(--surface); }
 .add-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Native date inputs size to their content; keep them inside their column. */
+input[type="date"], input[type="datetime-local"] { width: 100%; min-width: 0; }

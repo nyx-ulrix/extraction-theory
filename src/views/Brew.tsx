@@ -9,7 +9,7 @@ import { isFinished } from "../group.ts";
 import {
   beanRecipe, buildRecord, DRAFT_KEY, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
-import { MILK_DEFAULT_G, MILK_DRINKS, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
+import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
 import { addBrew, newId, saveBean, type Db } from "../store.ts";
 import { Button, Dialog, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import Timeline from "../components/Timeline.tsx";
@@ -152,12 +152,13 @@ export default function Brew() {
               .map((x) => [str(x.id), [x.name, x.roastery].map(str).filter(Boolean).join(" - ")])}
             hint="Finished bags are hidden. Mark a bag as finished in History or Beans." />
           {errBean && <p className="brew-err" role="alert">{errBean}</p>}
-          <div className="grid-3">
-            <div className="field">
-              <label className="label" htmlFor={dateId}>Brew date</label>
-              <input id={dateId} className="input" type="datetime-local" value={d.date}
-                onChange={(e) => setD((o) => ({ ...o, date: e.target.value || emptyDraft(o.method).date, dateSet: !!e.target.value }))} />
-            </div>
+          {/* Date and time is wide on phones: it gets its own row so it never runs into the next column. */}
+          <div className="field">
+            <label className="label" htmlFor={dateId}>Brew date</label>
+            <input id={dateId} className="input" type="datetime-local" value={d.date}
+              onChange={(e) => setD((o) => ({ ...o, date: e.target.value || emptyDraft(o.method).date, dateSet: !!e.target.value }))} />
+          </div>
+          <div className="grid-2">
             <DateField label="Roast date" value={num(bean?.roast_date)} onChange={setRoast} disabled={!bean || busy} />
             <Readout label="Days off roast">{num(rec.days_off_roast) ?? "-"}</Readout>
           </div>
@@ -220,8 +221,8 @@ export default function Brew() {
           <div className="stack brew-pair">
             <Segmented label="Taste balance" value={str(d.f.taste_balance)} onChange={(v) => up(withF({ taste_balance: v }))} full
               options={[["sour", "Sour"], ["balanced", "Balanced"], ["bitter", "Bitter"]]} />
-            <Segmented label="Strength" value={str(d.f.taste_strength)} onChange={(v) => up(withF({ taste_strength: v }))} full
-              options={[["weak", "Weak"], ["balanced", "Balanced"], ["strong", "Strong"]]} />
+            <SelectField label="Body" value={bodyLevel(d.f.taste_strength)} placeholder="Not set" options={BODY_LEVELS}
+              onChange={(v) => up(withF({ taste_strength: v }))} />
           </div>
         </Section>
       );

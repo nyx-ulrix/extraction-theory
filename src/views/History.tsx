@@ -5,7 +5,7 @@ import {
 import { fmtTime, fromSerial, num, round } from "../calc.ts";
 import { dialedMethods, isFinished } from "../group.ts";
 import { useApp } from "../ctx.ts";
-import { AGITATION_TIMING, methodDefs, type MethodDef, type Phase, type Rec } from "../schema.ts";
+import { AGITATION_TIMING, bodyLabel, methodDefs, type MethodDef, type Phase, type Rec } from "../schema.ts";
 import { patchBrew, saveBean, type Db } from "../store.ts";
 import { Button, IconButton, Msg, Section, Segmented, SelectField } from "../ui.tsx";
 import Timeline from "../components/Timeline.tsx";
@@ -123,7 +123,7 @@ function params(b: Rec, db: Db, m: MethodDef): P[] {
     ["Chill", "Final ratio", fr == null ? "" : `1:${round(fr, 1)}`],
     ["Taste", "Tasting notes", str(b.tasting_notes)],
     ["Taste", "Taste balance", cap(b.taste_balance)],
-    ["Taste", "Strength", cap(b.taste_strength)],
+    ["Taste", "Body", bodyLabel(b.taste_strength) || cap(b.taste_strength)],
     ["Taste", "Rating", rating == null ? "" : `${rating}/5`],
     ["Taste", "Dialed in", yn(b.dialed_in)],
     ["Notes", "What changed", str(b.changed)],

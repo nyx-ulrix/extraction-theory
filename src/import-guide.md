@@ -143,7 +143,7 @@ Use this to add coffees and brews to Extraction Theory in one go. You can fill t
 | `tasting_notes` | What you tasted, as text. Brews have no chart of their own. |
 | `rating` | 1 to 5. |
 | `taste_balance` | `sour`, `balanced` or `bitter`. |
-| `taste_strength` | `weak`, `balanced` or `strong`. |
+| `taste_strength` | Body of the cup: `low`, `medium_low`, `mid`, `medium_high` or `high`. |
 | `changed` | What to change next time. |
 | `notes` | Anything else. |
 | `dialed_in` | `true` if this is the recipe you settled on. |
