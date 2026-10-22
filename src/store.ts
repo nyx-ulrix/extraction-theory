@@ -146,6 +146,20 @@ export async function addBrew(db: Db, brew: Rec, phases: Phase[]): Promise<Db> {
   return { ...db, brews: [...db.brews, brew], phases: [...db.phases, ...linked] };
 }
 
+/** An edited brew: its row rewritten in place, its phases replaced (new ones first, so a failure never leaves none). */
+export async function saveBrew(db: Db, brew: Rec, phases: Phase[]): Promise<Db> {
+  const id = String(brew.id);
+  const linked = phases.map((p) => ({ ...p, brew_id: id }));
+  await sh.upsert(db.id, db.headers, "Brews", brew);
+  await sh.deleteRows(db.id, db.headers, "Phases", "brew_id", [id]);
+  await sh.append(db.id, db.headers, "Phases", linked as unknown as Rec[]);
+  return {
+    ...db,
+    brews: db.brews.map((b) => (b.id === brew.id ? { ...b, ...brew } : b)),
+    phases: [...db.phases.filter((p) => p.brew_id !== id), ...linked],
+  };
+}
+
 export async function patchBrew(db: Db, patch: Rec): Promise<Db> {
   await sh.upsert(db.id, db.headers, "Brews", patch);
   return { ...db, brews: db.brews.map((b) => (b.id === patch.id ? { ...b, ...patch } : b)) };

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft, ArrowsClockwise, CheckSquare, Coffee, Square, Target, X, type Icon, type IconProps,
+  ArrowLeft, ArrowsClockwise, CheckSquare, Coffee, PencilSimple, Square, Target, X, type Icon, type IconProps,
 } from "@phosphor-icons/react";
 import { fmtTime, fromSerial, num, round } from "../calc.ts";
 import { dialedMethods, isFinished } from "../group.ts";
@@ -254,6 +254,7 @@ function Detail({ brew, defs }: { brew: Rec; defs: MethodDef[] }) {
             return next;
           }, dialed ? "No longer dialed in" : "Marked as dialed in")}
         />
+        <IconButton icon={PencilSimple} label="Edit brew" onClick={() => go("brew", `edit:${str(brew.id)}`)} />
         <Button icon={ArrowsClockwise} onClick={() => go("brew", str(brew.id))}>Brew again</Button>
       </div>
 

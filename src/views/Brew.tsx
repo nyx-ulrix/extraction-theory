@@ -7,10 +7,10 @@ import { DateField } from "../components/DateField.tsx";
 import { useApp } from "../ctx.ts";
 import { isFinished } from "../group.ts";
 import {
-  beanRecipe, buildRecord, DRAFT_KEY, pastValues, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
+  beanRecipe, buildRecord, DRAFT_KEY, editDraft, pastValues, emptyDraft, loadFrom, pourTotal, prefill, restoreDraft, str, withF, type Draft, type Up,
 } from "../brew.ts";
 import { BODY_LEVELS, MILK_DEFAULT_G, MILK_DRINKS, bodyLevel, frozenOn, layoutFor, methodDefs, type MethodField, type Rec } from "../schema.ts";
-import { addBrew, newId, saveBean, type Db } from "../store.ts";
+import { addBrew, newId, saveBean, saveBrew, type Db } from "../store.ts";
 import { Button, Dialog, IconButton, Msg, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import Timeline from "../components/Timeline.tsx";
 import Chill from "../components/brew/Chill.tsx";
@@ -42,8 +42,10 @@ const again = (db: Db, b: Rec, fallback: string): Draft => ({ ...loadFrom(db, b,
 export default function Brew() {
   const { db, update, busy, go, arg, notify } = useApp();
   const methods = methodDefs(db.fields);
+  const [editing] = useState(() => (arg?.startsWith("edit:") ? db.brews.find((x) => x.id === arg.slice(5)) : undefined));
   const [init] = useState(() => {
-    // arg: a brew id (Brew again) or "bean:<id>" (new brew from a coffee's page).
+    // arg: a brew id (Brew again), "bean:<id>" (new brew from a coffee's page) or "edit:<id>" (change a logged brew).
+    if (editing) return { d: editDraft(db, editing, methods[0].id), pending: undefined as Pending | undefined };
     const beanArg = arg?.startsWith("bean:") ? arg.slice(5) : undefined;
     const b = arg && !beanArg ? db.brews.find((x) => x.id === arg) : undefined;
     const saved = restoreDraft();
@@ -69,7 +71,8 @@ export default function Brew() {
   const dateId = useId();
 
   useEffect(() => {
-    if (pending) return;
+    // Editing a logged brew never touches the new-brew draft kept on this device.
+    if (pending || editing) return;
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch { /* storage blocked */ }
   }, [d, pending]);
 
@@ -116,6 +119,13 @@ export default function Brew() {
     if (missing.length) {
       notify(`${missing.join(". ")}.`, "error");
       requestAnimationFrame(() => document.querySelector(".brew-form [role=alert]")?.scrollIntoView({ block: "center" }));
+      return;
+    }
+    if (editing) {
+      setSaving(true);
+      const ok = await update((x) => saveBrew(x, { ...rec, id: editing.id, created: editing.created }, phases), "Brew updated");
+      setSaving(false);
+      if (ok) go("history", str(editing.id));
       return;
     }
     const full: Rec = { ...rec, id: newId(), created: toSerial(new Date()) };
@@ -256,7 +266,7 @@ export default function Brew() {
       <style href="et-brew" precedence="default">{CSS}</style>
       <div className="brew-form">
         <div className="stack">
-          <h1>Brew</h1>
+          <h1>{editing ? "Edit brew" : "Brew"}</h1>
           <div className="brew-methods">
             <Segmented label="Method" value={m.id} onChange={pickMethod}
               options={methods.map((x): [string, string, Icon] => [x.id, x.label, ICONS[x.id] ?? Flask])} />
@@ -282,7 +292,9 @@ export default function Brew() {
             </span>
           </div>
           {errors && <p className="brew-err brew-bar-err">{errors}.</p>}
-          <Button icon={FloppyDisk} onClick={save} disabled={busy || saving}>{saving ? "Logging..." : "Log brew"}</Button>
+          <Button icon={FloppyDisk} onClick={save} disabled={busy || saving}>
+            {editing ? (saving ? "Saving..." : "Save changes") : saving ? "Logging..." : "Log brew"}
+          </Button>
         </div>
         <div className="brew-preview">
           <Timeline items={[{ label: "This brew", method: m, brew: rec, phases }]} />

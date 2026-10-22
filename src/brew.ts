@@ -1,6 +1,6 @@
 // Pure helpers for the brew form: the draft shape, prefill, ratio assists and the saved record.
 import {
-  cleanAxes, cleanLayers, daysOffRoast, dialToClicks, estimateMicrons, finalRatio, iceSplit, num, pressTimes, profile, round,
+  cleanAxes, cleanLayers, daysOffRoast, dialToClicks, fromSerial, estimateMicrons, finalRatio, iceSplit, num, pressTimes, profile, round,
   solveRatio, toSerial, type AxisDef, type Dial, type Flavour, type Num,
 } from "./calc.ts";
 import { frozenOn, newPhase, TABS, type Gear, type MethodDef, type MethodField, type Phase, type Rec } from "./schema.ts";
@@ -109,6 +109,16 @@ export function loadFrom(db: Db, b: Rec, d: Draft): Draft {
 }
 
 const latest = (rows: Rec[]) => rows.sort((a, b) => (num(b.brew_date) ?? 0) - (num(a.brew_date) ?? 0))[0];
+
+/** A logged brew back in the form for editing: recipe, phases, date and verdict, all as saved. */
+export function editDraft(db: Db, b: Rec, fallbackMethod: string): Draft {
+  const d = loadFrom(db, b, emptyDraft(str(b.method) || fallbackMethod));
+  const keep = ["tasting_notes", "rating", "taste_balance", "taste_strength", "changed", "notes", "dialed_in"];
+  const at = num(b.brew_date);
+  const local = at == null ? null : fromSerial(at);
+  const date = local ? new Date(local.getTime() - local.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : d.date;
+  return { ...d, date, dateSet: true, f: { ...d.f, ...Object.fromEntries(keep.map((k) => [k, b[k] ?? null])) }, prefilled: false, touched: false };
+}
 
 /** Distinct values typed into `key` across brews, most recent brew first. */
 export function pastValues(db: Db, key: string): string[] {
