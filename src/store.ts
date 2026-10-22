@@ -1,4 +1,4 @@
-import { DEFAULT_AXES, OLD_DEFAULT_COLOURS, cleanAxes, cleanLayers, num, profile, toSerial, type AxisDef } from "./calc.ts";
+import { DEFAULT_AXES, OLD_DEFAULT_COLOURS, cleanAxes, cleanLayers, defuse, num, profile, toSerial, type AxisDef } from "./calc.ts";
 import {
   DEFAULT_FIELDS, DEFAULT_GEAR, DEFAULT_SETTINGS,
   type Gear, type MethodField, type Phase, type Rec, type Settings,
@@ -221,13 +221,14 @@ export async function saveGear(db: Db, g: Gear): Promise<Db> {
 // so running the same import twice adds nothing.
 
 const KEY = /^[a-z][a-z0-9_]{0,40}$/;
-const low = (v: unknown) => str(v).trim().toLowerCase();
+// Compared as stored: cells() defuses names and keys on the way in, and defuse is idempotent.
+const low = (v: unknown) => defuse(str(v)).trim().toLowerCase();
 
 function cells(o: Record<string, unknown>, skip: string[]): Rec {
   const r: Rec = {};
   for (const [k, v] of Object.entries(o)) {
     if (skip.includes(k) || !KEY.test(k)) continue;
-    if (v == null || typeof v === "string" || typeof v === "number" || typeof v === "boolean") r[k] = typeof v === "string" ? v.slice(0, 2000) : v;
+    if (v == null || typeof v === "string" || typeof v === "number" || typeof v === "boolean") r[k] = typeof v === "string" ? defuse(v.slice(0, 2000)) : v;
   }
   return r;
 }
@@ -300,7 +301,7 @@ export async function importData(db: Db, raw: unknown): Promise<ImportResult> {
   let skipped = 0;
   for (const b of brews as Record<string, unknown>[]) {
     if (!b || typeof b !== "object") continue;
-    const key = str(b.import_key);
+    const key = defuse(str(b.import_key));
     // `delete: true` removes an imported brew (found by import_key) and its phases.
     if (b.delete) {
       const cur = key ? db.brews.find((x) => str(x.import_key) === key) : undefined;

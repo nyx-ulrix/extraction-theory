@@ -107,4 +107,15 @@ assert.deepEqual(c.parseFlavour("not json", ax), { axes: ax, layers: [] });
 // Aeropress press phases
 assert.deepEqual(c.pressTimes([{ start: 90, duration: 20 }, { start: 120, duration: 15 }]), { steep: 90, total: 135 });
 
+// Imported formulas stay text; ordinary notes are untouched
+assert.equal(c.defuse('=HYPERLINK("https://x","y")'), `'=HYPERLINK("https://x","y")`);
+assert.equal(c.defuse("+cmd|' /C calc'!A0"), "'+cmd|' /C calc'!A0");
+assert.equal(c.defuse("@SUM(A1)"), "'@SUM(A1)");
+assert.equal(c.defuse("-2 clicks finer"), "-2 clicks finer");
+assert.equal(c.defuse("Bright, jammy (washed)"), "Bright, jammy (washed)");
+assert.equal(c.defuse("-2+3+cmd|' /C calc'!A0"), "'-2+3+cmd|' /C calc'!A0");
+assert.equal(c.defuse("+HYPERLINK(\"x\")"), "'+HYPERLINK(\"x\")");
+for (const note of ["-1 step (finer)", "+2 clicks (coarser)", "- Bright (lemon)", "- Juicy!", "@roaster (IG)"]) assert.equal(c.defuse(note), note);
+assert.equal(c.defuse(c.defuse("=X(1)")), "'=X(1)"); // idempotent, so stored values match on re-import
+
 console.log("calc checks passed");

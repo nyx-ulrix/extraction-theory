@@ -6,15 +6,15 @@ import Fingerprint from "../components/Fingerprint.tsx";
 import Shelf from "../components/Shelf.tsx";
 import ExportChart from "../components/ExportChart.tsx";
 import { BagToggle, BrewList } from "./History.tsx";
-import { cleanAxes, cleanLayers, fromSerial, num, parseFlavour, profile, toSerial, type Flavour } from "../calc.ts";
-import { useApp } from "../ctx.ts";
+import { DEFAULT_AXES, axisKey, clamp10, cleanAxes, cleanLayers, fromSerial, num, parseFlavour, profile, toSerial, type AxisDef, type Flavour } from "../calc.ts";
+import { BEAN_FORM, keepForm, readForm, useApp } from "../ctx.ts";
 import { PROCESSES, ROAST_LEVELS, frozenOn, methodDefs, type Cell, type Rec } from "../schema.ts";
 import { deleteBean, newId, saveBean, saveSettings } from "../store.ts";
 import { Button, Dialog, Field, IconButton, Msg, NumField, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
 import { DateField } from "../components/DateField.tsx";
 import FlavourEditor, { syncLayers } from "../components/FlavourEditor.tsx";
-import { MAX_BAG_PHOTOS, getKey, photo, readBag, type BagInfo, type Img } from "../ai.ts";
-import { ink } from "../palette.ts";
+import { MAX_BAG_PHOTOS, getKey, photo, readBag, type BagInfo, type ChartNote, type Img } from "../ai.ts";
+import { ink, noteColour, paletteHex } from "../palette.ts";
 
 const str = (v: unknown) => (v == null ? "" : String(v));
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -33,8 +33,13 @@ const KEYS = [
 export default function Beans() {
   const { db, arg, back, go } = useApp();
   // arg: "new" = blank form; "edit:<id>" = form; "<id>" = that coffee's page with its brew history.
-  const [editing, setEditing] = useState<Rec | null>(() =>
-    arg === "new" ? {} : arg?.startsWith("edit:") ? db.beans.find((b) => b.id === arg.slice(5)) ?? null : null);
+  // Unsaved edits left by a reload or a trip to Google's sign-in page reopen their form.
+  const [editing, setEditing] = useState<Rec | null>(() => {
+    if (arg === "new") return {};
+    if (arg?.startsWith("edit:")) return db.beans.find((b) => b.id === arg.slice(5)) ?? null;
+    const kept = readForm<BeanDraft>(BEAN_FORM);
+    return kept ? (kept.id ? db.beans.find((b) => b.id === kept.id) ?? null : {}) : null;
+  });
   const viewing = arg && !editing && arg !== "new" && !arg.startsWith("edit:") ? db.beans.find((b) => b.id === arg) : undefined;
   const open = (b: Rec | null) => {
     setEditing(b);
@@ -63,11 +68,17 @@ export default function Beans() {
   );
 }
 
+interface BeanDraft { id: string; f: Rec; flav: Flavour }
+
 function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; onSaved: () => void }) {
-  const { db, update, busy, setDirty, go } = useApp();
-  const [f, setF] = useState<Rec>(bean);
+  const { db, update, busy, setDirty, go, notify } = useApp();
+  const [kept] = useState(() => {
+    const k = readForm<BeanDraft>(BEAN_FORM);
+    return k && k.id === str(bean.id) ? k : null;
+  });
+  const [f, setF] = useState<Rec>(kept?.f ?? bean);
   const [flav0] = useState<Flavour>(() => parseFlavour(bean.flavour, db.settings.axes));
-  const [flav, setFlav] = useState<Flavour>(flav0);
+  const [flav, setFlav] = useState<Flavour>(kept?.flav ?? flav0);
   const [err, setErr] = useState("");
   const dateId = useId();
   const set = (k: string) => (v: Cell) => setF((p) => ({ ...p, [k]: v }));
@@ -78,6 +89,12 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
     setDirty(dirty);
     return () => setDirty(false);
   }, [dirty, setDirty]);
+  useEffect(() => { keepForm(BEAN_FORM, dirty ? { id: str(bean.id), f, flav } satisfies BeanDraft : null); }, [dirty, f, flav, bean.id]);
+  useEffect(() => {
+    if (kept) notify("Restored your unsaved edits to this bean.", "info");
+    return () => keepForm(BEAN_FORM, null); // form closed: saved or discarded
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const back = () => {
     if (dirty && !window.confirm("Discard changes to this bean?")) return;
     onDone();
@@ -85,7 +102,7 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
   // Auto-fill only fills empty fields, so nothing already typed is overwritten.
   // Functional updates: whatever was typed while the photos were being read is kept.
   const fill = (info: BagInfo) => {
-    const { tasting_notes: notes, roast_date: date, roast_level: level, ...rest } = info;
+    const { tasting_notes: notes, roast_date: date, roast_level: level, chart, printed_axes: printed, ...rest } = info;
     const text = notes?.join(", ") ?? "";
     setF((p) => {
       const next: Rec = { ...p };
@@ -98,8 +115,9 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
       if (text && !str(next.roaster_notes).trim()) next.roaster_notes = text;
       return next;
     });
-    // Notes become layers only when the coffee has none yet.
-    if (text) setFlav((p) => (p.layers.length ? p : { axes: p.axes, layers: syncLayers(text, [], p.axes) }));
+    // The chart is filled only when the coffee has none yet: the roaster's printed axes if the bag has them,
+    // each note scored and coloured by the model; without a chart, notes start from the usual starter shape.
+    if (text) setFlav((p) => p.layers.length ? p : chart?.length ? chartFrom(chart, printed, p.axes) : { axes: p.axes, layers: syncLayers(text, [], p.axes) });
   };
 
   const save = async () => {
@@ -129,7 +147,7 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
         <h1>{bean.id ? str(bean.name) || "Edit bean" : "New bean"}</h1>
       </div>
       <div className="stack">
-        <BagFill onFill={fill} />
+        <BagFill onFill={fill} axes={flav.axes} />
         <div className="grid-2">
           <TextField label="Bean name" value={str(f.name)} onChange={set("name")} hint="What's on the front of the bag, for example Colombia Huila" />
           <TextField label="Roaster's name for it" value={str(f.product)} onChange={set("product")} hint="For example Halo or Nano" />
@@ -186,8 +204,28 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
   );
 }
 
+/** The model's scored notes as a chart: printed axes keep matching template colours, cup-wide axes share one value. */
+function chartFrom(chart: ChartNote[], printed: string[] | undefined, template: AxisDef[]): Flavour {
+  const axes = printed
+    ? cleanAxes(printed.map((label, i) => {
+      const same = template.find((a) => a.key === axisKey(label));
+      return { label, color: same?.color ?? DEFAULT_AXES[i % DEFAULT_AXES.length].color, shared: same?.shared ?? false };
+    }))
+    : template;
+  const layers = cleanLayers(chart.map((n) => ({
+    note: n.note,
+    color: paletteHex(n.colour) ?? noteColour(n.note),
+    v: Object.fromEntries(axes.map((a, i) => [a.key, clamp10(n.values[i] ?? 0)])),
+  })), axes);
+  for (const a of axes.filter((x) => x.shared)) {
+    const v = clamp10(layers.reduce((s, l) => s + (l.v[a.key] ?? 0), 0) / Math.max(1, layers.length));
+    for (const l of layers) l.v[a.key] = v;
+  }
+  return { axes, layers };
+}
+
 /** Up to two photos of the bag (front and back), read with the user's own AI key to fill the form. */
-function BagFill({ onFill }: { onFill: (info: BagInfo) => void }) {
+function BagFill({ onFill, axes }: { onFill: (info: BagInfo) => void; axes: AxisDef[] }) {
   const { db, notify } = useApp();
   const { ai_provider: provider, ai_model: model } = db.settings;
   const [shots, setShots] = useState<(Img & { url: string })[]>([]);
@@ -207,7 +245,7 @@ function BagFill({ onFill }: { onFill: (info: BagInfo) => void }) {
   const run = async () => {
     setReading(true);
     try {
-      const info = await readBag(shots, provider, model);
+      const info = await readBag(shots, provider, model, axes);
       if (!Object.keys(info).length) return notify("Nothing readable on that label. Try a closer, sharper photo.", "info");
       onFill(info);
       notify("Filled from the bag. Check the details before saving.", "success");
@@ -311,6 +349,9 @@ function PageArt({ fl, title, extra }: { fl: Flavour; title: string; extra?: Rea
   const { db, update, busy } = useApp();
   const s = db.settings;
   const art = s.page_art;
+  // Blob view: tapping a note shows it alone, as the spider chart's legend does.
+  const [solo, setSolo] = useState<number | null>(null);
+  const shown = solo != null && fl.layers[solo] ? [fl.layers[solo]] : fl.layers;
   const set = (p: Partial<typeof s>) => { if (!busy) update((d) => saveSettings(d, { ...d.settings, ...p })); };
   return (
     <div className="stack">
@@ -324,10 +365,16 @@ function PageArt({ fl, title, extra }: { fl: Flavour; title: string; extra?: Rea
       {art === "blob" ? (
         <>
           <div style={{ display: "grid", placeItems: "center" }} role="img" aria-label={title}>
-            <Fingerprint axes={fl.axes} layers={fl.layers} size={280} dense />
+            <Fingerprint axes={fl.axes} layers={shown} size={280} dense />
           </div>
           <div className="row" style={{ justifyContent: "center" }}>
-            {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch" style={{ background: ink(l.color) }} />{l.note}</span>)}
+            {fl.layers.map((l, i) => (
+              <button key={i} type="button" className="chip" style={{ minHeight: 44 }} aria-pressed={solo === i}
+                aria-label={solo === i ? `${l.note}, showing alone. Tap to show all notes` : `Show ${l.note} alone`}
+                onClick={() => setSolo(solo === i ? null : i)}>
+                <span className="swatch" style={{ background: ink(l.color) }} />{l.note}
+              </button>
+            ))}
             {extra}
           </div>
         </>

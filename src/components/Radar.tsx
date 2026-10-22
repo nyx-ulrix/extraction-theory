@@ -71,6 +71,10 @@ export default function Radar({
   const [focus, setFocus] = useState<number | null>(null);
   const sel = selected != null && layers[selected] ? selected : null;
   const editable = !!onChange && sel != null;
+  // Tapping a note in the legend shows that note alone until it is tapped again. In the editor the
+  // note being edited is the one shown, so its shape is clear while dragging.
+  const [solo, setSolo] = useState<number | null>(null);
+  const only = onSelect ? sel : solo != null && layers[solo] ? solo : null;
 
   // Label size shrinks so neighbouring tangential labels do not collide. Mono glyph + 0.2em tracking = 0.8em.
   const maxLen = Math.max(1, ...axes.map((a) => a.label.length));
@@ -113,8 +117,7 @@ export default function Radar({
     if (svgRef.current?.hasPointerCapture(e.pointerId)) svgRef.current.releasePointerCapture(e.pointerId);
   };
 
-  const order = layers.map((_, i) => i).filter((i) => i !== sel);
-  if (sel != null) order.push(sel);
+  const order = only != null ? [only] : layers.map((_, i) => i);
 
   return (
     <div style={{ display: "grid", gap: 12, width: "100%", maxWidth: size, margin: "0 auto" }}>
@@ -168,7 +171,6 @@ export default function Radar({
           return (
             <g
               key={li}
-              opacity={sel != null && li !== sel ? 0.4 : 1}
               onClick={onSelect ? () => onSelect(li) : undefined}
               style={{ cursor: onSelect ? "pointer" : undefined }}
             >
@@ -232,19 +234,14 @@ export default function Radar({
 
       {legend && layers.length > 0 && (
         <div className="row" style={{ justifyContent: "center" }}>
-          {layers.map((l, i) =>
-            onSelect ? (
-              <button key={i} type="button" className="chip" style={{ minHeight: 44 }} aria-pressed={sel === i} onClick={() => onSelect(sel === i ? null : i)}>
-                <span className="swatch" style={{ background: ink(l.color) }} />
-                {l.note}
-              </button>
-            ) : (
-              <span key={i} className="chip" style={{ cursor: "default" }}>
-                <span className="swatch" style={{ background: ink(l.color) }} />
-                {l.note}
-              </span>
-            ),
-          )}
+          {layers.map((l, i) => (
+            <button key={i} type="button" className="chip" style={{ minHeight: 44 }} aria-pressed={only === i}
+              aria-label={only === i ? `${l.note}, showing alone. Tap to show all notes` : `Show ${l.note} alone`}
+              onClick={() => (onSelect ? onSelect(sel === i ? null : i) : setSolo(solo === i ? null : i))}>
+              <span className="swatch" style={{ background: ink(l.color) }} />
+              {l.note}
+            </button>
+          ))}
           {legendEnd}
         </div>
       )}

@@ -63,6 +63,15 @@ export const round = (n: number, dp = 1) => {
   return Math.round(n * f) / f;
 };
 
+/**
+ * Imported text that looks like a spreadsheet formula gets a leading ' so it stays text in a CSV export
+ * or after a hand edit in Sheets (writes are RAW, so the app itself never runs it).
+ * ponytail: after + - @ it needs a DDE pipe or a function call right after the sign, so notes like
+ * "-1 step (finer)" or "- Bright (lemon)" keep their text; widen if a real payload slips through.
+ */
+export const defuse = (s: string) =>
+  (/^[=\t\r]/.test(s) && /[(|!]/.test(s)) || (/^[+\-@]/.test(s) && /\||^.\s*[A-Za-z_.]+\(/.test(s)) ? `'${s}` : s;
+
 export function num(v: unknown): Num {
   if (v === "" || v == null) return null;
   const n = typeof v === "number" ? v : Number(String(v).trim().replace(",", "."));

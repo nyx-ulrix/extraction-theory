@@ -21,6 +21,20 @@ export interface AppCtx {
   setDirty: (dirty: boolean) => void;
 }
 
+// Unsaved form edits kept on this device while the form is open, so leaving for Google's sign-in page
+// (or a reload) loses nothing; closing the form drops them. Coffee and settings only: never API keys or tokens.
+export const BEAN_FORM = "et.form.bean";
+export const SETTINGS_FORM = "et.form.settings";
+export function readForm<T>(key: string): T | null {
+  try { return JSON.parse(localStorage.getItem(key) ?? "null") as T | null; } catch { return null; }
+}
+export function keepForm(key: string, value: unknown) {
+  try {
+    if (value == null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch { /* storage blocked or full: edits last this page only */ }
+}
+
 export const Ctx = createContext<AppCtx | null>(null);
 export function useApp(): AppCtx {
   const c = useContext(Ctx);

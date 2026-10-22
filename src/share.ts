@@ -1,6 +1,6 @@
 // Share a coffee and a recommended recipe as a link (and so a QR code). Everything rides in the URL's
 // #fragment, which browsers never send to a server: deflated JSON in base64url. Nothing is stored online.
-import { cleanAxes, cleanLayers, num, profile, toSerial } from "./calc.ts";
+import { cleanAxes, cleanLayers, defuse, num, profile, toSerial } from "./calc.ts";
 import { str, toRecipe, editDraft } from "./brew.ts";
 import { methodDefs, newPhase, TABS, type Phase, type Rec, type Recipe } from "./schema.ts";
 import type { Db } from "./store.ts";
@@ -114,7 +114,7 @@ export const shareUrl = (code: string) => `${location.origin}/#s=${code}`;
 
 // A shared code is someone else's data: keep only short plain values under known-looking keys.
 const plain = (v: unknown, max = 300): string | number | boolean | null =>
-  typeof v === "string" ? v.slice(0, max) : typeof v === "number" && Number.isFinite(v) ? v : typeof v === "boolean" ? v : null;
+  typeof v === "string" ? defuse(v.slice(0, max)) : typeof v === "number" && Number.isFinite(v) ? v : typeof v === "boolean" ? v : null;
 const KEY = /^[a-z][a-z0-9_]{0,39}$/;
 function clean(o: unknown, keys?: string[], max = 300): Rec {
   if (!o || typeof o !== "object" || Array.isArray(o)) return {};
@@ -135,7 +135,7 @@ export async function decodeShare(code: string, db: Db): Promise<Shared> {
   const bean = clean(rename(o.b, LONG), BEAN_KEYS, 1000);
   const flavour = unpackFlavour(o.fl);
   if (flavour) bean.flavour = flavour;
-  if (flavour && !str(bean.roaster_notes)) bean.roaster_notes = layerNotes(flavour).slice(0, 1000) || null;
+  if (flavour && !str(bean.roaster_notes)) bean.roaster_notes = defuse(layerNotes(flavour).slice(0, 1000)) || null;
   if (!str(bean.name).trim()) throw new Error("bad code");
   let recipe: Shared["recipe"] = null;
   if (typeof o.m === "string" && methodDefs(db.fields).some((m) => m.id === o.m)) {

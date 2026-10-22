@@ -6,3 +6,5 @@ dist/
 firebase-debug.log
 graphify-out/
 .claude/
+auth-worker/.wrangler/
+auth-worker/.dev.vars*

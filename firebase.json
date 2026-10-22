@@ -8,7 +8,8 @@
         "headers": [
           { "key": "X-Content-Type-Options", "value": "nosniff" },
           { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-          { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+          { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+          { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: https://et-auth.liewjiaen.com https://sheets.googleapis.com https://www.googleapis.com https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" }
         ]
       },
       {
@@ -16,7 +17,7 @@
         "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
       },
       {
-        "source": "/sw.js",
+        "source": "/@(sw|theme).js",
         "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
       },
       {

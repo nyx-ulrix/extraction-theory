@@ -9,16 +9,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Extraction Theory</title>
-    <script>
-      // Theme before first paint, so the startup screen matches: same rule as applyTheme in App.tsx.
-      (function () {
-        var c = "system";
-        try { c = localStorage.getItem("et.theme") || "system"; } catch (e) {}
-        var dark = c === "dark" || (c !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.dataset.theme = dark ? "dark" : "light";
-        document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#131312" : "#ffffff");
-      })();
-    </script>
+    <script src="/theme.js"></script>
     <style>
       html, body { margin: 0; background: #ffffff; }
       html[data-theme="dark"], html[data-theme="dark"] body { background: #131312; }
@@ -26,7 +17,6 @@
       .boot img { width: 96px; height: 96px; }
       html[data-theme="dark"] .boot img { filter: invert(1); }
     </style>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div id="root"><div class="boot"><img src="/logo.png" alt="Extraction Theory" /></div></div>

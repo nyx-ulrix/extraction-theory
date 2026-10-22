@@ -5,4 +5,10 @@ routes = [{ pattern = "et-auth.liewjiaen.com", custom_domain = true }]
 
 [vars]
 GOOGLE_CLIENT_ID = "715190347401-7gf93u19u95g2h59tckftojm1m670028.apps.googleusercontent.com"
-ALLOWED_ORIGINS = "https://extractiontheory.liewjiaen.com,https://extraction-theory.web.app,https://extraction-theory.firebaseapp.com,http://localhost:5180"
+ALLOWED_ORIGINS = "https://extractiontheory.liewjiaen.com,https://extraction-theory.web.app,https://extraction-theory.firebaseapp.com"
+
+# Local only: npx wrangler dev --env dev (secret in auth-worker/.dev.vars), app with VITE_AUTH_URL=http://localhost:8787.
+# The OAuth client must also list http://localhost:8787/callback. Never deployed, so production never trusts localhost.
+[env.dev.vars]
+GOOGLE_CLIENT_ID = "715190347401-7gf93u19u95g2h59tckftojm1m670028.apps.googleusercontent.com"
+ALLOWED_ORIGINS = "http://localhost:5180"

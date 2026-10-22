@@ -1,5 +1,8 @@
 // AI does one small job with the user's own key: reading a bean bag's label from photos to fill the
-// bean form. Radar values and note colours are always the user's. Defaults are each provider's cheapest model.
+// bean form, flavour chart included (each note scored on the chart's axes and given a palette colour),
+// the same way a coffee is filled in by hand. Defaults are each provider's cheapest model.
+import type { AxisDef } from "./calc.ts";
+import { PALETTE_NAMES } from "./palette.ts";
 
 export type Provider = "claude" | "openai" | "gemini";
 export const PROVIDERS: { id: Provider; label: string; model: string; keyUrl: string }[] = [
@@ -8,16 +11,14 @@ export const PROVIDERS: { id: Provider; label: string; model: string; keyUrl: st
   { id: "gemini", label: "Gemini", model: "gemini-2.5-flash-lite", keyUrl: "https://aistudio.google.com/apikey" },
 ];
 
-// Keys live only in this browser's local storage. Never in the sheet or the repo.
-const keyName = (p: Provider) => `et.key.${p}`;
-export function getKey(p: Provider): string {
-  try { return localStorage.getItem(keyName(p)) ?? ""; } catch { return ""; }
-}
+// Keys live only in this page's memory: never on the device, in the sheet or in the repo. A reload or a trip
+// to Google's sign-in page forgets them. Keys saved by older versions are wiped from storage on load.
+const keys = new Map<Provider, string>();
+for (const p of PROVIDERS) try { localStorage.removeItem(`et.key.${p.id}`); } catch { /* storage blocked */ }
+export const getKey = (p: Provider) => keys.get(p) ?? "";
 export function setKey(p: Provider, key: string) {
-  try {
-    if (key) localStorage.setItem(keyName(p), key.trim());
-    else localStorage.removeItem(keyName(p));
-  } catch { /* storage blocked: key lasts this session only */ }
+  if (key.trim()) keys.set(p, key.trim());
+  else keys.delete(p);
 }
 
 export interface Img { type: string; data: string } // base64, no data: prefix
@@ -30,7 +31,7 @@ const claude: Call = async (model, key, { system, schema, text: input, images = 
   const haiku5 = /haiku-5/.test(model);
   const params = {
     model,
-    max_tokens: haiku5 ? 1024 : 16000, // thinking counts against this where it cannot be turned off
+    max_tokens: haiku5 ? 4096 : 16000, // thinking counts against this where it cannot be turned off
     system,
     messages: [{ role: "user", content: [
       ...images.map((i) => ({ type: "image", source: { type: "base64", media_type: i.type, data: i.data } })),
@@ -113,31 +114,70 @@ use null for anything not shown, never guess. name: the farm, lot or coffee name
 for the coffee as printed. roastery: the roaster's name. origin: country, then region. farm: farm or producer.
 variety and process as printed, in sentence case. roast_level only if printed. roast_date as YYYY-MM-DD (labels
 often print YY.M.D). altitude in metres. tasting_notes: the printed tasting notes, each a short phrase in sentence
-case with spelling mistakes fixed.`;
+case with spelling mistakes fixed.
+
+Then chart each tasting note, as a coffee taster filling in a flavour radar:
+- Descriptors such as "smooth", "juicy" or "long finish" are notes too.
+- If the label prints its own flavour chart or wheel with axes, set printed_axes to its axis labels in order (clockwise
+  from the top) and score each note on those axes so that, across the notes, the highest value on each axis matches the
+  printed one. Otherwise set printed_axes to null and score each note on the axes you are given.
+- values: one number per axis, in the axes' order, from 0 to 10 in steps of 0.5. Score what the note brings: a citrus
+  note scores high on acidity and low on body; a chocolate note high on sweetness and body; "long finish" high on finish.
+- Axes marked cup-wide (such as body or bitterness) describe the whole cup: give every note the same value on them.
+- colour: the palette colour that looks most like the note itself (blueberry: Plum 500, orange: Copper 300,
+  passionfruit: Gold 300, cherry: Ember 500, jasmine: Plum 200, chocolate: Dark Roast). Avoid giving two notes the same
+  colour.`;
 
 export const MAX_BAG_PHOTOS = 2;
 const opt = (type: string) => ({ anyOf: [{ type }, { type: "null" }] });
 const BAG_FIELDS = {
   name: opt("string"), product: opt("string"), roastery: opt("string"), origin: opt("string"), farm: opt("string"),
   variety: opt("string"), process: opt("string"), roast_level: opt("string"), roast_date: opt("string"),
-  altitude_low_m: opt("number"), altitude_high_m: opt("number"), tasting_notes: { type: "array", items: { type: "string" } },
+  altitude_low_m: opt("number"), altitude_high_m: opt("number"),
+  printed_axes: { anyOf: [{ type: "array", items: { type: "string" } }, { type: "null" }] },
+  notes: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: { note: { type: "string" }, colour: { type: "string", enum: PALETTE_NAMES }, values: { type: "array", items: { type: "number" } } },
+      required: ["note", "colour", "values"], additionalProperties: false,
+    },
+  },
 };
 const BAG_SCHEMA = { type: "object", properties: BAG_FIELDS, required: Object.keys(BAG_FIELDS), additionalProperties: false };
 
-export type BagInfo = Partial<Record<Exclude<keyof typeof BAG_FIELDS, "tasting_notes">, string | number>> & { tasting_notes?: string[] };
+export interface ChartNote { note: string; colour: string; values: number[] }
+export type BagInfo = Partial<Record<Exclude<keyof typeof BAG_FIELDS, "notes" | "printed_axes">, string | number>> & {
+  tasting_notes?: string[];
+  /** The roaster's own chart axes when the bag prints one (3 or more), else the notes are scored on the given axes. */
+  printed_axes?: string[];
+  chart?: ChartNote[];
+};
 
-/** Bean details read from up to two photos of the bag. Fields not printed come back missing. */
-export async function readBag(images: Img[], provider: Provider, model: string): Promise<BagInfo> {
+/** Bean details read from up to two photos of the bag, notes charted on `axes`. Fields not printed come back missing. */
+export async function readBag(images: Img[], provider: Provider, model: string, axes: AxisDef[]): Promise<BagInfo> {
   const key = getKey(provider);
   if (!key) throw new Error("Add an API key in Settings first.");
+  const list = axes.map((a) => `${a.label}${a.shared ? " (cup-wide)" : ""}`).join(", ");
   const raw = await ask<Record<string, unknown>>(provider, model, key, {
-    system: BAG, schema: BAG_SCHEMA, name: "bean_label", text: "Fill in the bean from this label.",
-    images: images.slice(0, MAX_BAG_PHOTOS),
+    system: BAG, schema: BAG_SCHEMA, name: "bean_label", images: images.slice(0, MAX_BAG_PHOTOS),
+    text: `Fill in the bean from this label. The flavour chart's axes, in order: ${list}.`,
   });
   const out: BagInfo = {};
   for (const [k, v] of Object.entries(raw ?? {})) {
-    if (k === "tasting_notes") {
-      if (Array.isArray(v)) out.tasting_notes = v.map((n) => String(n).trim().slice(0, 40)).filter(Boolean).slice(0, 12);
+    if (k === "notes") {
+      if (!Array.isArray(v)) continue;
+      const notes = v.filter((n) => n && typeof n === "object").slice(0, 12).map((n) => ({
+        note: String(n.note ?? "").trim().slice(0, 40),
+        colour: String(n.colour ?? ""),
+        values: Array.isArray(n.values) ? n.values.slice(0, 12).map((x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : 0)) : [],
+      })).filter((n) => n.note);
+      if (notes.length) { out.chart = notes; out.tasting_notes = notes.map((n) => n.note); }
+    } else if (k === "printed_axes") {
+      if (Array.isArray(v)) {
+        const labels = v.map((x) => String(x).trim().slice(0, 24)).filter(Boolean).slice(0, 12);
+        if (labels.length >= 3) out.printed_axes = labels;
+      }
     } else if (k in BAG_FIELDS && (typeof v === "string" ? v.trim() : typeof v === "number" && Number.isFinite(v))) {
       (out as Record<string, unknown>)[k] = typeof v === "string" ? v.trim().slice(0, 200) : v;
     }

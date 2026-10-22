@@ -10,7 +10,7 @@ Live at https://extractiontheory.liewjiaen.com
 
 ```bash
 npm install
-cp .env.example .env   # set VITE_GOOGLE_CLIENT_ID and VITE_AUTH_URL
+cp .env.example .env   # set VITE_AUTH_URL
 npm run dev
 ```
 
@@ -20,7 +20,7 @@ See [plan.md](plan.md) for the full spec and [style.md](style.md) for the design
 
 ## Staying signed in (auth-worker/)
 
-Google only gives a browser app a 1-hour token. `auth-worker/` is a Cloudflare Worker (free plan) that trades the sign-in code for a refresh token, keeps it in an HttpOnly cookie, and hands the app fresh access tokens. Deploy it once:
+Google only gives a browser app a 1-hour token. `auth-worker/` is a Cloudflare Worker (free plan) that runs Google's full-page sign-in (`/login`, `/callback`), keeps the refresh token in an HttpOnly cookie, and hands the app fresh access tokens. The OAuth client must list `https://<worker>/callback` as an authorized redirect URI. The cookie belongs to the Worker's site, so sign-in only sticks on an app origin on the same site (extractiontheory.liewjiaen.com with et-auth.liewjiaen.com). Deploy it once:
 
 ```bash
 cd auth-worker

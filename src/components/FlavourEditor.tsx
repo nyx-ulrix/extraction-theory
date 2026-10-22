@@ -127,8 +127,10 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
       {editAxes && <AxesEditor axes={axes} onChange={setAxes} template={template} />}
 
       <Radar axes={axes} layers={layers} onChange={setLayers} selected={cur ? sel : null} onSelect={setSel} title={`${label} radar`} legend={false} emptyText="" />
+      {/* The note being shaped shows alone; "Show all notes" brings the rest back. */}
       <p className="muted" aria-live="polite" style={{ fontSize: 12, textAlign: "center" }}>
-        {!layers.length ? "Add notes to draw layers." : cur ? `Drag the points to shape ${cur.note || "this note"}.` : "Tap a note to shape it."}
+        {!layers.length ? "Add notes to draw layers." : cur ? `Drag the points to shape ${cur.note || "this note"}. ` : "Tap a note to shape it on its own."}
+        {cur && layers.length > 1 && <button type="button" className="linkish" onClick={() => setSel(null)}>Show all notes</button>}
       </p>
     </div>
   );

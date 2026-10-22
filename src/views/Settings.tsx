@@ -7,7 +7,7 @@ import { DEFAULT_AXES, cleanAxes, parsePattern, type DialType, type Layer } from
 import Radar from "../components/Radar.tsx";
 import Fingerprint from "../components/Fingerprint.tsx";
 import { PROVIDERS, getKey, setKey, type Provider } from "../ai.ts";
-import { useApp } from "../ctx.ts";
+import { SETTINGS_FORM, keepForm, readForm, useApp } from "../ctx.ts";
 import { signOut } from "../google.ts";
 import { useInstall } from "../install.ts";
 import {
@@ -27,9 +27,11 @@ type Patch = (p: Partial<S>) => void;
 
 export default function Settings() {
   const { db, update, busy, setDirty, arg, go, back, notify } = useApp();
-  const [s, setS] = useState<S>(db.settings);
+  // Unsaved edits left by a reload or a trip to Google's sign-in page come back as they were.
+  const [kept] = useState(() => readForm<{ s: S; edited: string[] }>(SETTINGS_FORM));
+  const [s, setS] = useState<S>(() => (kept ? { ...db.settings, ...kept.s } : db.settings));
   const lockedHours = Math.ceil((s.pretentious_lock + LOCK_MS - Date.now()) / 3_600_000);
-  const edited = useRef(new Set<string>());
+  const edited = useRef(new Set<string>(kept?.edited));
   const patch: Patch = (p) => { Object.keys(p).forEach((k) => edited.current.add(k)); setS((x) => ({ ...x, ...p })); };
   // Settings reloaded from the sheet (the app opens on its saved copy first): follow them unless edited here.
   const base = useRef(db.settings);
@@ -42,6 +44,12 @@ export default function Settings() {
     setDirty(dirty);
     return () => setDirty(false);
   }, [dirty, setDirty]);
+  useEffect(() => { keepForm(SETTINGS_FORM, dirty ? { s, edited: [...edited.current] } : null); }, [dirty, s]);
+  useEffect(() => {
+    if (kept) notify("Restored your unsaved settings. Save them, or leave Settings to discard.", "info");
+    return () => keepForm(SETTINGS_FORM, null); // left Settings: saved or discarded
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const problem = s.presets.some((p) => !p.name.trim() || !parsePattern(p.pattern))
     ? "Each preset needs a name and a pattern like 1:2:3."
     : s.axes.some((a) => !a.label.trim()) ? "Each radar axis needs a label." : "";
@@ -575,7 +583,7 @@ function KeyField({ p }: { p: (typeof PROVIDERS)[number] }) {
   };
   return (
     <div className="stack" style={{ gap: 8 }}>
-      <Field label={`${p.label} API key`} id={id} hint={`Stored only in this browser. Sent only to ${p.label}.`}>
+      <Field label={`${p.label} API key`} id={id} hint={`Kept only while this page is open, never saved on this device. Sent only to ${p.label}.`}>
         <div className="inline">
           <input id={id} className="input" type="password" autoComplete="off" spellCheck={false} placeholder="Paste your key"
             value={k} onChange={(e) => change(e.target.value)} />

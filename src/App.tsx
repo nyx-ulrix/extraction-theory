@@ -5,7 +5,7 @@ import {
   ArrowClockwise, Books, Coffee, GearSix, GoogleLogo, House, Moon, SignIn, Sun, Table, X, type Icon,
 } from "@phosphor-icons/react";
 import { Ctx, type AppCtx, type View } from "./ctx.ts";
-import { AuthError, hadSession, hasToken, preload, resume, signIn } from "./google.ts";
+import { AuthError, hadSession, hasToken, resume, returned, signIn } from "./google.ts";
 import { sheetUrl } from "./sheets.ts";
 import { loadDb, type Db } from "./store.ts";
 import { DEFAULT_SETTINGS } from "./schema.ts";
@@ -76,13 +76,21 @@ const INCOMING = "et.incoming";
 function pendingShare(): string | null {
   try { return sessionStorage.getItem(INCOMING); } catch { return null; }
 }
-function initialView(): View {
+// The page this tab was on, so a reload or a trip to Google's sign-in page comes back to it (a Settings
+// section or a bean's form, say). Not the brew form's arg: that is a one-time prefill, and the brew draft has its own.
+function initialPage(): { v: View; a?: string } {
   try {
-    const v = sessionStorage.getItem(VIEW_KEY);
-    if (NAV.some(([n]) => n === v)) return v as View;
-  } catch { /* storage blocked */ }
-  return "home";
+    const p = JSON.parse(sessionStorage.getItem(VIEW_KEY) ?? "null") as { v?: string; a?: unknown } | null;
+    if (p && NAV.some(([n]) => n === p.v)) return { v: p.v as View, a: p.v !== "brew" && typeof p.a === "string" ? p.a : undefined };
+  } catch { /* storage blocked or an older plain value */ }
+  return { v: "home" };
 }
+const RETURN_MSG: Record<string, string> = {
+  ok: "Signed in, but this browser didn't keep the sign-in. Allow cookies for this site and try again.",
+  cancelled: "Sign-in was cancelled.",
+  expired: "Sign-in took too long or started in another tab. Try again.",
+};
+
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 type Kind = "info" | "error" | "success";
@@ -126,9 +134,9 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [incoming, setIncoming] = useState<string | null>(pendingShare);
-  const [view, setView] = useState<View>(initialView);
-  const [arg, setArg] = useState<string>();
-  const [gisReady, setGisReady] = useState(false);
+  const [first] = useState(initialPage);
+  const [view, setView] = useState<View>(first.v);
+  const [arg, setArg] = useState<string | undefined>(first.a);
   const dirty = useRef(false);
   // The page on screen, for a link opened in this tab: its #hash entry stands in for this page.
   const here = useRef<{ v: View; a?: string; depth: number }>({ v: view, a: arg, depth: 0 });
@@ -136,14 +144,19 @@ export default function App() {
   const [leaving, setLeaving] = useState<[View, string | undefined] | null>(null);
 
   useEffect(() => {
-    preload().then(() => setGisReady(true), (e) => setErr(errMsg(e)));
+    // Back from Google's page with the browser's back button: the page may be restored as it was left.
+    const shown = (e: PageTransitionEvent) => { if (e.persisted) setSigning(false); };
+    window.addEventListener("pageshow", shown);
     const warn = (e: BeforeUnloadEvent) => {
       if (!dirty.current) return;
       e.preventDefault();
       e.returnValue = ""; // older Chromium needs this to show the prompt
     };
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
+    return () => {
+      window.removeEventListener("pageshow", shown);
+      window.removeEventListener("beforeunload", warn);
+    };
   }, []);
 
   const notify = useCallback((msg: string, kind: Kind = "info") => setToast({ msg, kind }), []);
@@ -156,18 +169,17 @@ export default function App() {
   const start = async () => {
     setErr("");
     setSigning(true);
+    // A cookie still valid at the Worker (storage cleared, say) needs no trip to Google.
+    if (hasToken() || (await resume())) {
+      setSigning(false);
+      return load();
+    }
     try {
-      if (!hasToken() && !(await signIn())) {
-        notify("Signed in, but Google didn't allow staying signed in. Remove Extraction Theory at myaccount.google.com/connections, then sign in again.", "info");
-      }
+      signIn(); // leaves the page; the button stays disabled until it does
     } catch (e) {
       setErr(errMsg(e));
-      setPhase("out");
-      return;
-    } finally {
       setSigning(false);
     }
-    await load();
   };
 
   const setData = useCallback((d: Db) => {
@@ -180,7 +192,8 @@ export default function App() {
   // sheet in the background while the token is valid, or after the next tap renews it.
   const [authed, setAuthed] = useState(hasToken);
   useEffect(() => {
-    const known = hadSession();
+    // Back from Google's sign-in page: the Worker now holds the session, so renew from it like a known device.
+    const known = hadSession() || returned === "ok";
     const cached = known ? readCache() : null;
     if (cached) {
       dbRef.current = cached;
@@ -192,6 +205,7 @@ export default function App() {
       if (!hasToken() && known) await resume();
       if (hasToken()) return cached ? refresh() : load();
       setAuthed(false);
+      if (returned) setErr(RETURN_MSG[returned] ?? "Sign-in failed. Try again.");
       if (!cached) setPhase("out");
     })();
     // Notice the token running out while the app stays open.
@@ -225,33 +239,42 @@ export default function App() {
     }
   };
 
-  // Token expired and the Worker couldn't renew it: the next tap anywhere tries again, falling back to
-  // Google's window (it can only open during a tap).
+  // Token expired and the Worker couldn't renew it (offline, say): the next tap anywhere tries again.
+  // Still no session: offer sign-in, which leaves the page, rather than leaving on a stray tap.
   const [retry, setRetry] = useState(0);
   useEffect(() => {
-    if (phase !== "in" || authed || !gisReady) return;
-    const renew = () => {
-      resume().then((ok) => ok || signIn()).then(() => { setAuthed(true); refresh(); }, () => setRetry((n) => n + 1));
+    if (phase !== "in" || authed) return;
+    const renew = (e: MouseEvent) => {
+      // Taps on the toast itself (Close, Sign in again) are its own; re-arm for the next one.
+      if ((e.target as Element | null)?.closest?.(".toast")) return setRetry((n) => n + 1);
+      resume().then((ok) => {
+        if (ok) {
+          setAuthed(true);
+          refresh();
+          return;
+        }
+        setToast({ msg: "Google session expired. Sign in again to sync.", kind: "error", auth: true });
+        setRetry((n) => n + 1);
+      });
     };
-    // click, not pointerdown: on touch screens only the end of a tap counts as a gesture for pop-ups.
     window.addEventListener("click", renew, { capture: true, once: true });
     return () => window.removeEventListener("click", renew, { capture: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, authed, gisReady, retry]);
+  }, [phase, authed, retry]);
 
   const update = useCallback<AppCtx["update"]>(async (fn, done) => {
     const cur = dbRef.current;
     if (!cur) return false;
     setBusy(true);
     try {
-      // Token ran out while the app was open: renew silently, else sign in (saves come from a click).
-      if (!hasToken() && !(await resume())) await signIn();
+      // Token ran out while the app was open: renew silently, else the toast offers sign-in.
+      if (!hasToken() && !(await resume())) throw new AuthError();
       setAuthed(true);
       setData(await fn(cur));
       if (done) notify(done, "success");
       return true;
     } catch (e) {
-      if (e instanceof AuthError) setToast({ msg: "Google session expired. Sign in again, then retry. Nothing was lost.", kind: "error", auth: true });
+      if (e instanceof AuthError) setToast({ msg: "Google session expired. Sign in again, then retry.", kind: "error", auth: true });
       else notify(errMsg(e), "error");
       return false;
     } finally {
@@ -259,13 +282,9 @@ export default function App() {
     }
   }, [notify, setData]);
 
-  const reauth = async () => {
-    try {
-      await signIn();
-      notify("Signed in again. Try that once more.", "success");
-    } catch (e) {
-      notify(errMsg(e), "error");
-    }
+  // Leaves the page; with unsaved edits the browser asks first.
+  const reauth = () => {
+    try { signIn(); } catch (e) { notify(errMsg(e), "error"); }
   };
 
   // Every page change is a browser history entry, so the back arrow and the phone's back gesture
@@ -280,7 +299,7 @@ export default function App() {
       const depth = ((window.history.state as { depth?: number } | null)?.depth ?? 0) + 1;
       window.history.pushState({ v, a, depth }, "");
     }
-    try { sessionStorage.setItem(VIEW_KEY, v); } catch { /* storage blocked */ }
+    try { sessionStorage.setItem(VIEW_KEY, JSON.stringify({ v, a })); } catch { /* storage blocked */ }
   }, []);
   // Same view and arg keeps the page mounted, so nothing is lost and no need to ask.
   const go = useCallback((v: View, a?: string) => {
@@ -353,7 +372,7 @@ export default function App() {
             <Brand big />
             <p className="lede">Log every brew and get to a cup you like, faster. Your data lives in your own Google Sheet.</p>
             <div>
-              <Button icon={GoogleLogo} onClick={start} disabled={signing || !gisReady}>{hadSession() ? "Continue with Google" : "Sign in with Google"}</Button>
+              <Button icon={GoogleLogo} onClick={start} disabled={signing}>{hadSession() ? "Continue with Google" : "Sign in with Google"}</Button>
             </div>
             {err && <Msg kind="error">{err}</Msg>}
             <nav className="row legal" aria-label="Legal">

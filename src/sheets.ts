@@ -20,7 +20,9 @@ function remember(id: string) {
   try { localStorage.setItem(ID_KEY, id); } catch { /* storage blocked */ }
 }
 
-/** Find the app's sheet (drive.file only sees files this app made), or create it with seed rows. */
+type SheetProps = { properties: { sheetId: number; title: Tab } };
+
+/** Find the app's sheet, or create it with seed rows. */
 export async function findOrCreate(seed: Partial<Record<Tab, Rec[]>>): Promise<string> {
   let cached: string | null = null;
   try { cached = localStorage.getItem(ID_KEY); } catch { /* storage blocked */ }
@@ -30,14 +32,26 @@ export async function findOrCreate(seed: Partial<Record<Tab, Rec[]>>): Promise<s
       if (!f.trashed) return cached;
     } catch { /* gone or no longer ours: look it up again */ }
   }
-  const q = `name='${SHEET_TITLE}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`;
+  // No name filter: drive.file only sees files this app made, and it makes just this one, so a renamed sheet is still found.
+  const q = "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
   const found = await api<{ files: { id: string }[] }>(`${DRIVE}?q=${encodeURIComponent(q)}&fields=files(id)&orderBy=createdTime`);
   if (found.files.length) {
-    remember(found.files[0].id);
-    return found.files[0].id;
+    const id = found.files[0].id;
+    // Set-up cut short after the create (it is remembered only once done): finish the tabs left without headers,
+    // else the sheet has no gear and no brew fields.
+    const heads = await api<{ valueRanges: { values?: Cell[][] }[] }>(
+      `${SHEETS}/${id}/values:batchGet?${TAB_NAMES.map((t) => `ranges=${range(t, "1:1")}`).join("&")}`,
+    );
+    const bare = TAB_NAMES.filter((_, i) => !heads.valueRanges[i]?.values?.length);
+    if (bare.length) {
+      const meta = await api<{ sheets: SheetProps[] }>(`${SHEETS}/${id}?fields=sheets.properties(sheetId,title)`);
+      await setUp(id, seed, meta.sheets.filter((s) => bare.includes(s.properties.title)));
+    }
+    remember(id);
+    return id;
   }
 
-  const created = await api<{ spreadsheetId: string; sheets: { properties: { sheetId: number; title: Tab } }[] }>(SHEETS, {
+  const created = await api<{ spreadsheetId: string; sheets: SheetProps[] }>(SHEETS, {
     method: "POST",
     body: JSON.stringify({
       properties: { title: SHEET_TITLE },
@@ -48,17 +62,24 @@ export async function findOrCreate(seed: Partial<Record<Tab, Rec[]>>): Promise<s
     }),
   });
   const id = created.spreadsheetId;
+  await setUp(id, seed, created.sheets);
+  remember(id);
+  return id;
+}
+
+/** Header row, seed rows, bold header and date formats for the given tabs. */
+async function setUp(id: string, seed: Partial<Record<Tab, Rec[]>>, sheets: SheetProps[]) {
   await api(`${SHEETS}/${id}/values:batchUpdate`, {
     method: "POST",
     body: JSON.stringify({
       valueInputOption: "RAW",
-      data: TAB_NAMES.map((tab) => {
+      data: sheets.map(({ properties: { title: tab } }) => {
         const header = [...TABS[tab]] as string[];
         return { range: `${tab}!A1`, values: [header, ...(seed[tab] ?? []).map((r) => header.map((h) => toCell(r[h])))] };
       }),
     }),
   });
-  const requests = created.sheets.flatMap(({ properties: { sheetId, title } }) => {
+  const requests = sheets.flatMap(({ properties: { sheetId, title } }) => {
     const header = TABS[title] as readonly string[];
     const bold = {
       repeatCell: {
@@ -80,8 +101,6 @@ export async function findOrCreate(seed: Partial<Record<Tab, Rec[]>>): Promise<s
     return [bold, ...dates];
   });
   await api(`${SHEETS}/${id}:batchUpdate`, { method: "POST", body: JSON.stringify({ requests }) });
-  remember(id);
-  return id;
 }
 
 export async function loadAll(id: string): Promise<Loaded> {
