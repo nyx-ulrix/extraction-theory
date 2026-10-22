@@ -336,3 +336,12 @@ label.btn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Code sample (import format): scrolls sideways rather than wrapping. */
 pre.code { margin: 0; padding: 12px; overflow-x: auto; border: 1px solid var(--border-soft); background: var(--bg-subtle); font: 400 12px/1.5 var(--mono); color: var(--text-strong); }
+
+/* Pour phases: presets beside the water to split; the add button trails the last pour. */
+.pour-top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; }
+.add-row {
+  width: 100%; min-height: 48px; display: grid; place-items: center; cursor: pointer;
+  background: transparent; color: var(--text-strong); border: 1px dashed var(--border);
+}
+.add-row:hover { background: var(--surface); }
+.add-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

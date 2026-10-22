@@ -28,9 +28,12 @@ function build({ label, brew, phases }: TimelineItem): Model {
   const presses = phases.filter((p) => p.kind === "press").sort((a, b) => a.n - b.n);
   const empty: Model = { label, hours: false, end: 0, pours: [], line: [], agit: [], valve: null, press: [], steep: null, chill: null, events: [] };
 
+  // Espresso: pre-soak, then hold, then flow (older brews logged one preinfusion time).
+  const soak = n("presoak_s");
+  const pre = soak != null || n("hold_s") != null ? (soak ?? 0) + (n("hold_s") ?? 0) : n("preinfusion_s");
   const total = n("total_s") ?? pressTimes(presses.map((p) => ({ start: p.start_s, duration: p.duration_s }))).total;
   const known = [
-    total, n("drain_at_s"), n("first_flow_s"), n("preinfusion_s"),
+    total, n("drain_at_s"), n("first_flow_s"), soak, pre,
     ...phases.map((p) => (p.start_s == null ? null : p.start_s + (p.duration_s ?? 0))),
     ...phases.map((p) => (p.agitation_timing === "at" ? p.agitation_at_s : null)),
   ].filter((x): x is number => isNum(x) && x > 0);
@@ -82,7 +85,7 @@ function build({ label, brew, phases }: TimelineItem): Model {
 
   const cs = brew.chill_start;
   if (typeof cs === "string" && cs) {
-    const ctx = { total: T, phaseStarts: pours.map((p) => p.start_s ?? undefined) as number[], pre: n("preinfusion_s"), yieldG: n("yield_g") };
+    const ctx = { total: T, phaseStarts: pours.map((p) => p.start_s ?? undefined) as number[], pre, yieldG: n("yield_g") };
     const a = stageToTime(cs, ctx);
     const b = stageToTime(String(brew.chill_stop || "end"), ctx);
     if (a && isNum(a.t)) {
@@ -92,7 +95,8 @@ function build({ label, brew, phases }: TimelineItem): Model {
   }
 
   const ev: [string, number | null][] = [
-    ["Preinfusion", n("preinfusion_s")], ["First flow", n("first_flow_s")], ["Drain", n("drain_at_s")], ["End", total],
+    ["Pre-soak", soak], ["Hold", soak != null && n("hold_s") != null ? pre : null], ["Preinfusion", soak == null && n("hold_s") == null ? pre : null],
+    ["First flow", n("first_flow_s")], ["Drain", n("drain_at_s")], ["End", total],
   ];
   m.events = ev.filter(([, t]) => isNum(t)).map(([text, t]) => ({ t: t!, text }));
   return m;

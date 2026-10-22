@@ -59,11 +59,22 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
   };
 
   return (
-    <Section title="Pour phases" actions={
-      <IconButton icon={Plus} label="Add phase" onClick={() => setPours([...pours, kp(newPhase("pour", pours.length + 1))])} />
-    }>
+    <Section title="Pour phases">
       <div className="stack brew-assist">
-        <Readout label="Water to split">{total != null ? `${total} g` : null}</Readout>
+        {/* Presets sit beside the water they split. */}
+        <div className="pour-top">
+          <Readout label="Water to split">{total != null ? `${total} g` : null}</Readout>
+          {db.settings.presets.length > 0 && (
+            <div className="row" role="group" aria-label="Split presets">
+              {db.settings.presets.map((p) => (
+                <button key={p.name} type="button" className="chip" aria-pressed={d.x.pattern === p.pattern}
+                  onClick={() => up((o) => split({ ...o, x: { ...o.x, pattern: p.pattern } }, parsePattern(p.pattern)))}>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="brew-split">
           <TextField
             label="Split pattern" value={d.x.pattern} placeholder="1:2:3:3" onChange={(v) => setX({ pattern: v })}
@@ -73,19 +84,9 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
           <IconButton icon={MagicWand} label="Split water into phases" variant="solid" disabled={!pattern || !total}
             onClick={() => up((o) => split(o, pattern))} />
         </div>
-        {db.settings.presets.length > 0 && (
-          <div className="row" role="group" aria-label="Split presets">
-            {db.settings.presets.map((p) => (
-              <button key={p.name} type="button" className="chip" aria-pressed={d.x.pattern === p.pattern}
-                onClick={() => up((o) => split({ ...o, x: { ...o.x, pattern: p.pattern } }, parsePattern(p.pattern)))}>
-                {p.name}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
-      {pours.length === 0 && <p>No phases yet. Split the water above or add a phase.</p>}
+      {pours.length === 0 && <p>No phases yet. Split the water above or add one below.</p>}
       {pours.map((p, i) => (
         <div key={p.k} className="phase">
           <header>
@@ -124,6 +125,11 @@ export default function Pours({ d, up, total, hybrid }: { d: Draft; up: Up; tota
           )}
         </div>
       ))}
+      {/* Always under the last pour, so it moves down as pours are added. */}
+      <button type="button" className="add-row" aria-label={pours.length ? "Add pour" : "Add bloom"} data-tip={pours.length ? "Add pour" : "Add bloom"}
+        onClick={() => setPours([...pours, kp(newPhase("pour", pours.length + 1))])}>
+        <Plus size={20} aria-hidden />
+      </button>
     </Section>
   );
 }

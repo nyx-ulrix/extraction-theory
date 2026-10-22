@@ -195,7 +195,7 @@ export function daysOffRoast(roastSerial: Num, brewSerial: Num): Num {
 
 /**
  * Chill stage -> seconds on the brew timeline.
- * Stages: start | end | after | phase:N | t:SECONDS | y:GRAMS (espresso, linear flow after preinfusion).
+ * Stages: start | end | after | phase:N | t:SECONDS | y:GRAMS (espresso, linear flow after pre-soak and hold).
  */
 export function stageToTime(
   stage: string,
@@ -204,7 +204,7 @@ export function stageToTime(
   const i = stage.indexOf(":");
   const kind = i < 0 ? stage : stage.slice(0, i);
   const raw = i < 0 ? "" : stage.slice(i + 1);
-  const v = kind === "t" ? parseTime(raw) : num(raw);
+  const v = kind === "t" ? (/^\d+(\.\d+)?$/.test(raw) ? Number(raw) : parseTime(raw)) : num(raw);
   switch (kind) {
     case "start":
       return { t: 0, approx: false };

@@ -149,7 +149,7 @@ Use this to add coffees and brews to Extraction Theory in one go. You can fill t
 | `dialed_in` | `true` if this is the recipe you settled on. |
 | `phases` | Pours and presses, in order (see below). |
 
-Method extras, only for that method: espresso `preinfusion_s`, `pressure`, `basket`, `puck_prep`; cold brew `cb_method` (`Immersion` or `Slow drip`), `steep_location` (`Fridge` or `Room`), `steep_h`, `drip_rate`, `cb_filter`, `dilution`; moka `pot_size`, `starting_water` (`Preheated` or `Cold`), `heat_level`, `first_flow_s`, `off_heat`, `base_cooled`; Aeropress `orientation` (`Standard` or `Inverted`), `ap_filter` (`Paper x1`, `Paper x2`, `Metal`), `accessory`, `bypass_g`.
+Method extras, only for that method: espresso `presoak_s` and `hold_s` (seconds of pre-soak, then hold), `pressure`, `basket`, `puck_prep`; cold brew `cb_method` (`Immersion` or `Slow drip`), `steep_location` (`Fridge` or `Room`), `steep_h`, `drip_rate`, `cb_filter`, `dilution`; moka `pot_size`, `starting_water` (`Preheated` or `Cold`), `heat_level`, `first_flow_s`, `off_heat`, `base_cooled`; Aeropress `orientation` (`Standard` or `Inverted`), `ap_filter` (`Paper x1`, `Paper x2`, `Metal`), `accessory`, `bypass_g`.
 
 ### Phases (pours and presses)
 

@@ -69,6 +69,7 @@ assert.equal(c.daysOffRoast(c.toSerial(new Date(2026, 9, 7)), c.toSerial(d)), 14
 const ctx = { total: 180, phaseStarts: [0, 45, 90], pre: 0, yieldG: null };
 assert.deepEqual(c.stageToTime("phase:2", ctx), { t: 45, approx: false });
 assert.deepEqual(c.stageToTime("t:30", ctx), { t: 30, approx: false });
+assert.deepEqual(c.stageToTime("t:150", ctx), { t: 150, approx: false });
 assert.equal(c.stageToTime("phase:9", ctx), null);
 assert.deepEqual(c.stageToTime("t:1:30", ctx), { t: 90, approx: false });
 assert.deepEqual(c.stageToTime("y:18", { total: 30, pre: 6, yieldG: 36 }), { t: 18, approx: true });

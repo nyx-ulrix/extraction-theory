@@ -98,7 +98,8 @@ const mf = (method: string, rows: [string, string, FieldType, string?, string?, 
 
 export const DEFAULT_FIELDS: MethodField[] = [
   ...mf("espresso", [
-    ["preinfusion_s", "Preinfusion", "number", "s"],
+    ["presoak_s", "Pre-soak", "number", "s"],
+    ["hold_s", "Hold", "number", "s"],
     ["pressure", "Pressure / profile", "text", "bar"],
     ["basket", "Basket", "text"],
     ["puck_prep", "Puck prep", "text"],
@@ -253,7 +254,8 @@ export function availableKeys(m: MethodDef, fields: MethodField[]): string[] {
 /** Saved layout filtered to what the method can show; required sections are always kept. */
 export function layoutFor(m: MethodDef, fields: MethodField[], s: Settings): string[] {
   const avail = availableKeys(m, fields);
-  const saved = s.layout[m.id]?.filter((k) => avail.includes(k));
+  // Preinfusion became pre-soak and hold: a saved layout keeps its place for them.
+  const saved = s.layout[m.id]?.flatMap((k) => (k === "preinfusion_s" ? ["presoak_s", "hold_s"] : [k])).filter((k) => avail.includes(k));
   const keys = saved?.length ? saved : avail;
   const required = ["bean", "recipe", ...(m.chill === "required" ? ["chill"] : [])];
   return [...required.filter((k) => !keys.includes(k)), ...keys];

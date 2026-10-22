@@ -110,12 +110,23 @@ export async function loadDb(): Promise<Db> {
   for (const key of ["card_shape", "card_grid", "page_shape", "page_grid"] as const) {
     if (!have.has(key)) await sh.upsert(id, headers, "Settings", { key, value: JSON.stringify(settings[key]) }, "key");
   }
+  // Espresso's preinfusion field became pre-soak and hold: update an older sheet's Methods tab once.
+  let fields = rows.Methods.map(toField).filter((f) => f.method && f.key);
+  const esp = fields.filter((f) => f.method === "espresso");
+  if (esp.some((f) => f.key === "preinfusion_s") && !esp.some((f) => f.key === "presoak_s")) {
+    const order = esp.find((f) => f.key === "preinfusion_s")?.order ?? 0;
+    const added = DEFAULT_FIELDS.filter((f) => f.method === "espresso" && (f.key === "presoak_s" || f.key === "hold_s"))
+      .map((f, i) => ({ ...f, order: order + i * 0.5 }));
+    await sh.deleteRows(id, headers, "Methods", "key", ["preinfusion_s"]);
+    await sh.append(id, headers, "Methods", added as unknown as Rec[]);
+    fields = [...fields.filter((f) => f.key !== "preinfusion_s"), ...added];
+  }
   return {
     id,
     headers,
     beans: rows.Beans.filter((b) => b.id),
     gear: rows.Gear.filter((g) => g.id).map(toGear),
-    fields: rows.Methods.map(toField).filter((f) => f.method && f.key).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    fields: fields.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     brews: rows.Brews.filter((b) => b.id),
     phases: rows.Phases.map(toPhase).filter((p) => p.brew_id),
     settings,
