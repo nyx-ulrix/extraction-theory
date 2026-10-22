@@ -17,7 +17,7 @@ const W = 1080; // image width; the height follows the content
 const PAD = 72;
 const CHART = 860;
 const str = (v: unknown) => (v == null ? "" : String(v));
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const stamp = (v: unknown) => {
   const n = num(v);
@@ -44,9 +44,21 @@ const dataUrl = (url: string) => fetch(url).then((r) => r.blob()).then((b) => ne
   fr.readAsDataURL(b);
 }));
 /** The app font, embedded so the image looks the same wherever it is opened. */
-function fonts(): Promise<string> {
+export function fonts(): Promise<string> {
   return (fontCss ??= Promise.all([dataUrl(font400), dataUrl(font700)]).then(([a, b]) =>
     `@font-face{font-family:"Space Mono";font-weight:400;src:url(${a}) format("woff2")}@font-face{font-family:"Space Mono";font-weight:700;src:url(${b}) format("woff2")}`));
+}
+
+/** An SVG string drawn to a PNG at twice its size. */
+export async function svgToPng(svg: string): Promise<Blob> {
+  const img = new Image();
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth * 2;
+  c.height = img.naturalHeight * 2;
+  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Could not make the image."))), "image/png"));
 }
 
 const PREFS = "et.export";
@@ -93,16 +105,7 @@ export default function ExportChart({ bean, fl, open, onClose }: { bean: Rec; fl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, o, bean, fl, brews]);
 
-  const png = async (): Promise<Blob> => {
-    const img = new Image();
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    await img.decode();
-    const c = document.createElement("canvas");
-    c.width = img.naturalWidth * 2;
-    c.height = img.naturalHeight * 2;
-    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-    return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Could not make the image."))), "image/png"));
-  };
+  const png = () => svgToPng(svg);
   const name = `${str(bean.name).replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "") || "coffee"}-chart.png`;
   const run = async (share: boolean) => {
     setWorking(true);

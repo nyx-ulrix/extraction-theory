@@ -1,3 +1,5 @@
+import { Scan, ShareCoffee, SharedCoffee } from "./views/Share.tsx";
+import { codeFrom } from "./share.ts";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   ArrowClockwise, Books, Coffee, GearSix, GoogleLogo, House, Moon, SignIn, Sun, Table, X, type Icon,
@@ -70,6 +72,10 @@ const NAV: [View, string, Icon][] = [
   ["settings", "Settings", GearSix],
 ];
 const VIEW_KEY = "et.view";
+const INCOMING = "et.incoming";
+function pendingShare(): string | null {
+  try { return sessionStorage.getItem(INCOMING); } catch { return null; }
+}
 function initialView(): View {
   try {
     const v = sessionStorage.getItem(VIEW_KEY);
@@ -119,10 +125,14 @@ export default function App() {
   const dbRef = useRef<Db | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [incoming, setIncoming] = useState<string | null>(pendingShare);
   const [view, setView] = useState<View>(initialView);
   const [arg, setArg] = useState<string>();
   const [gisReady, setGisReady] = useState(false);
   const dirty = useRef(false);
+  // The page on screen, for a link opened in this tab: its #hash entry stands in for this page.
+  const here = useRef<{ v: View; a?: string; depth: number }>({ v: view, a: arg, depth: 0 });
+  here.current = { v: view, a: arg, depth: (window.history.state as { depth?: number } | null)?.depth ?? 0 };
   const [leaving, setLeaving] = useState<[View, string | undefined] | null>(null);
 
   useEffect(() => {
@@ -299,6 +309,26 @@ export default function App() {
   }, [navigate, view, arg]);
   const setDirty = useCallback((d: boolean) => { dirty.current = d; }, []);
 
+  // A shared coffee link (#s=...): kept through sign-in, opened once the sheet is loaded.
+  useEffect(() => {
+    const take = () => {
+      const code = location.hash.length > 3 ? codeFrom(location.hash) : null;
+      if (!code) return;
+      try { sessionStorage.setItem(INCOMING, code); } catch { /* storage blocked */ }
+      history.replaceState(history.state?.v ? history.state : here.current, "", location.pathname + location.search);
+      setIncoming(code);
+    };
+    take();
+    window.addEventListener("hashchange", take);
+    return () => window.removeEventListener("hashchange", take);
+  }, []);
+  useEffect(() => {
+    if (!db || !incoming) return;
+    try { sessionStorage.removeItem(INCOMING); } catch { /* storage blocked */ }
+    setIncoming(null);
+    navigate("shared", incoming);
+  }, [db, incoming, navigate]);
+
   const ctx = useMemo<AppCtx | null>(
     () => (db ? { db, update, busy, notify, go, back, arg, setDirty } : null),
     [db, update, busy, notify, go, back, arg, setDirty],
@@ -390,7 +420,7 @@ export default function App() {
     );
   }
 
-  const Page = { home: Home, brew: Brew, history: History, beans: Beans, settings: Settings }[view];
+  const Page = { home: Home, brew: Brew, history: History, beans: Beans, settings: Settings, share: ShareCoffee, shared: SharedCoffee, scan: Scan }[view];
   return (
     <Ctx.Provider value={ctx}>
       <style>{CSS}</style>

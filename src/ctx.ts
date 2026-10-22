@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 import type { Db } from "./store.ts";
 
-export type View = "home" | "brew" | "history" | "beans" | "settings";
+export type View = "home" | "brew" | "history" | "beans" | "settings" | "share" | "shared" | "scan";
 
 export interface AppCtx {
   db: Db;
@@ -12,7 +12,7 @@ export interface AppCtx {
   update: (fn: (db: Db) => Promise<Db>, done?: string) => Promise<boolean>;
   busy: boolean;
   notify: (msg: string, kind?: "info" | "error" | "success") => void;
-  /** Switch view. `arg` is a brew id (history detail, or brew form prefill) or a bean id. */
+  /** Switch view. `arg` is a brew id (history detail, or brew form prefill), a bean id, or a shared code. */
   go: (view: View, arg?: string) => void;
   /** Return to the page you came from (browser history), or Home if there is none. */
   back: () => void;

@@ -1,5 +1,5 @@
 // Flavour radar: Kiviat grid with coloured axis dots, one see-through polygon per tasting note.
-import { useContext, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useContext, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { clamp10, type AxisDef, type Layer } from "../calc.ts";
 import { Ctx } from "../ctx.ts";
 import { shapePath } from "./shape.ts";
@@ -29,7 +29,7 @@ function extreme(hex: string) {
 }
 
 export default function Radar({
-  axes, layers, onChange, selected = null, onSelect, size = 420, legend = true, title = "Flavour radar",
+  axes, layers, onChange, selected = null, onSelect, size = 420, legend = true, legendEnd, title = "Flavour radar",
   emptyText = "Add tasting notes to draw layers.", rounded: roundedProp, grid: gridProp, pitch = 3.4, animate = true, labels = true,
 }: {
   /** false leaves out the axis names (image export). */
@@ -48,6 +48,8 @@ export default function Radar({
   onSelect?: (i: number | null) => void;
   size?: number;
   legend?: boolean;
+  /** Shown at the end of the legend row, e.g. an export button beside the notes. */
+  legendEnd?: ReactNode;
   title?: string;
   /** Centre text when there are no layers. Pass "" to hide (small previews). */
   emptyText?: string;
@@ -243,6 +245,7 @@ export default function Radar({
               </span>
             ),
           )}
+          {legendEnd}
         </div>
       )}
     </div>

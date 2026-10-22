@@ -1,9 +1,9 @@
 // Home: the coffees you still have. Finished bags live in the Library.
-import { DownloadSimple, Plant } from "@phosphor-icons/react";
+import { DownloadSimple, Plant, Scan } from "@phosphor-icons/react";
 import { useInstall } from "../install.ts";
 import { useApp } from "../ctx.ts";
 import { isFinished } from "../group.ts";
-import { Button } from "../ui.tsx";
+import { Button, IconButton } from "../ui.tsx";
 import Shelf from "../components/Shelf.tsx";
 
 export default function Home() {
@@ -15,6 +15,7 @@ export default function Home() {
         <h1>Home</h1>
         <div className="row">
           {app.canPrompt && !app.installed && <Button ghost icon={DownloadSimple} onClick={app.install}>Install app</Button>}
+          <IconButton icon={Scan} label="Scan a coffee code" onClick={() => go("scan")} />
           <Button icon={Plant} onClick={() => go("beans", "new")}>Add bean</Button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 // Shared form primitives. Every view builds from these so the look stays one system.
 import { useContext, createContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { Icon } from "@phosphor-icons/react";
-import { X } from "@phosphor-icons/react";
+import { CaretDown, X } from "@phosphor-icons/react";
 import { fmtTime, num, parseTime, type Num } from "./calc.ts";
 
 export function Field({ label, hint, error, children, id }: { label: string; hint?: string; error?: string; children: ReactNode; id?: string }) {
@@ -251,4 +251,18 @@ export function Marquee({ children, className }: { children: string; className?:
 
 export function Msg({ kind = "info", children }: { kind?: "info" | "error" | "success" | "warning"; children: ReactNode }) {
   return <div className={`msg ${kind}`} role={kind === "error" ? "alert" : "status"}>{children}</div>;
+}
+
+/** A closed-by-default fold with a one-line summary. */
+export function Fold({ title, meta, level, children }: { title: string; meta?: string; level?: "section" | "group"; children: ReactNode }) {
+  return (
+    <details className={`disclosure${level ? ` fold-${level}` : ""}`}>
+      <summary>
+        {level === "section" ? <h2 className="strong">{title}</h2> : <span className="strong">{title}</span>}
+        {meta && <span className="label">{meta}</span>}
+        <CaretDown size={16} aria-hidden className="caret" />
+      </summary>
+      <div className="fold-body">{children}</div>
+    </details>
+  );
 }

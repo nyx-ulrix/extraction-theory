@@ -186,11 +186,15 @@ export function defaultGrinder(db: Db, beanId: unknown): string | null {
  * Switch the form to a coffee: its last recipe (any method), keeping the brew date. A coffee with no
  * brews yet starts blank on the current method, with its grinder chosen.
  */
-export function beanRecipe(db: Db, d: Draft, beanId: string): Draft {
-  const last = latest(db.brews.filter((b) => b.bean_id === beanId));
+export function beanRecipe(db: Db, d: Draft, beanId: string, preferShared = false): Draft {
+  // A recipe that came with the coffee (a roaster's QR code) starts its first brew, or any brew when asked for.
+  const shared = [...db.settings.recipes].reverse().find((r) => r.bean === beanId);
+  const last = preferShared && shared ? undefined : latest(db.brews.filter((b) => b.bean_id === beanId));
   const base: Draft = last
     ? loadFrom(db, last, { ...d })
-    : { ...emptyDraft(d.method), date: d.date, dateSet: d.dateSet, f: { bean_id: beanId } };
+    : shared
+      ? applyRecipe({ ...emptyDraft(shared.method), date: d.date, dateSet: d.dateSet, f: { bean_id: beanId } }, shared)
+      : { ...emptyDraft(d.method), date: d.date, dateSet: d.dateSet, f: { bean_id: beanId } };
   const f: Rec = { ...base.f, bean_id: beanId };
   if (!f.grinder_id) f.grinder_id = defaultGrinder(db, beanId);
   return { ...base, f, touched: false };

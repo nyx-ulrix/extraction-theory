@@ -1,5 +1,5 @@
-import { useEffect, useId, useState } from "react";
-import { ArrowLeft, Camera, Coffee, Export, FloppyDisk, MagicWand, PencilSimple, Plus, Target, Trash, X } from "@phosphor-icons/react";
+import { useEffect, useId, useState, type ReactNode } from "react";
+import { ArrowLeft, Camera, Coffee, Export, FloppyDisk, MagicWand, PencilSimple, Plus, QrCode, Scan, Target, Trash, X } from "@phosphor-icons/react";
 import { dialedMethods } from "../group.ts";
 import Radar from "../components/Radar.tsx";
 import Fingerprint from "../components/Fingerprint.tsx";
@@ -31,7 +31,7 @@ const KEYS = [
 ];
 
 export default function Beans() {
-  const { db, arg, back } = useApp();
+  const { db, arg, back, go } = useApp();
   // arg: "new" = blank form; "edit:<id>" = form; "<id>" = that coffee's page with its brew history.
   const [editing, setEditing] = useState<Rec | null>(() =>
     arg === "new" ? {} : arg?.startsWith("edit:") ? db.beans.find((b) => b.id === arg.slice(5)) ?? null : null);
@@ -53,7 +53,10 @@ export default function Beans() {
     <div className="page stack-lg">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Library</h1>
-        <Button icon={Plus} onClick={() => open({})}>Add bean</Button>
+        <div className="row">
+          <IconButton icon={Scan} label="Scan a coffee code" onClick={() => go("scan")} />
+          <Button icon={Plus} onClick={() => open({})}>Add bean</Button>
+        </div>
       </div>
       <Shelf beans={db.beans} storageKey="library" empty="No coffees yet. Add the bag you are brewing from." />
     </div>
@@ -260,9 +263,8 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
       <div className="page-head">
         <IconButton icon={ArrowLeft} label="Back" onClick={back} />
         <h1 style={{ flex: 1, minWidth: 0 }}>{str(bean.name) || "Unnamed"}</h1>
-        {fl.layers.length > 0 && <IconButton icon={Export} label="Export chart" onClick={() => setExporting(true)} />}
-        <IconButton icon={PencilSimple} label="Edit coffee" onClick={onEdit} />
-        <IconButton icon={Trash} label="Delete coffee" variant="danger" tipAlign="end" disabled={busy} onClick={() => setConfirm(true)} />
+        <IconButton icon={QrCode} label="Share as QR code" onClick={() => go("share", str(bean.id))} />
+        <IconButton icon={PencilSimple} label="Edit coffee" tipAlign="end" onClick={onEdit} />
       </div>
       <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Delete ${str(bean.name) || "this coffee"}?`}>
         <p>
@@ -277,7 +279,10 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
           }}>Delete</Button>
         </div>
       </Dialog>
-      {fl.layers.length > 0 && <PageArt fl={fl} title={`${str(bean.name)} roaster notes`} />}
+      {fl.layers.length > 0 && (
+        <PageArt fl={fl} title={`${str(bean.name)} roaster notes`}
+          extra={<IconButton icon={Export} label="Export as image" onClick={() => setExporting(true)} />} />
+      )}
       {exporting && <ExportChart bean={bean} fl={fl} open onClose={() => setExporting(false)} />}
       {facts.length > 0 && (
         <dl className="kv">
@@ -290,6 +295,9 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
         <header><h2>Brew history</h2></header>
         <BrewList beanId={str(bean.id)} />
       </section>
+      <div className="delete-coffee">
+        <Button icon={Trash} danger disabled={busy} onClick={() => setConfirm(true)}>Delete coffee</Button>
+      </div>
       {/* New brew of this coffee, starting from its last recipe. */}
       <button type="button" className="fab" aria-label="New brew" data-tip="New brew" onClick={() => go("brew", `bean:${str(bean.id)}`)}>
         <Coffee size={28} aria-hidden />
@@ -299,7 +307,7 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
 }
 
 /** The coffee's chart as a spider chart or blob, switchable here (saved as the coffee page setting, apart from card art). */
-function PageArt({ fl, title }: { fl: Flavour; title: string }) {
+function PageArt({ fl, title, extra }: { fl: Flavour; title: string; extra?: ReactNode }) {
   const { db, update, busy } = useApp();
   const s = db.settings;
   const art = s.page_art;
@@ -320,9 +328,10 @@ function PageArt({ fl, title }: { fl: Flavour; title: string }) {
           </div>
           <div className="row" style={{ justifyContent: "center" }}>
             {fl.layers.map((l, i) => <span key={i} className="chip" style={{ cursor: "default" }}><span className="swatch" style={{ background: ink(l.color) }} />{l.note}</span>)}
+            {extra}
           </div>
         </>
-      ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} pitch={2.3} />}
+      ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} pitch={2.3} legendEnd={extra} />}
     </div>
   );
 }

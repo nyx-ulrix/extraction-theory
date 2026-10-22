@@ -300,7 +300,8 @@ export function layoutFor(m: MethodDef, fields: MethodField[], s: Settings): str
   return [...required.filter((k) => !keys.includes(k)), ...keys];
 }
 
-export interface Recipe { name: string; method: string; f: Rec; pours: Phase[]; presses: Phase[] }
+/** `bean`: a recipe that came with a shared coffee, the starting point for that coffee's first brew. */
+export interface Recipe { name: string; method: string; f: Rec; pours: Phase[]; presses: Phase[]; bean?: string }
 
 /** Sections that can be switched off for every method (the rest are the core of a brew). */
 export const OPTIONAL_SECTIONS: [string, string][] = [

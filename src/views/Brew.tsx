@@ -46,16 +46,18 @@ export default function Brew() {
   const methods = methodDefs(db.fields);
   const [editing] = useState(() => (arg?.startsWith("edit:") ? db.brews.find((x) => x.id === arg.slice(5)) : undefined));
   const [init] = useState(() => {
-    // arg: a brew id (Brew again), "bean:<id>" (new brew from a coffee's page) or "edit:<id>" (change a logged brew).
+    // arg: a brew id (Brew again), "bean:<id>" (new brew from a coffee's page), "shared:<id>" (a scanned coffee's recipe)
+    // or "edit:<id>" (change a logged brew).
     if (editing) return { d: editDraft(db, editing, methods[0].id), pending: undefined as Pending | undefined };
-    const beanArg = arg?.startsWith("bean:") ? arg.slice(5) : undefined;
+    const fromShare = arg?.startsWith("shared:");
+    const beanArg = arg?.startsWith("bean:") ? arg.slice(5) : fromShare ? arg!.slice(7) : undefined;
     const b = arg && !beanArg ? db.brews.find((x) => x.id === arg) : undefined;
     const saved = restoreDraft();
     // A touched draft is not replaced without asking.
     if (b && saved?.touched) return { d: saved, pending: { brew: b } as Pending };
     if (beanArg) {
       if (saved?.touched) return { d: saved, pending: { beanId: beanArg } as Pending };
-      return { d: beanRecipe(db, emptyDraft(methods[0].id), beanArg), pending: undefined };
+      return { d: beanRecipe(db, emptyDraft(methods[0].id), beanArg, fromShare), pending: undefined };
     }
     let d = b ? again(db, b, methods[0].id) : saved ?? emptyDraft(methods[0].id);
     const open = db.beans.filter((x) => !isFinished(x.finished));

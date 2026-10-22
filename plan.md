@@ -116,6 +116,13 @@ AI does one small job: reading a bean bag's label from up to two photos (front a
 
 Bulk import: Settings, Import shows the JSON format and offers `src/import-guide.md` as a download. The guide is written so any AI chat can turn bag photos or notes into valid import JSON (allowed fields, values, dates, flavour layers with shared bitterness and body, phases as added water, match / update / delete, and what is not allowed).
 
+## 7b. Roaster QR codes (no backend)
+- A coffee's page has a QR button: pick a recommended recipe (its brews, dialed-in first, or a saved recipe) and whether the flavour chart and roast date go in. The card (coffee, QR, recipe, notes) downloads as a PNG to print on a bag or card, or shares as an image with the link.
+- Everything rides in the link's `#s=` fragment as deflated, compacted JSON (short keys, pours as tuples), so nothing is uploaded and servers never see it. Gear travels by name and is matched to the scanner's own grinders and drippers.
+- The QR is drawn in the site's risograph style: halftone dots in ink, sharp square eyes in the coffee's lead note colour (deepened until dark enough to scan), medium error correction. The page states a minimum print width from the code's size.
+- Scanning: any phone camera opens the link; Home and Library also have an in-app scanner (BarcodeDetector, Chrome on Android) with a paste-a-link fallback. A link opened before sign-in waits until the sheet loads.
+- The scanned page previews the coffee, chart and recipe (details in folds), then adds the coffee (or only the recipe, if the coffee is already there) to the user's own sheet and can open the brew form with that recipe.
+
 ## 8. Settings
 - Pour entry style (per pour / target weight; stored per pour either way).
 - Grind input shown first (setting / microns).

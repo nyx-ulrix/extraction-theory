@@ -61,11 +61,11 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  * Chart ink: the stored colour as a vivid risograph-style ink (same hue, near full saturation),
  * brighter and neon on the dark theme. Stored colours never change; this is display only.
  */
-export function ink(c: string): string {
+export function ink(c: string, paper = false): string {
   const v = hsl(c);
   if (!v) return c;
   const [h, s, l] = v;
-  const dark = document.documentElement.dataset.theme === "dark";
+  const dark = !paper && document.documentElement.dataset.theme === "dark";
   if (s < 0.12) return dark ? "#E8E6E1" : c; // black and grey inks stay neutral; lifted to read on dark paper
   return hex(h, Math.min(1, 0.72 + s * 0.45), dark ? clamp(l, 0.6, 0.72) : clamp(l, 0.45, 0.6));
 }

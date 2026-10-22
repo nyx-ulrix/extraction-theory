@@ -15,7 +15,7 @@ import {
 } from "../schema.ts";
 import { sheetUrl } from "../sheets.ts";
 import { fillGrinder, importData, saveGear, saveSettings } from "../store.ts";
-import { Button, Dialog, Field, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../ui.tsx";
+import { Button, Dialog, Field, Fold, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../ui.tsx";
 import AxesEditor from "../components/AxesEditor.tsx";
 import importGuide from "../import-guide.md?raw";
 import { PAPERS } from "../papers.ts";
@@ -384,18 +384,6 @@ function Layout({ s, patch }: { s: S; patch: Patch }) {
 const STYLES: [DripperStyle, string][] = [["immersion", "Immersion"], ["hybrid", "Hybrid"], ["percolation", "Percolation"]];
 
 /** Collapsible row. `level` "section" renders a section-sized heading in the summary. */
-function Fold({ title, meta, level, children }: { title: string; meta?: string; level?: "section" | "group"; children: ReactNode }) {
-  return (
-    <details className={`disclosure${level ? ` fold-${level}` : ""}`}>
-      <summary>
-        {level === "section" ? <h2 className="strong">{title}</h2> : <span className="strong">{title}</span>}
-        {meta && <span className="label">{meta}</span>}
-        <CaretDown size={16} aria-hidden className="caret" />
-      </summary>
-      <div className="fold-body">{children}</div>
-    </details>
-  );
-}
 
 function Drippers() {
   const { db } = useApp();
