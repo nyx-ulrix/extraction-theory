@@ -167,7 +167,9 @@ export default function Brew() {
       case "recipe": return <Recipe key={b} d={d} up={up} m={m} err={errDose} />;
       case "water_type": return (
         <Section key={b} title="Water used">
-          <TextField label="Water used" value={str(d.f.water_type)} onChange={(v) => up(withF({ water_type: v }))} />
+          {/* Waters you've used before, newest first; "Other" adds a new one, which then joins the list. */}
+          <SelectField label="Water used" value={str(d.f.water_type)} other placeholder="None" onChange={(v) => up(withF({ water_type: v }))}
+            options={[...new Set([...db.brews].reverse().map((x) => str(x.water_type).trim()).filter(Boolean))]} />
         </Section>
       );
       case "milk": {
