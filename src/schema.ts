@@ -191,6 +191,8 @@ export interface Settings {
   page_grid: boolean;
   /** Grinder ids the user owns: the brew form lists only these, and the first is the default. Empty = all. */
   my_grinders: string[];
+  /** Filter papers the user has: listed first in the brew form, after papers they've actually used. */
+  my_papers: string[];
   /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
   card_art: "radar" | "blob";
   /** Chart on a coffee's own page, chosen apart from the card art. */
@@ -217,6 +219,7 @@ export const DEFAULT_SETTINGS: Settings = {
   card_art: "radar",
   page_art: "radar",
   my_grinders: [],
+  my_papers: [],
 };
 
 /**

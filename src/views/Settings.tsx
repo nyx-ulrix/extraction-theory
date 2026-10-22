@@ -18,6 +18,7 @@ import { fillGrinder, importData, saveGear, saveSettings } from "../store.ts";
 import { Button, Field, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../ui.tsx";
 import AxesEditor from "../components/AxesEditor.tsx";
 import importGuide from "../import-guide.md?raw";
+import { PAPERS } from "../papers.ts";
 import { DripperDialog } from "../components/brew/Dripper.tsx";
 import { GrinderDialog } from "../components/brew/Grind.tsx";
 import { IconLink, setTheme, useTheme } from "../App.tsx";
@@ -94,7 +95,7 @@ export default function Settings() {
           </Section>
         </>
       )}
-      {arg === "gear" && (<><MyGrinders s={s} patch={patch} /><Drippers /><Grinders /></>)}
+      {arg === "gear" && (<><MyGrinders s={s} patch={patch} /><MyPapers s={s} patch={patch} /><Drippers /><Grinders /></>)}
       {arg === "ai" && <Ai s={s} patch={patch} />}
       {arg === "data" && <ImportData />}
       {arg === "account" && <Account />}
@@ -323,6 +324,33 @@ function DripperRow({ g }: { g: Gear }) {
 }
 
 const DIALS: [DialType, string][] = [["clicks", "Clicks"], ["rotation", "Rotation"], ["stepless", "Stepless"]];
+
+/** Filter papers the user has: these come first in the brew form, right after papers they've used. */
+function MyPapers({ s, patch }: { s: S; patch: Patch }) {
+  const mine = s.my_papers;
+  const toggle = (name: string) => patch({ my_papers: mine.includes(name) ? mine.filter((x) => x !== name) : [...mine, name] });
+  return (
+    <section className="section">
+      <Fold title="My papers" meta={`${mine.length}`} level="section">
+        <p className="meta">Pick the papers you have. The brew form lists papers you've used first (newest first), then these, then the rest.</p>
+        <div className="list">
+          {Object.entries(PAPERS).map(([brand, names]) => {
+            const n = names.filter((x) => mine.includes(`${brand} ${x}`)).length;
+            return (
+              <Fold key={brand} title={brand} meta={n ? `${n} of ${names.length}` : `${names.length}`} level="group">
+                <div className="row">
+                  {names.map((x) => (
+                    <button key={x} type="button" className="chip" aria-pressed={mine.includes(`${brand} ${x}`)} onClick={() => toggle(`${brand} ${x}`)}>{x}</button>
+                  ))}
+                </div>
+              </Fold>
+            );
+          })}
+        </div>
+      </Fold>
+    </section>
+  );
+}
 
 /** The grinders this user owns. The brew form lists only these; the default goes on coffees not brewed yet. */
 function MyGrinders({ s, patch }: { s: S; patch: Patch }) {

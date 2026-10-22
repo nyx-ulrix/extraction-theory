@@ -176,6 +176,8 @@ export default function Brew() {
         </Section>
       );
       case "milk": {
+        // Serve and milk only apply to espresso-style drinks.
+        if (m.id !== "espresso" && m.id !== "moka") return null;
         // How the cup was served: straight, black (hot or iced, with water) or as a milk drink.
         const serve = str(d.f.serve) || (str(d.f.milk_drink) ? "milk" : "");
         return (

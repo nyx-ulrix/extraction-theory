@@ -7,6 +7,8 @@ export const PAPERS: Record<string, string[]> = {
     "Abaca Cone 1 Cup", "Abaca Cone 1 Cup Brown", "Abaca Cone 4 Cup", "Abaca Cone 4 Cup Brown", "Abaca Trapezoid 102", "Abaca Trapezoid 103",
     "Abaca+ Cone 1 Cup", "Abaca+ Cone 4 Cup", "Abaca+ Deep 27", "Dark Roast T-83 Cone 1 Cup", "Dark Roast T-83 Cone 4 Cup",
     "Light Roast T-92 Cone 1 Cup", "Light Roast T-92 Cone 4 Cup", "Medium Roast T-90 Cone 1 Cup", "Medium Roast T-90 Cone 4 Cup",
+    // TH series: TH-1 thin, dense and slower; TH-2 fast then restricting; TH-3 thick, medium-high flow.
+    "TH-1 Cone 1 Cup", "TH-1 Cone 4 Cup", "TH-2 Cone 1 Cup", "TH-2 Cone 4 Cup", "TH-3 Cone 1 Cup", "TH-3 Cone 4 Cup",
     "Traditional Cone 1 Cup", "Traditional Cone 4 Cup",
   ],
   Chemex: ["Bonded Circles", "Bonded Half Moon", "Bonded Half Moon Natural", "Bonded Squares", "Bonded Squares Natural"],

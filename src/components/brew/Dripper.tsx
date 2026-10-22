@@ -38,12 +38,12 @@ export default function Dripper({ d, up }: { d: Draft; up: Up }) {
   );
 }
 
-/** Papers you've used (newest first), then the specialty list by brand, then any saved on the sheet. */
+/** Papers you've used (newest first, so a new one rises to the top), then your papers, then everything else. */
 function papers(db: Db): string[] {
-  const used = [...db.brews].reverse().map((b) => str(b.paper).trim()).filter(Boolean);
+  const used = [...db.brews].sort((a, b) => (Number(b.brew_date) || 0) - (Number(a.brew_date) || 0)).map((b) => str(b.paper).trim()).filter(Boolean);
   const saved = db.gear.filter((g) => g.type === "paper").map((g) => g.name);
   const seen = new Set<string>();
-  return [...used, ...PAPER_NAMES, ...saved].filter((n) => !seen.has(n.toLowerCase()) && !!seen.add(n.toLowerCase()));
+  return [...used, ...db.settings.my_papers, ...PAPER_NAMES, ...saved].filter((n) => !seen.has(n.toLowerCase()) && !!seen.add(n.toLowerCase()));
 }
 
 /** Add-dripper dialog. Closes itself after a save. */
