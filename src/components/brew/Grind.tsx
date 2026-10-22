@@ -25,7 +25,7 @@ export default function Grind({ d, up }: { d: Draft; up: Up }) {
   const calc = [dial?.dial_type === "rotation" && clicks != null ? `${clicks} clicks` : "", est != null ? `about ${est} µm` : ""].filter(Boolean).join(", ");
 
   const settingField = (
-    <TextField key="s" label="Grind setting" value={setting} hint={calc ? `${how}. ${calc}` : how} onChange={(v) => up(withF({ grind_setting: v }))} />
+    <TextField key="s" label="Grind setting" value={setting} hint={calc && !basic ? `${how}. ${calc}` : how} onChange={(v) => up(withF({ grind_setting: v }))} />
   );
   const umField = (
     <NumField
