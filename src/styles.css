@@ -376,3 +376,9 @@ input[type="date"], input[type="datetime-local"] { width: 100%; min-width: 0; }
 .fold-section > summary::after { grid-area: mark; content: "+"; font-size: 24px; line-height: 1; color: var(--text-strong); }
 .fold-section[open] > summary::after { content: "-"; }
 .fold-section > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Settings checklists: two columns of tick boxes, one tap target per row. */
+.checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; color: var(--text-strong); }
+.check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--text-strong); }
+@media (max-width: 479px) { .checks { grid-template-columns: 1fr; } }

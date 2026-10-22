@@ -195,6 +195,8 @@ export interface Settings {
   my_papers: string[];
   /** Optional sections and method fields switched off everywhere (Settings, Brew form). Required ones always show. */
   hidden: string[];
+  /** Basic shows the essentials for each method; advanced shows what is ticked in Settings, Brew form. */
+  brew_mode: "basic" | "advanced";
   /** Saved recipes: a method and its recipe (no coffee, date or verdict), loaded into the brew form by name. */
   recipes: Recipe[];
   /** Art on Home and Library cards: the spider chart, or the blob (fingerprint shapes only). */
@@ -225,6 +227,7 @@ export const DEFAULT_SETTINGS: Settings = {
   my_grinders: [],
   my_papers: [],
   hidden: [],
+  brew_mode: "basic",
   recipes: [],
 };
 
@@ -260,12 +263,27 @@ export function availableKeys(m: MethodDef, fields: MethodField[]): string[] {
   ];
 }
 
+/**
+ * Basic mode: the few things that move a cup. Filter: grind, dose and ratio, temperature, pours, dripper and paper.
+ * Espresso: grind, temperature and ratio. Every method keeps the bean and the verdict (rating and what changed).
+ */
+const BASIC: Record<string, string[]> = {
+  espresso: ["bean", "grind", "recipe", "rating"],
+  moka: ["bean", "grind", "recipe", "rating"],
+  filter: ["bean", "grind", "recipe", "dripper", "pours", "rating"],
+  ice: ["bean", "grind", "recipe", "dripper", "pours", "chill", "rating"],
+  coldbrew: ["bean", "grind", "recipe", "rating"],
+  aeropress: ["bean", "grind", "recipe", "presses", "rating"],
+};
+const BASIC_OTHER = ["bean", "grind", "recipe", "rating"];
+
 /** Saved layout filtered to what the method can show; required sections are always kept. */
 export function layoutFor(m: MethodDef, fields: MethodField[], s: Settings): string[] {
   const avail = availableKeys(m, fields);
   // Preinfusion became pre-soak and hold: a saved layout keeps its place for them.
   const saved = s.layout[m.id]?.flatMap((k) => (k === "preinfusion_s" ? ["presoak_s", "hold_s"] : [k])).filter((k) => avail.includes(k));
   const required = ["bean", "recipe", ...(m.chill === "required" ? ["chill"] : [])];
+  if (s.brew_mode !== "advanced") return (BASIC[m.id] ?? BASIC_OTHER).filter((k) => avail.includes(k));
   const keys = (saved?.length ? saved : avail).filter((k) => required.includes(k) || !s.hidden.includes(k));
   return [...required.filter((k) => !keys.includes(k)), ...keys];
 }
@@ -274,7 +292,7 @@ export interface Recipe { name: string; method: string; f: Rec; pours: Phase[]; 
 
 /** Sections that can be switched off for every method (the rest are the core of a brew). */
 export const OPTIONAL_SECTIONS: [string, string][] = [
-  ["grind", "Grind"], ["water_type", "Water used"], ["milk", "Black or milk"], ["dripper", "Dripper and paper"],
+  ["grind", "Grind"], ["total_s", "Brew time"], ["water_type", "Water used"], ["milk", "Black or milk"], ["dripper", "Dripper and paper"],
   ["pours", "Pour phases"], ["presses", "Press phases"], ["chill", "Chilling (iced drinks)"], ["taste", "Tasting notes"], ["rating", "Rating and what changed"],
 ];
 

@@ -157,7 +157,8 @@ export default function Brew() {
     }));
   }
 
-  const layoutHasRating = layoutFor(m, db.fields, db.settings).includes("rating");
+  const layoutKeys = layoutFor(m, db.fields, db.settings);
+  const layoutHasRating = layoutKeys.includes("rating");
   // Consecutive Methods-tab fields share one section.
   const own = db.fields.filter((f) => f.method === m.id);
   const blocks: (string | MethodField[])[] = [];
@@ -314,11 +315,11 @@ export default function Brew() {
           </Dialog>
           {/* The two choices that decide which sections show: hot or iced, and (espresso style) black or milk. */}
           <div className="grid-2 brew-switches">
-            {m.chill !== "required" && m.id !== "coldbrew" && (
+            {m.chill !== "required" && m.id !== "coldbrew" && layoutKeys.includes("chill") && (
               <Segmented label="Drink" full value={iced ? "iced" : "hot"} options={[["hot", "Hot", Flame], ["iced", "Iced", Snowflake]]}
                 onChange={(v) => up(withF({ iced: v === "iced" }))} />
             )}
-            {espressoStyle(m) && (
+            {espressoStyle(m) && layoutKeys.includes("milk") && (
               <Segmented label="Served" full value={serve} options={[["black", "Black", Coffee], ["milk", "Milk", Drop]]}
                 onChange={(v) => up(withF(v === "milk"
                   ? { serve: "milk", milk_drink: str(d.f.milk_drink) || MILK_DRINKS[0], milk_g: num(d.f.milk_g) ?? MILK_DEFAULT_G[str(d.f.milk_drink) || MILK_DRINKS[0]] ?? null }

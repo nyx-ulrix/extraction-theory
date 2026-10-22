@@ -15,7 +15,7 @@ import {
 } from "../schema.ts";
 import { sheetUrl } from "../sheets.ts";
 import { fillGrinder, importData, saveGear, saveSettings } from "../store.ts";
-import { Button, Field, IconButton, NumField, Section, Segmented, SelectField, TextField, Toggle } from "../ui.tsx";
+import { Button, Field, IconButton, NumField, Section, Segmented, SelectField, TextField } from "../ui.tsx";
 import AxesEditor from "../components/AxesEditor.tsx";
 import importGuide from "../import-guide.md?raw";
 import { PAPERS } from "../papers.ts";
@@ -92,7 +92,15 @@ export default function Settings() {
         <h1 style={{ flex: 1, minWidth: 0 }}>{cat[1]}</h1>
       </div>
       {arg === "brewing" && <Brewing s={s} patch={patch} />}
-      {arg === "form" && (<><Optional s={s} patch={patch} /><Layout s={s} patch={patch} /></>)}
+      {arg === "form" && (<>
+        <Section title="Brew form">
+          <Segmented label="Mode" full value={s.brew_mode} options={[["basic", "Basic"], ["advanced", "Advanced"]]} onChange={(brew_mode) => patch({ brew_mode })} />
+          <p className="meta">{s.brew_mode === "basic"
+            ? "Basic shows the essentials: grind, dose and ratio, temperature, and for pour-overs the pours, dripper and paper. Switch to Advanced to choose every variable yourself."
+            : "Advanced shows what you tick below, in the order you set."}</p>
+        </Section>
+        {s.brew_mode === "advanced" && <><Optional s={s} patch={patch} /><Layout s={s} patch={patch} /></>}
+      </>)}
       {arg === "chart" && (
         <>
           <ChartStyle s={s} patch={patch} />
@@ -219,6 +227,15 @@ function PresetRow({ p, onChange, onRemove }: { p: Preset; onChange: (p: Partial
   );
 }
 
+function Check({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <label className="check">
+      <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} />
+      <span>{label}</span>
+    </label>
+  );
+}
+
 /** On/off for every optional section and method extra, across all methods. Off = not shown in the brew form. */
 function Optional({ s, patch }: { s: S; patch: Patch }) {
   const { db } = useApp();
@@ -231,16 +248,16 @@ function Optional({ s, patch }: { s: S; patch: Patch }) {
     .map((m) => [m, db.fields.filter((f) => f.method === m.id)] as const)
     .filter(([, fs]) => fs.length);
   return (
-    <Section title="Optional sections">
-      <p className="meta">Switch off what you don't log. Bean, dose and the ice brew's chilling always show. Saved values are kept either way.</p>
-      <div className="grid-2">
-        {OPTIONAL_SECTIONS.map(([k, label]) => <Toggle key={k} label={label} checked={!s.hidden.includes(k)} onChange={(on) => set(k, on)} />)}
+    <Section title="Variables to log">
+      <p className="meta">Tick what you want in the brew form. Bean, dose and the ice brew's chilling always show. Saved values are kept either way.</p>
+      <div className="checks">
+        {OPTIONAL_SECTIONS.map(([k, label]) => <Check key={k} label={label} on={!s.hidden.includes(k)} onChange={(on) => set(k, on)} />)}
       </div>
       {byMethod.map(([m, fs]) => (
         <div key={m.id} className="stack" style={{ gap: 8 }}>
           <h3 className="label">{m.label} details</h3>
-          <div className="grid-2">
-            {fs.map((f) => <Toggle key={f.key} label={f.label} checked={!s.hidden.includes(f.key)} onChange={(on) => set(f.key, on)} />)}
+          <div className="checks">
+            {fs.map((f) => <Check key={f.key} label={f.label} on={!s.hidden.includes(f.key)} onChange={(on) => set(f.key, on)} />)}
           </div>
         </div>
       ))}
