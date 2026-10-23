@@ -5,7 +5,7 @@ import {
   ArrowClockwise, Books, Coffee, GearSix, GoogleLogo, House, Moon, SignIn, Sun, Table, X, type Icon,
 } from "@phosphor-icons/react";
 import { Ctx, type AppCtx, type View } from "./ctx.ts";
-import { AuthError, hadSession, hasToken, resume, returned, signIn } from "./google.ts";
+import { AuthError, forgetAccount, hadSession, hasToken, resume, returned, signIn } from "./google.ts";
 import { sheetUrl } from "./sheets.ts";
 import { loadDb, type Db } from "./store.ts";
 import { DEFAULT_SETTINGS } from "./schema.ts";
@@ -183,6 +183,15 @@ export default function App() {
   };
 
   const setData = useCallback((d: Db) => {
+    // Another sheet under the open page (another account signed in from another tab): start the page
+    // afresh, so a draft held on screen can't be saved into the new account's sheet.
+    if (dbRef.current && dbRef.current.id !== d.id) {
+      forgetAccount();
+      writeCache(d);
+      dirty.current = false;
+      location.reload();
+      return;
+    }
     dbRef.current = d;
     setDb(d);
     writeCache(d);
@@ -194,7 +203,9 @@ export default function App() {
   useEffect(() => {
     // Back from Google's sign-in page: the Worker now holds the session, so renew from it like a known device.
     const known = hadSession() || returned === "ok";
-    // Not the saved copy right after sign-in: it may have been another Google account's.
+    // Not the saved copy right after sign-in: it may have been another Google account's. Dropped, not
+    // just skipped, so a load that fails now can't bring it back on the next open.
+    if (returned === "ok") try { localStorage.removeItem(CACHE); } catch { /* storage blocked */ }
     const cached = known && returned !== "ok" ? readCache() : null;
     if (cached) {
       dbRef.current = cached;

@@ -19,8 +19,8 @@ const toCell = (v: Cell | undefined): Cell => (v == null ? "" : v);
 function remember(id: string) {
   try {
     // A different sheet than last time: another Google account signed in (or the old sheet is gone),
-    // so the copy and drafts on this device aren't this account's. A flaky network can't land here:
-    // the lookup throws before it, and a same-account retry finds the same id.
+    // so the copy and drafts on this device aren't this account's. A failed check of a sheet this account
+    // still has can't land here: the lookup keeps the cached id when it lists it.
     const prev = localStorage.getItem(ID_KEY);
     if (prev && prev !== id) forgetAccount();
     localStorage.setItem(ID_KEY, id);
@@ -43,7 +43,8 @@ export async function findOrCreate(seed: Partial<Record<Tab, Rec[]>>): Promise<s
   const q = "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
   const found = await api<{ files: { id: string }[] }>(`${DRIVE}?q=${encodeURIComponent(q)}&fields=files(id)&orderBy=createdTime`);
   if (found.files.length) {
-    const id = found.files[0].id;
+    // The cached sheet if it is still listed (its check above only hit a passing error), else the oldest.
+    const id = found.files.find((f) => f.id === cached)?.id ?? found.files[0].id;
     // Set-up cut short after the create (it is remembered only once done): finish the tabs left without headers,
     // else the sheet has no gear and no brew fields.
     const heads = await api<{ valueRanges: { values?: Cell[][] }[] }>(
