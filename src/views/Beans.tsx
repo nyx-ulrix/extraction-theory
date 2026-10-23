@@ -56,7 +56,7 @@ export default function Beans() {
     const done = () => (editing.id || arg !== "new" ? open(null) : back());
     return <BeanForm bean={editing} onDone={done} onSaved={done} />;
   }
-  if (viewing) return <CoffeePage bean={viewing} onEdit={() => open(viewing)} />;
+  if (viewing) return <CoffeePage key={str(viewing.id)} bean={viewing} onEdit={() => open(viewing)} />;
 
   // Library: every coffee, finished bags included.
   return (
@@ -106,7 +106,7 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
   };
   // Auto-fill only fills empty fields, so nothing already typed is overwritten.
   // Functional updates: whatever was typed while the photos were being read is kept.
-  const fill = (info: BagInfo) => {
+  const fill = (info: BagInfo, sent: AxisDef[]) => {
     const { tasting_notes: notes, roast_date: date, roast_level: level, chart, printed_axes: printed, ...rest } = info;
     const text = notes?.join(", ") ?? "";
     setF((p) => {
@@ -122,7 +122,11 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
     });
     // The chart is filled only when the coffee has none yet: the roaster's printed axes if the bag has them,
     // each note scored and coloured by the model; without a chart, notes start from the usual starter shape.
-    if (text) setFlav((p) => p.layers.length ? p : chart?.length ? chartFrom(chart, printed, p.axes) : { axes: p.axes, layers: syncLayers(text, [], p.axes) });
+    if (text) setFlav((p) => {
+      if (p.layers.length) return p;
+      const drawn = chart?.length ? chartFrom(chart, JSON.stringify(p.axes) === JSON.stringify(flav0.axes) ? printed : undefined, sent) : null;
+      return drawn ?? { axes: p.axes, layers: syncLayers(text, [], p.axes) };
+    });
   };
 
   const save = async () => {
@@ -210,27 +214,32 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
 }
 
 /** The model's scored notes as a chart: printed axes keep matching template colours, cup-wide axes share one value. */
-function chartFrom(chart: ChartNote[], printed: string[] | undefined, template: AxisDef[]): Flavour {
-  const axes = printed
-    ? cleanAxes(printed.map((label, i) => {
-      const same = template.find((a) => a.key === axisKey(label));
-      return { label, color: same?.color ?? DEFAULT_AXES[i % DEFAULT_AXES.length].color, shared: same?.shared ?? false };
-    }))
-    : template;
+function chartFrom(chart: ChartNote[], printed: string[] | undefined, template: AxisDef[]): Flavour | null {
+  // Printed axes that clean down to a different list (duplicates, blanks) can't be lined up with the scores.
+  const fromPrint = printed && cleanAxes(printed.map((label, i) => {
+    const same = template.find((a) => a.key === axisKey(label));
+    return { label, color: same?.color ?? DEFAULT_AXES[i % DEFAULT_AXES.length].color, shared: same?.shared ?? false };
+  }));
+  const usable = fromPrint && fromPrint.length === printed!.length ? fromPrint : null;
+  const axes = usable ?? template;
+  const scored = usable ? printed! : template.map((a) => a.label);
+  if (!chart.every((n) => n.values.length === scored.length)) return null;
+  const at = new Map(scored.map((l, i) => [axisKey(l), i]));
   const layers = cleanLayers(chart.map((n) => ({
     note: n.note,
     color: paletteHex(n.colour) ?? noteColour(n.note),
-    v: Object.fromEntries(axes.map((a, i) => [a.key, clamp10(n.values[i] ?? 0)])),
+    v: Object.fromEntries(axes.map((a) => [a.key, clamp10(n.values[at.get(a.key) ?? -1] ?? 0)])),
   })), axes);
+  // Cup-wide axes take the highest score, so the profile matches what the bag says.
   for (const a of axes.filter((x) => x.shared)) {
-    const v = clamp10(layers.reduce((s, l) => s + (l.v[a.key] ?? 0), 0) / Math.max(1, layers.length));
+    const v = Math.max(0, ...layers.map((l) => l.v[a.key] ?? 0));
     for (const l of layers) l.v[a.key] = v;
   }
   return { axes, layers };
 }
 
 /** Up to two photos of the bag (front and back), read with the user's own AI key to fill the form. */
-function BagFill({ onFill, axes }: { onFill: (info: BagInfo) => void; axes: AxisDef[] }) {
+function BagFill({ onFill, axes }: { onFill: (info: BagInfo, sent: AxisDef[]) => void; axes: AxisDef[] }) {
   const { db, notify } = useApp();
   const { ai_provider: provider, ai_model: model } = db.settings;
   const [shots, setShots] = useState<(Img & { url: string })[]>([]);
@@ -252,7 +261,7 @@ function BagFill({ onFill, axes }: { onFill: (info: BagInfo) => void; axes: Axis
     try {
       const info = await readBag(shots, provider, model, axes);
       if (!Object.keys(info).length) return notify("Nothing readable on that label. Try a closer, sharper photo.", "info");
-      onFill(info);
+      onFill(info, axes);
       notify("Filled from the bag. Check the details before saving.", "success");
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e), "error");

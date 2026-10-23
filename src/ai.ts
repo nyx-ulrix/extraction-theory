@@ -113,7 +113,7 @@ const BAG = `Read the coffee bag label in these photos and fill in the bean's de
 use null for anything not shown, never guess. name: the farm, lot or coffee name. product: the roaster's full name
 for the coffee as printed. roastery: the roaster's name. origin: country, then region. farm: farm or producer.
 variety and process as printed, in sentence case. roast_level only if printed. roast_date as YYYY-MM-DD (labels
-often print YY.M.D). altitude in metres. tasting_notes: the printed tasting notes, each a short phrase in sentence
+often print YY.M.D). altitude in metres. notes: each printed tasting note, a short phrase in sentence
 case with spelling mistakes fixed.
 
 Then chart each tasting note, as a coffee taster filling in a flavour radar:
@@ -121,7 +121,7 @@ Then chart each tasting note, as a coffee taster filling in a flavour radar:
 - If the label prints its own flavour chart or wheel with axes, set printed_axes to its axis labels in order (clockwise
   from the top) and score each note on those axes so that, across the notes, the highest value on each axis matches the
   printed one. Otherwise set printed_axes to null and score each note on the axes you are given.
-- values: one number per axis, in the axes' order, from 0 to 10 in steps of 0.5. Score what the note brings: a citrus
+- values: one number per axis, in order: the printed axes when printed_axes is set, otherwise the axes you are given; from 0 to 10 in steps of 0.5. Score what the note brings: a citrus
   note scores high on acidity and low on body; a chocolate note high on sweetness and body; "long finish" high on finish.
 - Axes marked cup-wide (such as body or bitterness) describe the whole cup: give every note the same value on them.
 - colour: the palette colour that looks most like the note itself (blueberry: Plum 500, orange: Copper 300,
@@ -170,7 +170,7 @@ export async function readBag(images: Img[], provider: Provider, model: string, 
       const notes = v.filter((n) => n && typeof n === "object").slice(0, 12).map((n) => ({
         note: String(n.note ?? "").trim().slice(0, 40),
         colour: String(n.colour ?? ""),
-        values: Array.isArray(n.values) ? n.values.slice(0, 12).map((x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : 0)) : [],
+        values: Array.isArray(n.values) ? n.values.slice(0, 12).map((x: unknown) => { const v = Number(x); return Number.isFinite(v) ? v : 0; }) : [],
       })).filter((n) => n.note);
       if (notes.length) { out.chart = notes; out.tasting_notes = notes.map((n) => n.note); }
     } else if (k === "printed_axes") {
