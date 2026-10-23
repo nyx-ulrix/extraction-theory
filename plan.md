@@ -13,7 +13,7 @@ Public repo `nyx-ulrix/extraction-theory`, MIT licence. Commits never credit Cla
 | Domain | `extractiontheory.liewjiaen.com` (Cloudflare DNS, proxy off) | Root `liewjiaen.com` is the portfolio on GitHub Pages and stays untouched |
 | Auth | Google code flow through a small Cloudflare Worker (`auth-worker/`), scope `drive.file` | The app can only see files it created. The Worker only keeps you signed in; no secrets in the bundle |
 | Storage | Google Sheets API v4 + Drive API v3 (find the sheet on any device) | Sheet is human readable and yours |
-| Flavour AI | User key for Claude, OpenAI or Gemini, called from the browser | Key stays in that browser's local storage, never in the sheet or repo |
+| Flavour AI | User key for Claude, OpenAI or Gemini, called from the browser | Key lives only in the open page: never stored on the device, in the sheet or in the repo |
 
 The only server piece is the sign-in Worker (section 9, "Staying signed in"); it never sees sheet data. The app's only config value is `VITE_AUTH_URL` in `.env`. The client secret lives only as a Worker secret. Don't remove the Worker to "simplify": without it every session ends after an hour.
 
@@ -23,8 +23,8 @@ The only server piece is the sign-in Worker (section 9, "Staying signed in"); it
    - **Google Sheets API** and **Google Drive API** enabled.
    - Google Auth Platform: Audience **External**, **published to production**. No verification needed because the only scope is `.../auth/drive.file` and the consent screen has no logo. Adding a consent-screen logo or any sensitive scope would trigger Google verification.
    - Branding: home page `https://extractiontheory.liewjiaen.com`, privacy `/privacy.html`, terms `/terms.html` (both on the subdomain). Authorized domains: `liewjiaen.com`, `extraction-theory.web.app`, `extraction-theory.firebaseapp.com`.
-   - Clients, Web application. Authorized JavaScript origins: `https://extractiontheory.liewjiaen.com`, `https://extraction-theory.web.app`, `https://extraction-theory.firebaseapp.com`, `http://localhost:5180`. Authorized redirect URI: `https://et-auth.liewjiaen.com/callback` (plus `http://localhost:8787/callback` for `wrangler dev --env dev`).
-3. Firebase console, Hosting, Add custom domain `extractiontheory.liewjiaen.com`, then add the records it shows in Cloudflare DNS with **proxy off** (grey cloud) so Firebase can issue the certificate (pending, see section 11).
+   - Clients, Web application. Authorized JavaScript origins: `https://extractiontheory.liewjiaen.com`, `https://extraction-theory.web.app`, `https://extraction-theory.firebaseapp.com`, `http://localhost:5180`. Authorized redirect URI: `https://et-auth.liewjiaen.com/callback`. Local sign-in with `wrangler dev --env dev` also needs `http://localhost:8787/callback`, not added yet.
+3. Firebase console, Hosting, Add custom domain `extractiontheory.liewjiaen.com`, then add the records it shows in Cloudflare DNS with **proxy off** (grey cloud) so Firebase can issue the certificate (done).
 
 ## 2. Spreadsheet: "Extraction Theory"
 
@@ -143,7 +143,7 @@ Tapping a note in a chart's legend (spider or blob) shows that note alone until 
 - Footer credit "Created by Jia En" linking `https://liewjiaen.com`, `https://github.com/nyx-ulrix`, `https://www.linkedin.com/in/malcolmliewjiaen/`.
 
 ## 9. UI
-Staying signed in: Google gives a browser-only app a 1-hour access token and no refresh token, so sign-in uses Google's code flow and a small Cloudflare Worker (`auth-worker/`, at et-auth.liewjiaen.com, free plan). Sign-in is a full-page redirect (`/login` to Google to `/callback`, with a one-time state cookie), not a popup: on Android the popup's tab can outlive the app's. The Worker trades the code for a refresh token with the client secret (a Worker secret, never in the repo), keeps it in an HttpOnly, Secure, partitioned cookie, and hands the app fresh access tokens on `/refresh`; only the app's own origins may call it (localhost only in `wrangler dev --env dev`). The app also keeps the last copy of the sheet on the device (`et.cache`, cleared on sign out), so it always opens straight into your coffees; if the Worker can't renew while the app is open, a toast offers sign-in again (at startup it shows the sign-in screen). The cookie is first-party on extractiontheory.liewjiaen.com (same site as the Worker); on the Firebase web.app address it relies on partitioned cookies (Chrome 114+, Firefox 131+, Safari 18.4+). The OAuth consent screen must stay In production: in Testing, Google expires refresh tokens after 7 days.
+Staying signed in: Google gives a browser-only app a 1-hour access token and no refresh token, so sign-in uses Google's code flow and a small Cloudflare Worker (`auth-worker/`, at et-auth.liewjiaen.com, free plan). Sign-in is a full-page redirect (`/login` to Google to `/callback`, with a one-time state cookie), not a popup: on Android the popup's tab can outlive the app's. The Worker trades the code for a refresh token with the client secret (a Worker secret, never in the repo), keeps it in an HttpOnly, Secure, partitioned cookie, and hands the app fresh access tokens on `/refresh`; only the app's own origins may call it (localhost only in `wrangler dev --env dev`). The app also keeps the last copy of the sheet on the device (`et.cache`, cleared on sign out), so it always opens straight into your coffees; if the Worker can't renew while the app is open, a toast offers sign-in again (at startup it shows the sign-in screen). The cookie is first-party on extractiontheory.liewjiaen.com (same site as the Worker). On the Firebase web.app and firebaseapp.com addresses sign-in doesn't stick: the cookie is set under liewjiaen.com, which those sites can't read. The OAuth consent screen must stay In production: in Testing, Google expires refresh tokens after 7 days.
 Home and Library shelves: card or list view, a Filters panel (roaster, origin, process, and Available / Finished in the Library) and a Sort panel (last brewed, name, date added, date roasted; dates newest first), each opened from the bar above the cards. View and sort are remembered per shelf on the device.
 Swiss-brutalist Caffalyst tokens (see `style.md`). Icon-only buttons with tooltips wherever possible (Phosphor), one primary text button per view. Bottom tab bar on phones, top nav on tablet and laptop, two-column brew form with sticky preview on laptop. App icon is the coffee-flower line art (favicon, header logo, home-screen icon), not uploaded to the Google consent screen.
 Installable as an app (PWA): the service worker passes page loads through (network only, offline notice), so Chrome offers its install prompt; an Install app button shows on Home when it does. Startup screen follows the theme (logo on white, or white logo on black) before the app loads. The Android launch splash can only have one colour, so it is dark: #131312 with the white-flower icon.
@@ -159,11 +159,12 @@ Installable as an app (PWA): the service worker passes page loads through (netwo
 - [x] Sheets API and Drive API enabled
 - [x] OAuth consent published to production
 - [x] Sheet schema, Google auth, Sheets and AI layer
-- [ ] UI: brew form, phases, chilling, radar, timeline, history, compare, beans, settings (in progress)
-- [ ] Audits: Fable code audit and taste-skill UI audit
-- [ ] Browser test on phone, tablet and laptop widths
-- [ ] Push to public GitHub repo
-- [ ] Firebase deploy and custom domain
+- [x] UI: brew form, phases, chilling, radar, timeline, history, compare, beans, settings, QR sharing
+- [x] Fable code audit per feature
+- [x] Push to GitHub (nyx-ulrix/extraction-theory)
+- [x] Firebase deploy and custom domain; sign-in Worker at et-auth.liewjiaen.com
+- [ ] Taste-skill UI audit
+- [ ] Real-device sign-in test (Android first-time sign-up, iPhone home-screen app)
 
 ## 12. Known limits
 - Online only. A failed save keeps the draft (autosaved locally); offline queueing can come later.
