@@ -1,5 +1,5 @@
 // Tasting notes text plus the editable radar: one layer per note, optional per-coffee axes.
-// The user sets every value by dragging. AI only picks palette colours for the notes.
+// The user sets every value by dragging. An AI bag fill (Beans) may hand in a starting chart and colours.
 import { useEffect, useRef, useState } from "react";
 import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { cleanLayers, splitNotes, type AxisDef, type Flavour, type Layer, type Values } from "../calc.ts";

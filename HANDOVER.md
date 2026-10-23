@@ -55,7 +55,6 @@ Rebuilt on 2026-10-22/23, after a tester on Android needed three taps to sign up
 
 - Taste-skill UI audit of the latest screens.
 - Real-device sign-in test: Android first-time sign-up, iPhone home-screen app.
-- The privacy page's AI paragraph still says keys are used only to pick note colours. AI now reads bag photos and charts the notes, so that sentence needs rewriting.
 - AI keys are forgotten on every reload, including the trip to Google's sign-in page (the "never store keys on the device" rule). If that proves annoying, a key kept for the browser session is the alternative, but it would sit on the device, so it's the owner's call.
 - On web.app and firebaseapp.com, sign-in doesn't stick: the cookie belongs to liewjiaen.com. Redirecting those addresses to the custom domain would fix it. Left on purpose.
 - Expected behaviour: while offline, a tap shows "Google session expired" rather than an offline notice. Two tabs signing up a brand-new account at the same moment can create two sheets; the app uses the oldest.
