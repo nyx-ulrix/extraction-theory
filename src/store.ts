@@ -145,6 +145,14 @@ async function readDb(): Promise<Db> {
     await sh.upsert(id, headers, "Settings", { key: "fields_v2", value: "true" }, "key");
     fields = [...fields, ...added];
   }
+  // Drippers added to the defaults later: appended once to older sheets, so deleting one in the sheet sticks.
+  if (!have.has("gear_v2")) {
+    const ids = new Set(rows.Gear.map((g) => str(g.id)));
+    const added = DEFAULT_GEAR.filter((g) => ["d-origami-air", "d-ufo", "d-ufo-ceramic", "d-ufo-switch"].includes(g.id) && !ids.has(g.id));
+    if (added.length) await sh.append(id, headers, "Gear", added as unknown as Rec[]);
+    await sh.upsert(id, headers, "Settings", { key: "gear_v2", value: "true" }, "key");
+    rows.Gear.push(...(added as unknown as Rec[]));
+  }
   return {
     id,
     headers,

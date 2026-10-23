@@ -72,7 +72,7 @@ Yield (g), shot time, preinfusion (s), pressure / profile, basket, puck prep, op
 ### Filter
 Dripper (dropdown + Other), dripper style (Immersion / Hybrid / Percolation), filter paper (dropdown + Other), pour phases, drain at (immersion, or hybrid ending closed), optional extract chilling, total time.
 
-Drippers: a new dripper must be given a style on a 3-stop slider (Immersion, Hybrid, Percolation) that starts unset. Defaults: Percolation: V60, Kalita Wave, Origami, Chemex, April, Orea, Melitta, Kono. Hybrid: Hario Switch, NextLevel Pulsar, Orea Switch. Immersion: Clever Dripper.
+Drippers: a new dripper must be given a style on a 3-stop slider (Immersion, Hybrid, Percolation) that starts unset. Defaults: Percolation: V60, Kalita Wave, Origami, Origami Air, Chemex, April, Orea, Melitta, Kono, UFO, UFO Ceramic. Hybrid: Hario Switch, NextLevel Pulsar, Orea Switch, UFO Switch. Immersion: Clever Dripper.
 
 ### Ice brew
 Everything in Filter plus required chilling, ice amount or "as much ice as possible", brew ratio (hot water / dose) and final ratio ((hot water + ice) / dose). Ratio assist splits a final ratio into hot water and ice by ice percentage.

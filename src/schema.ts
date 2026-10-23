@@ -170,8 +170,9 @@ export const DEFAULT_GEAR: Gear[] = [
   grinder("Timemore", "Chestnut S3", "clicks", null),
   grinder("Timemore", "Sculptor 064", "stepless", null),
   grinder("Timemore", "Sculptor 078", "stepless", null),
-  ...["Hario V60", "Kalita Wave", "Origami", "Chemex", "April", "Orea", "Melitta", "Kono"].map((n) => dripper(n, "percolation")),
-  ...["Hario Switch", "NextLevel Pulsar", "Orea Switch"].map((n) => dripper(n, "hybrid")),
+  ...["Hario V60", "Kalita Wave", "Origami", "Origami Air", "Chemex", "April", "Orea", "Melitta", "Kono", "UFO", "UFO Ceramic"]
+    .map((n) => dripper(n, "percolation")),
+  ...["Hario Switch", "NextLevel Pulsar", "Orea Switch", "UFO Switch"].map((n) => dripper(n, "hybrid")),
   dripper("Clever Dripper", "immersion"),
   ...["Hario V60 tabbed", "Cafec Abaca", "Sibarist FAST", "Kalita Wave 185", "Chemex bonded", "Origami cone"].map(paper),
 ];
