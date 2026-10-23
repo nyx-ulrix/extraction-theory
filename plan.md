@@ -23,7 +23,7 @@ The only server piece is the sign-in Worker (section 9, "Staying signed in"); it
    - **Google Sheets API** and **Google Drive API** enabled.
    - Google Auth Platform: Audience **External**, **published to production**. No verification needed because the only scope is `.../auth/drive.file` and the consent screen has no logo. Adding a consent-screen logo or any sensitive scope would trigger Google verification.
    - Branding: home page `https://extractiontheory.liewjiaen.com`, privacy `/privacy.html`, terms `/terms.html` (both on the subdomain). Authorized domains: `liewjiaen.com`, `extraction-theory.web.app`, `extraction-theory.firebaseapp.com`.
-   - Clients, Web application. Authorized JavaScript origins: `https://extractiontheory.liewjiaen.com`, `https://extraction-theory.web.app`, `https://extraction-theory.firebaseapp.com`, `http://localhost:5180`. Authorized redirect URI: `https://et-auth.liewjiaen.com/callback`. Local sign-in with `wrangler dev --env dev` also needs `http://localhost:8787/callback`, not added yet.
+   - Clients, Web application. Authorized JavaScript origins: `https://extractiontheory.liewjiaen.com`, `https://extraction-theory.web.app`, `https://extraction-theory.firebaseapp.com`, `http://localhost:5180`. Authorized redirect URI: `https://et-auth.liewjiaen.com/callback`.
 3. Firebase console, Hosting, Add custom domain `extractiontheory.liewjiaen.com`, then add the records it shows in Cloudflare DNS with **proxy off** (grey cloud) so Firebase can issue the certificate (done).
 
 ## 2. Spreadsheet: "Extraction Theory"

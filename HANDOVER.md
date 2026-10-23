@@ -42,7 +42,7 @@ Rebuilt on 2026-10-22/23, after a tester on Android needed three taps to sign up
 - **Sheet lookup:** the app finds its sheet without filtering on the name, so renaming it in Drive is safe. A sheet whose first-time setup was cut short gets its headers and starting rows on the next load.
 - **Check a deploy:** `curl -s -X POST -H "Origin: https://extractiontheory.liewjiaen.com" https://et-auth.liewjiaen.com/refresh` should answer `{"error":"no_session"}`.
 - **Test signed-in screens without signing in:** in the dev server, set `et.known=1` and a fake `et.cache` (`{id, headers, beans, gear, fields, brews, phases, settings}`) in localStorage, then reload.
-- **Logins are the owner's:** a login-manager hook blocks Claude from `firebase login`, `wrangler login` and account switches. `GOOGLE_CLIENT_SECRET` is only a Wrangler secret (locally, `auth-worker/.dev.vars`, gitignored).
+- **Logins are the owner's:** a login-manager hook blocks Claude from `firebase login`, `wrangler login` and account switches. `GOOGLE_CLIENT_SECRET` is only a Wrangler secret.
 
 ## Working rules (from the owner)
 
@@ -55,7 +55,6 @@ Rebuilt on 2026-10-22/23, after a tester on Android needed three taps to sign up
 
 - Taste-skill UI audit of the latest screens.
 - Real-device sign-in test: Android first-time sign-up, iPhone home-screen app.
-- Local sign-in through `wrangler dev --env dev` needs `http://localhost:8787/callback` added to the OAuth client.
 - The privacy page's AI paragraph still says keys are used only to pick note colours. AI now reads bag photos and charts the notes, so that sentence needs rewriting.
 - AI keys are forgotten on every reload, including the trip to Google's sign-in page (the "never store keys on the device" rule). If that proves annoying, a key kept for the browser session is the alternative, but it would sit on the device, so it's the owner's call.
 - On web.app and firebaseapp.com, sign-in doesn't stick: the cookie belongs to liewjiaen.com. Redirecting those addresses to the custom domain would fix it. Left on purpose.

@@ -20,16 +20,6 @@ npm run dev
 
 `npm run check` runs the brew maths and sign-in Worker self-checks. `npm run deploy` builds and deploys to Firebase Hosting.
 
-Sign-in on localhost needs the Worker running locally too, because the live Worker's cookie belongs to liewjiaen.com:
-
-```bash
-cd auth-worker
-echo GOOGLE_CLIENT_SECRET=... > .dev.vars        # gitignored
-npx wrangler dev --env dev                       # http://localhost:8787, allows only http://localhost:5180
-```
-
-Then run the app with `VITE_AUTH_URL=http://localhost:8787` in `.env`. Add `http://localhost:8787/callback` to the OAuth client's redirect URIs first (it isn't listed yet).
-
 See [plan.md](plan.md) for the full spec, [style.md](style.md) for the design rules and [HANDOVER.md](HANDOVER.md) for where things stand.
 
 ## Staying signed in (auth-worker/)
