@@ -256,7 +256,7 @@ export function Msg({ kind = "info", children }: { kind?: "info" | "error" | "su
 /** A closed-by-default fold with a one-line summary. */
 export function Fold({ title, meta, level, children }: { title: string; meta?: string; level?: "section" | "group"; children: ReactNode }) {
   return (
-    <details className={`disclosure${level ? ` fold-${level}` : ""}`}>
+    <details className={`disclosure${level ? ` disclosure-${level}` : ""}`}>
       <summary>
         {level === "section" ? <h2 className="strong">{title}</h2> : <span className="strong">{title}</span>}
         {meta && <span className="label">{meta}</span>}

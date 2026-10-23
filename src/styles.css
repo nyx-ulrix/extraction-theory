@@ -265,10 +265,10 @@ details.disclosure > summary .caret { transition: transform 150ms ease; flex: no
 details.disclosure[open] > summary .caret { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) { details.disclosure > summary .caret { transition: none; } }
 details.disclosure > .fold-body { display: grid; gap: 12px; padding-bottom: 16px; }
-details.fold-section { border-bottom: 0; }
-details.fold-section > summary { min-height: 56px; }
-details.fold-section > summary h2 { flex: 1; }
-details.fold-group > .fold-body { padding-left: 12px; border-left: 1px solid var(--border-soft); margin-left: 4px; }
+details.disclosure-section { border-bottom: 0; }
+details.disclosure-section > summary { min-height: 56px; }
+details.disclosure-section > summary h2 { flex: 1; }
+details.disclosure-group > .fold-body { padding-left: 12px; border-left: 1px solid var(--border-soft); margin-left: 4px; }
 
 /* Messages */
 .msg { padding: 12px 14px; border: 1px solid; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
