@@ -194,7 +194,8 @@ export default function App() {
   useEffect(() => {
     // Back from Google's sign-in page: the Worker now holds the session, so renew from it like a known device.
     const known = hadSession() || returned === "ok";
-    const cached = known ? readCache() : null;
+    // Not the saved copy right after sign-in: it may have been another Google account's.
+    const cached = known && returned !== "ok" ? readCache() : null;
     if (cached) {
       dbRef.current = cached;
       setDb(cached);

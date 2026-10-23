@@ -108,7 +108,13 @@ const SEED = {
   Settings: Object.entries(DEFAULT_SETTINGS).map(([key, v]) => ({ key, value: JSON.stringify(v) })),
 };
 
-export async function loadDb(): Promise<Db> {
+// One load at a time: two at once (startup plus a tap, StrictMode) could each create a sheet on a new
+// account, or run the one-off upgrades below twice.
+// ponytail: per tab only; two tabs on a brand-new account can still make two sheets (the oldest wins).
+let loading: Promise<Db> | null = null;
+export const loadDb = () => (loading ??= readDb().finally(() => { loading = null; }));
+
+async function readDb(): Promise<Db> {
   const id = await sh.findOrCreate(SEED);
   const { headers, rows } = await sh.loadAll(id);
   const settings = parseSettings(rows.Settings);

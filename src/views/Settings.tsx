@@ -29,7 +29,10 @@ export default function Settings() {
   const { db, update, busy, setDirty, arg, go, back, notify } = useApp();
   // Unsaved edits left by a reload or a trip to Google's sign-in page come back as they were.
   const [kept] = useState(() => readForm<{ s: S; edited: string[] }>(SETTINGS_FORM));
-  const [s, setS] = useState<S>(() => (kept ? { ...db.settings, ...kept.s } : db.settings));
+  // Only the keys edited here come back; the rest follow the sheet, which may have changed since.
+  const [s, setS] = useState<S>(() => (kept
+    ? { ...db.settings, ...Object.fromEntries(kept.edited.filter((k) => k in kept.s).map((k) => [k, kept.s[k as keyof S]])) }
+    : db.settings));
   const lockedHours = Math.ceil((s.pretentious_lock + LOCK_MS - Date.now()) / 3_600_000);
   const edited = useRef(new Set<string>(kept?.edited));
   const patch: Patch = (p) => { Object.keys(p).forEach((k) => edited.current.add(k)); setS((x) => ({ ...x, ...p })); };

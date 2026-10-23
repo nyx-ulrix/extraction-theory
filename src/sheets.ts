@@ -1,4 +1,4 @@
-import { api } from "./google.ts";
+import { api, forgetAccount } from "./google.ts";
 import { DATE_COLS, SHEET_TITLE, TABS, TAB_NAMES, type Cell, type Rec, type Tab } from "./schema.ts";
 
 const SHEETS = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -17,7 +17,14 @@ const range = (tab: Tab, a1 = "") => encodeURIComponent(a1 ? `${tab}!${a1}` : ta
 const toCell = (v: Cell | undefined): Cell => (v == null ? "" : v);
 
 function remember(id: string) {
-  try { localStorage.setItem(ID_KEY, id); } catch { /* storage blocked */ }
+  try {
+    // A different sheet than last time: another Google account signed in (or the old sheet is gone),
+    // so the copy and drafts on this device aren't this account's. A flaky network can't land here:
+    // the lookup throws before it, and a same-account retry finds the same id.
+    const prev = localStorage.getItem(ID_KEY);
+    if (prev && prev !== id) forgetAccount();
+    localStorage.setItem(ID_KEY, id);
+  } catch { /* storage blocked */ }
 }
 
 type SheetProps = { properties: { sheetId: number; title: Tab } };

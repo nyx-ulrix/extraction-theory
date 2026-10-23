@@ -76,8 +76,13 @@ export function signOut() {
   worker("/logout").catch(() => { /* offline: the cookie still expires on its own */ });
   token = null;
   expires = 0;
-  // Drop data tied to this account. AI keys stay: they are a per-device choice.
-  for (const k of ["et.draft", "et.form.bean", "et.form.settings", "et.sheetId", "et.cache", KNOWN]) {
+  forgetAccount();
+  try { localStorage.removeItem(KNOWN); } catch { /* storage blocked */ }
+}
+
+/** Drop data tied to an account: its sheet copy and drafts. AI keys are never stored; they live in memory until the reload. */
+export function forgetAccount() {
+  for (const k of ["et.draft", "et.form.bean", "et.form.settings", "et.sheetId", "et.cache"]) {
     try { localStorage.removeItem(k); } catch { /* storage blocked */ }
   }
 }

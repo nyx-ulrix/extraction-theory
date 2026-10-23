@@ -30,7 +30,7 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET     # the OAuth client's secret fro
 
 ## Bulk import and AI (optional)
 
-Settings, Import takes JSON. Download the import guide there (`src/import-guide.md`) and give it to any AI chat with photos of your bags or your notes; it writes the JSON for you. In the app itself, AI only fills a new bean from bag photos, with your own Claude, OpenAI or Gemini key (stored in your browser, sent only to that provider). You shape the radar and pick colours yourself.
+Settings, Import takes JSON. Download the import guide there (`src/import-guide.md`) and give it to any AI chat with photos of your bags or your notes; it writes the JSON for you. In the app itself, AI only fills a new bean from bag photos, with your own Claude, OpenAI or Gemini key (kept only in the open page, never stored, sent only to that provider). You shape the radar and pick colours yourself.
 
 ## License
 

@@ -37,8 +37,13 @@ export default function Beans() {
   const [editing, setEditing] = useState<Rec | null>(() => {
     if (arg === "new") return {};
     if (arg?.startsWith("edit:")) return db.beans.find((b) => b.id === arg.slice(5)) ?? null;
+    // Only where it was left: the library reopens a new-bean draft, a bean's page only its own draft.
     const kept = readForm<BeanDraft>(BEAN_FORM);
-    return kept ? (kept.id ? db.beans.find((b) => b.id === kept.id) ?? null : {}) : null;
+    if (!kept || arg !== (kept.id || undefined)) return null;
+    if (!kept.id) return {};
+    const b = db.beans.find((x) => x.id === kept.id);
+    if (!b) keepForm(BEAN_FORM, null); // bean deleted elsewhere: nothing to reopen
+    return b ?? null;
   });
   const viewing = arg && !editing && arg !== "new" && !arg.startsWith("edit:") ? db.beans.find((b) => b.id === arg) : undefined;
   const open = (b: Rec | null) => {
