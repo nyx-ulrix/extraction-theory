@@ -231,25 +231,65 @@ function fitPrinted(chart: ChartNote[], n: number, printed: unknown): ChartNote[
 /** A photo shrunk to at most `max` px on its long side as JPEG, so the call stays small and cheap. */
 export async function photo(file: File, max = 1568): Promise<Img> {
   const { src, done } = await decode(file);
+  const w = src.width, h = src.height;
   try {
-    // Mobile browsers can fail to draw or encode a canvas without throwing (an empty "data:," result,
-    // e.g. when memory is short), which the API rejects as an empty image: check it, and retry smaller.
-    for (const side of [max, 1024, 768]) {
-      const s = Math.min(1, side / Math.max(src.width, src.height));
-      const c = document.createElement("canvas");
-      c.width = Math.max(1, Math.round(src.width * s));
-      c.height = Math.max(1, Math.round(src.height * s));
-      const ctx = c.getContext("2d");
-      if (!ctx) continue;
-      ctx.drawImage(src, 0, 0, c.width, c.height);
-      const data = c.toDataURL("image/jpeg", 0.85).split(",")[1] ?? "";
-      c.width = c.height = 0; // free the canvas memory straight away
-      if (data.length > 100) return { type: "image/jpeg", data };
-    }
+    const img = encode(src, max);
+    if (img) return img;
   } finally {
     done();
   }
+  // Still blank: a full-size camera photo can be too big for a phone to draw. Let the decoder shrink it
+  // first, so only a small image reaches the canvas.
+  const s = Math.min(1, max / Math.max(w, h));
+  try {
+    const bmp = await createImageBitmap(file, {
+      imageOrientation: "from-image", resizeWidth: Math.round(w * s), resizeHeight: Math.round(h * s), resizeQuality: "high",
+    });
+    try {
+      const img = encode(bmp, max);
+      if (img) return img;
+    } finally {
+      bmp.close();
+    }
+  } catch { /* nothing else to try */ }
   throw new Error("Could not read that photo.");
+}
+
+/** JPEG at most `max` px on its long side, or null when every try came out empty or blank. */
+function encode(src: ImageBitmap | HTMLImageElement, max: number): Img | null {
+  // Mobile browsers can fail to draw or encode a canvas without throwing: an empty "data:," result, or a
+  // canvas of one flat colour. Either would reach the model as a blank photo, so check both and retry smaller.
+  for (const side of [max, 1024, 768]) {
+    const s = Math.min(1, side / Math.max(src.width, src.height));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(src.width * s));
+    c.height = Math.max(1, Math.round(src.height * s));
+    const ctx = c.getContext("2d");
+    if (!ctx) continue;
+    ctx.drawImage(src, 0, 0, c.width, c.height);
+    const data = c.toDataURL("image/jpeg", 0.85).split(",")[1] ?? "";
+    const ok = data.length > 100 && !flat(c);
+    c.width = c.height = 0; // free the canvas memory straight away
+    if (ok) return { type: "image/jpeg", data };
+  }
+  return null;
+}
+
+/** One flat colour all over: a real photo always has some light and shade, a failed draw doesn't. */
+function flat(c: HTMLCanvasElement) {
+  const t = document.createElement("canvas");
+  t.width = t.height = 16;
+  const x = t.getContext("2d", { willReadFrequently: true });
+  if (!x) return false;
+  x.drawImage(c, 0, 0, 16, 16);
+  const d = x.getImageData(0, 0, 16, 16).data;
+  let lo = 765, hi = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = d[i] + d[i + 1] + d[i + 2];
+    lo = Math.min(lo, v);
+    hi = Math.max(hi, v);
+  }
+  return hi - lo < 12;
 }
 
 /** The photo decoded, upright, and how to free it; falls back to an <img> where createImageBitmap cannot read the file. */
