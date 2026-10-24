@@ -42,12 +42,15 @@ export default function Settings() {
     setS((x) => (JSON.stringify(x) === JSON.stringify(base.current) ? db.settings : x));
     base.current = db.settings;
   }, [db.settings]);
-  const dirty = JSON.stringify(s) !== JSON.stringify(db.settings);
+  // An API key typed or "Remember" changed here waits for Save settings like everything else on the page.
+  const [keyEdit, setKeyEdit] = useState<KeyEdit | null>(null);
+  const settingsDirty = JSON.stringify(s) !== JSON.stringify(db.settings);
+  const dirty = settingsDirty || !!keyEdit;
   useEffect(() => {
     setDirty(dirty);
     return () => setDirty(false);
   }, [dirty, setDirty]);
-  useEffect(() => { keepForm(SETTINGS_FORM, dirty ? { s, edited: [...edited.current] } : null); }, [dirty, s]);
+  useEffect(() => { keepForm(SETTINGS_FORM, settingsDirty ? { s, edited: [...edited.current] } : null); }, [settingsDirty, s]);
   useEffect(() => {
     if (kept) notify("Restored your unsaved settings. Save them, or leave Settings to discard.", "info");
     return () => keepForm(SETTINGS_FORM, null); // left Settings: saved or discarded
@@ -57,6 +60,11 @@ export default function Settings() {
     ? "Each preset needs a name and a pattern like 1:2:3."
     : s.axes.some((a) => !a.label.trim()) ? "Each radar axis needs a label." : "";
   const save = async () => {
+    if (keyEdit) {
+      setKey(keyEdit.p, keyEdit.k, keyEdit.remember);
+      setKeyEdit(null);
+      if (!settingsDirty) return notify(keyEdit.k.trim() ? "Key saved" : "Key cleared", "success");
+    }
     // Only the keys changed on this page: anything updated elsewhere since it opened stays as it is.
     const mine = Object.fromEntries([...edited.current].map((k) => [k, s[k as keyof S]]));
     let next: S = s;
@@ -128,7 +136,7 @@ export default function Settings() {
         </>
       )}
       {arg === "gear" && (<><MyGrinders s={s} patch={patch} /><MyPapers s={s} patch={patch} /><Drippers /><Grinders /></>)}
-      {arg === "ai" && <Ai s={s} patch={patch} />}
+      {arg === "ai" && <Ai s={s} patch={patch} keyEdit={keyEdit} onKey={setKeyEdit} />}
       {arg === "data" && <ImportData />}
       {arg === "account" && <Account />}
       {dirty && (
@@ -564,7 +572,9 @@ function GrinderRow({ g }: { g: Gear }) {
   );
 }
 
-function Ai({ s, patch }: { s: S; patch: Patch }) {
+interface KeyEdit { p: Provider; k: string; remember: boolean }
+
+function Ai({ s, patch, keyEdit, onKey }: { s: S; patch: Patch; keyEdit: KeyEdit | null; onKey: (e: KeyEdit | null) => void }) {
   const p = PROVIDERS.find((x) => x.id === s.ai_provider) ?? PROVIDERS[0];
   return (
     <Section title="Bag photo auto-fill (AI)">
@@ -572,19 +582,18 @@ function Ai({ s, patch }: { s: S; patch: Patch }) {
       <Segmented label="Provider" value={p.id} options={PROVIDERS.map((x): [Provider, string] => [x.id, x.label])}
         onChange={(ai_provider) => patch({ ai_provider, ai_model: "" })} />
       <TextField label="Model" value={s.ai_model} placeholder={p.model} hint="Leave empty for the cheapest default." onChange={(ai_model) => patch({ ai_model })} />
-      <KeyField key={p.id} p={p} />
+      <KeyField key={p.id} p={p} edit={keyEdit?.p === p.id ? keyEdit : null} onEdit={onKey} />
     </Section>
   );
 }
 
-function KeyField({ p }: { p: (typeof PROVIDERS)[number] }) {
+function KeyField({ p, edit, onEdit }: { p: (typeof PROVIDERS)[number]; edit: KeyEdit | null; onEdit: (e: KeyEdit | null) => void }) {
   const id = useId();
-  const [k, setK] = useState(() => getKey(p.id));
-  const [remember, setRemember] = useState(() => isRemembered(p.id));
-  const change = (v: string, keep = remember) => {
-    setK(v);
-    setKey(p.id, v, keep);
-  };
+  const k = edit ? edit.k : getKey(p.id);
+  const remember = edit ? edit.remember : isRemembered(p.id);
+  // Back to what is already saved: nothing left to save.
+  const change = (v: string, keep = remember) =>
+    onEdit(v.trim() === getKey(p.id) && keep === isRemembered(p.id) ? null : { p: p.id, k: v, remember: keep });
   return (
     <div className="stack" style={{ gap: 8 }}>
       <Field label={`${p.label} API key`} id={id} hint={remember
@@ -596,7 +605,7 @@ function KeyField({ p }: { p: (typeof PROVIDERS)[number] }) {
           <IconButton icon={Trash} label="Clear key" disabled={!k} onClick={() => change("")} />
         </div>
       </Field>
-      <Check label="Remember on this device" on={remember} onChange={(on) => { setRemember(on); change(k, on); }} />
+      <Check label="Remember on this device" on={remember} onChange={(on) => change(k, on)} />
       <a href={p.keyUrl} target="_blank" rel="noopener noreferrer" className="meta">Get a {p.label} key</a>
     </div>
   );
