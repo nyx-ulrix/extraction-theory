@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import { ArrowLeft, Camera, Coffee, Export, FloppyDisk, MagicWand, PencilSimple, Plus, QrCode, Scan, Target, Trash, X } from "@phosphor-icons/react";
 import { dialedMethods } from "../group.ts";
 import Radar from "../components/Radar.tsx";
+import NoteChips from "../components/NoteChips.tsx";
 import Fingerprint from "../components/Fingerprint.tsx";
 import Shelf from "../components/Shelf.tsx";
 import ExportChart from "../components/ExportChart.tsx";
@@ -14,7 +15,7 @@ import { Button, Dialog, Field, IconButton, Msg, NumField, Segmented, SelectFiel
 import { DateField } from "../components/DateField.tsx";
 import FlavourEditor, { syncLayers } from "../components/FlavourEditor.tsx";
 import { MAX_BAG_PHOTOS, getKey, photo, readBag, type BagInfo, type ChartNote, type Img } from "../ai.ts";
-import { ink, noteColour, paletteHex } from "../palette.ts";
+import { noteColour, paletteHex } from "../palette.ts";
 
 const str = (v: unknown) => (v == null ? "" : String(v));
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -46,7 +47,10 @@ export default function Beans() {
     return b ?? null;
   });
   const viewing = arg && !editing && arg !== "new" && !arg.startsWith("edit:") ? db.beans.find((b) => b.id === arg) : undefined;
-  const open = (b: Rec | null) => {
+  // Opened from the coffee page's notes: jump to them, adding a new one or editing the first.
+  const [notesStart, setNotesStart] = useState<"add" | "edit">();
+  const open = (b: Rec | null, notes?: "add" | "edit") => {
+    setNotesStart(notes);
     setEditing(b);
     window.scrollTo(0, 0);
   };
@@ -54,9 +58,9 @@ export default function Beans() {
   if (editing) {
     // Existing coffee: close the form back onto its page. New one: return to wherever "Add bean" was pressed.
     const done = () => (editing.id || arg !== "new" ? open(null) : back());
-    return <BeanForm bean={editing} onDone={done} onSaved={done} />;
+    return <BeanForm bean={editing} onDone={done} onSaved={done} notesStart={notesStart} />;
   }
-  if (viewing) return <CoffeePage key={str(viewing.id)} bean={viewing} onEdit={() => open(viewing)} />;
+  if (viewing) return <CoffeePage key={str(viewing.id)} bean={viewing} onEdit={(notes) => open(viewing, notes)} />;
 
   // Library: every coffee, finished bags included.
   return (
@@ -75,7 +79,7 @@ export default function Beans() {
 
 interface BeanDraft { id: string; f: Rec; flav: Flavour }
 
-function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; onSaved: () => void }) {
+function BeanForm({ bean, onDone, onSaved, notesStart }: { bean: Rec; onDone: () => void; onSaved: () => void; notesStart?: "add" | "edit" }) {
   const { db, update, busy, setDirty, go, notify } = useApp();
   const [kept] = useState(() => {
     const k = readForm<BeanDraft>(BEAN_FORM);
@@ -196,7 +200,7 @@ function BeanForm({ bean, onDone, onSaved }: { bean: Rec; onDone: () => void; on
         </div>
         <FlavourEditor
           label="Roaster tasting notes" notes={str(f.roaster_notes)} onNotes={set("roaster_notes")}
-          value={flav} onChange={setFlav} template={db.settings.axes}
+          value={flav} onChange={setFlav} template={db.settings.axes} start={notesStart}
         />
         {!getKey(db.settings.ai_provider) && (
           <p className="meta">
@@ -296,7 +300,7 @@ function BagFill({ onFill, axes }: { onFill: (info: BagInfo, sent: AxisDef[]) =>
 }
 
 /** One coffee: its facts, roaster's radar, bag status and full brew history. */
-function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
+function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: (notes?: "add" | "edit") => void }) {
   const { db, back, update, busy, go } = useApp();
   const [confirm, setConfirm] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -316,7 +320,7 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
         <IconButton icon={ArrowLeft} label="Back" onClick={back} />
         <h1 style={{ flex: 1, minWidth: 0 }}>{str(bean.name) || "Unnamed"}</h1>
         <IconButton icon={QrCode} label="Share as QR code" onClick={() => go("share", str(bean.id))} />
-        <IconButton icon={PencilSimple} label="Edit coffee" tipAlign="end" onClick={onEdit} />
+        <IconButton icon={PencilSimple} label="Edit coffee" tipAlign="end" onClick={() => onEdit()} />
       </div>
       <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Delete ${str(bean.name) || "this coffee"}?`}>
         <p>
@@ -331,9 +335,14 @@ function CoffeePage({ bean, onEdit }: { bean: Rec; onEdit: () => void }) {
           }}>Delete</Button>
         </div>
       </Dialog>
-      {fl.layers.length > 0 && (
-        <PageArt fl={fl} title={`${str(bean.name)} roaster notes`}
-          extra={<IconButton icon={Export} label="Export as image" onClick={() => setExporting(true)} />} />
+      {fl.layers.length > 0 ? (
+        <PageArt fl={fl} title={`${str(bean.name)} roaster notes`} extra={<>
+          <IconButton icon={Plus} label="Add flavour" onClick={() => onEdit("add")} />
+          <IconButton icon={PencilSimple} label="Edit flavours" onClick={() => onEdit("edit")} />
+          <IconButton icon={Export} label="Export as image" tipAlign="end" onClick={() => setExporting(true)} />
+        </>} />
+      ) : (
+        <Button ghost icon={Plus} onClick={() => onEdit("add")}>Add flavour notes</Button>
       )}
       {exporting && <ExportChart bean={bean} fl={fl} open onClose={() => setExporting(false)} />}
       {facts.length > 0 && (
@@ -381,16 +390,7 @@ function PageArt({ fl, title, extra }: { fl: Flavour; title: string; extra?: Rea
           <div style={{ display: "grid", placeItems: "center" }} role="img" aria-label={title}>
             <Fingerprint axes={fl.axes} layers={shown} size={280} dense />
           </div>
-          <div className="row" style={{ justifyContent: "center" }}>
-            {fl.layers.map((l, i) => (
-              <button key={i} type="button" className="chip" style={{ minHeight: 44 }} aria-pressed={solo === i}
-                aria-label={solo === i ? `${l.note}, showing alone. Tap to show all notes` : `Show ${l.note} alone`}
-                onClick={() => setSolo(solo === i ? null : i)}>
-                <span className="swatch" style={{ background: ink(l.color) }} />{l.note}
-              </button>
-            ))}
-            {extra}
-          </div>
+          <NoteChips layers={fl.layers} active={solo} onTap={setSolo} end={extra} />
         </>
       ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} pitch={2.3} legendEnd={extra} />}
     </div>

@@ -8,6 +8,7 @@ import { useApp } from "../ctx.ts";
 import { IconButton } from "../ui.tsx";
 import AxesEditor from "./AxesEditor.tsx";
 import ColourPicker from "./ColourPicker.tsx";
+import NoteChips from "./NoteChips.tsx";
 import Radar from "./Radar.tsx";
 
 const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
@@ -30,11 +31,13 @@ export function syncLayers(text: string, layers: Layer[], axes: AxisDef[]): Laye
   return splitNotes(text).reduce<Layer[]>((acc, n) => [...acc, have.get(low(n)) ?? starter(n, axes, acc[0] ?? layers[0])], []);
 }
 
-export default function FlavourEditor({ notes, onNotes, value, onChange, template, label = "Tasting notes" }: {
+export default function FlavourEditor({ notes, onNotes, value, onChange, template, label = "Tasting notes", start }: {
   notes: string; onNotes: (s: string) => void;
   value: Flavour; onChange: (f: Flavour) => void;
   template: AxisDef[];
   label?: string;
+  /** Opened from the coffee page's chart: "add" opens a new note ready to type, "edit" picks the first note. */
+  start?: "add" | "edit";
 }) {
   const { notify } = useApp();
   const [editAxes, setEditAxes] = useState(false);
@@ -69,11 +72,22 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const root = useRef<HTMLDivElement>(null);
+  const [adding, setAdding] = useState(start === "add");
+  useEffect(() => {
+    if (!start) return;
+    root.current?.scrollIntoView({ block: "start" });
+    if (start === "edit" && layers.length) setSel(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [draft, setDraft] = useState("");
-  const addDraft = () => {
+  // Enter adds the note and keeps the field open and focused for the next one; leaving it closes it.
+  const addDraft = (keepOpen = false) => {
     const have = new Set(layers.map((l) => low(l.note)));
     const fresh = splitNotes(draft).filter((n) => !have.has(low(n)) && have.add(low(n)));
     setDraft("");
+    if (!keepOpen) setAdding(false);
     if (!fresh.length) return;
     const next = fresh.reduce((acc, n) => [...acc, starter(n, axes, acc[0])], layers).slice(0, 12);
     if (layers.length + fresh.length > 12) notify("Up to 12 notes per coffee.", "info");
@@ -93,45 +107,43 @@ export default function FlavourEditor({ notes, onNotes, value, onChange, templat
   };
 
   return (
-    <div className="stack">
-      <div className="field">
-        <span className="label">{label}</span>
-        <div className="note-rows">
-          {layers.map((l, i) => (
-            <div key={i} className={`note-row${sel === i ? " on" : ""}`}>
-              <ColourPicker value={l.color} label={`${l.note || "Note"} colour`} onChange={(c) => setColour(i, c)} />
-              <input
-                className="input" value={l.note} maxLength={40} aria-label={`Note ${i + 1}`}
-                onFocus={() => setSel(i)} onChange={(e) => rename(i, e.target.value)}
-                onBlur={(e) => { if (!e.target.value.trim()) remove(i); }}
-              />
-              <IconButton icon={Trash} label={`Remove ${l.note || "note"}`} tipAlign="end" onClick={() => remove(i)} />
-            </div>
-          ))}
-          <div className="note-row">
-            <span className="note-new" aria-hidden />
-            <input
-              className="input" value={draft} aria-label="New note"
-              placeholder={layers.length ? "Add another note" : "Add a note, for example blueberry"}
-              onChange={(e) => setDraft(e.target.value)} onBlur={addDraft}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDraft(); } }}
-            />
-            <IconButton icon={Plus} label="Add note" tipAlign="end" disabled={!draft.trim()} onClick={addDraft} />
-          </div>
-        </div>
-        <span className="hint">One note per field. Each becomes a layer with a colour from the palette; tap the swatch to change it.</span>
-      </div>
-      <div className="row">
-        <IconButton icon={PencilSimple} label="Edit axes" pressed={editAxes} onClick={() => setEditAxes(!editAxes)} />
-      </div>
-      {editAxes && <AxesEditor axes={axes} onChange={setAxes} template={template} />}
-
+    <div className="stack" ref={root}>
+      <span className="label">{label}</span>
       <Radar axes={axes} layers={layers} onChange={setLayers} selected={cur ? sel : null} onSelect={setSel} title={`${label} radar`} legend={false} emptyText="" />
-      {/* The note being shaped shows alone; "Show all notes" brings the rest back. */}
+      <NoteChips layers={layers} active={cur ? sel : null} onTap={setSel} end={<>
+        {adding ? (
+          <input
+            className="input note-draft" value={draft} aria-label="New note" autoFocus maxLength={200}
+            placeholder={layers.length ? "Another note" : "For example blueberry"}
+            onChange={(e) => setDraft(e.target.value)} onBlur={() => addDraft()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); addDraft(true); }
+              if (e.key === "Escape") { setDraft(""); setAdding(false); }
+            }}
+          />
+        ) : (
+          <IconButton icon={Plus} label="Add flavour" disabled={layers.length >= 12} onClick={() => { setAdding(true); setSel(null); }} />
+        )}
+        <IconButton icon={PencilSimple} label="Edit axes" tipAlign="end" pressed={editAxes} onClick={() => setEditAxes(!editAxes)} />
+      </>} />
+      {cur && sel != null && (
+        <div className="note-row">
+          <ColourPicker value={cur.color} label={`${cur.note || "Note"} colour`} onChange={(c) => setColour(sel, c)} />
+          <input
+            className="input" value={cur.note} maxLength={40} aria-label="Note name"
+            onChange={(e) => rename(sel, e.target.value)}
+            onBlur={(e) => { if (!e.target.value.trim()) remove(sel); }}
+          />
+          <IconButton icon={Trash} label={`Remove ${cur.note || "note"}`} tipAlign="end" onClick={() => remove(sel)} />
+        </div>
+      )}
+      {/* The note being shaped shows alone; tapping its chip again brings the rest back. */}
       <p className="muted" aria-live="polite" style={{ fontSize: 12, textAlign: "center" }}>
-        {!layers.length ? "Add notes to draw layers." : cur ? `Drag the points to shape ${cur.note || "this note"}. ` : "Tap a note to shape it on its own."}
+        {!layers.length ? "Tap + to add a note; each becomes a layer on the chart."
+          : cur ? `Drag the points to shape ${cur.note || "this note"}, or rename it and change its colour above. ` : "Tap a note to shape, rename or recolour it."}
         {cur && layers.length > 1 && <button type="button" className="linkish" onClick={() => setSel(null)}>Show all notes</button>}
       </p>
+      {editAxes && <AxesEditor axes={axes} onChange={setAxes} template={template} />}
     </div>
   );
 }

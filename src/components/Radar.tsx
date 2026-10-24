@@ -6,6 +6,7 @@ import { shapePath } from "./shape.ts";
 import { ink } from "../palette.ts";
 import { InkShape } from "./Fingerprint.tsx";
 import { useGrow } from "./grow.ts";
+import NoteChips from "./NoteChips.tsx";
 
 const R = 150; // radius of value 10
 const DOT_R = R + 16; // axis dot at the outer end of each spoke
@@ -233,17 +234,7 @@ export default function Radar({
       </svg>
 
       {legend && layers.length > 0 && (
-        <div className="row" style={{ justifyContent: "center" }}>
-          {layers.map((l, i) => (
-            <button key={i} type="button" className="chip" style={{ minHeight: 44 }} aria-pressed={only === i}
-              aria-label={only === i ? `${l.note}, showing alone. Tap to show all notes` : `Show ${l.note} alone`}
-              onClick={() => (onSelect ? onSelect(sel === i ? null : i) : setSolo(solo === i ? null : i))}>
-              <span className="swatch" style={{ background: ink(l.color) }} />
-              {l.note}
-            </button>
-          ))}
-          {legendEnd}
-        </div>
+        <NoteChips layers={layers} active={only} onTap={(i) => (onSelect ? onSelect(i) : setSolo(i))} end={legendEnd} />
       )}
     </div>
   );

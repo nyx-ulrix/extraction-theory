@@ -169,11 +169,11 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
 .kv dd { margin: 4px 0 0; color: var(--text-strong); overflow-wrap: anywhere; }
 
 /* Tasting notes: one input per note */
-.note-rows { display: grid; gap: 8px; }
+.note-chips { justify-content: center; }
+.note-chips .chip { min-height: 44px; }
+.note-chips .note-draft { width: 16ch; min-height: 44px; }
 .note-row { display: flex; gap: 8px; align-items: center; }
 .note-row > .input { flex: 1; min-width: 0; }
-.note-row.on > .input { border-color: var(--text-strong); background: var(--surface); }
-.note-new { width: 44px; height: 44px; flex: none; border: 1px dashed var(--border-soft); }
 
 /* Palette colour picker: only the 64 approved colours */
 .swatch-btn { flex: none; padding: 0; border: 1px solid var(--border); outline: 3px solid var(--bg); outline-offset: -4px; cursor: pointer; }
