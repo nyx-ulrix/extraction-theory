@@ -6,7 +6,7 @@ import {
 import { DEFAULT_AXES, cleanAxes, parsePattern, type DialType, type Layer } from "../calc.ts";
 import Radar from "../components/Radar.tsx";
 import Fingerprint from "../components/Fingerprint.tsx";
-import { PROVIDERS, getKey, setKey, type Provider } from "../ai.ts";
+import { PROVIDERS, getKey, isRemembered, setKey, type Provider } from "../ai.ts";
 import { SETTINGS_FORM, keepForm, readForm, useApp } from "../ctx.ts";
 import { signOut } from "../google.ts";
 import { useInstall } from "../install.ts";
@@ -580,19 +580,23 @@ function Ai({ s, patch }: { s: S; patch: Patch }) {
 function KeyField({ p }: { p: (typeof PROVIDERS)[number] }) {
   const id = useId();
   const [k, setK] = useState(() => getKey(p.id));
-  const change = (v: string) => {
+  const [remember, setRemember] = useState(() => isRemembered(p.id));
+  const change = (v: string, keep = remember) => {
     setK(v);
-    setKey(p.id, v);
+    setKey(p.id, v, keep);
   };
   return (
     <div className="stack" style={{ gap: 8 }}>
-      <Field label={`${p.label} API key`} id={id} hint={`Kept only while this page is open, never saved on this device. Sent only to ${p.label}.`}>
+      <Field label={`${p.label} API key`} id={id} hint={remember
+        ? `Saved in this browser on this device until you clear it. Sent only to ${p.label}.`
+        : `Kept only while this page is open. Sent only to ${p.label}.`}>
         <div className="inline">
           <input id={id} className="input" type="password" autoComplete="off" spellCheck={false} placeholder="Paste your key"
             value={k} onChange={(e) => change(e.target.value)} />
           <IconButton icon={Trash} label="Clear key" disabled={!k} onClick={() => change("")} />
         </div>
       </Field>
+      <Check label="Remember on this device" on={remember} onChange={(on) => { setRemember(on); change(k, on); }} />
       <a href={p.keyUrl} target="_blank" rel="noopener noreferrer" className="meta">Get a {p.label} key</a>
     </div>
   );

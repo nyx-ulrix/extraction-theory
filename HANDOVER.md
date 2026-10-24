@@ -24,7 +24,7 @@ A coffee brew log and dial-in tracker. React 19, TypeScript and Vite, with no ap
   - *I'm a snob* (`advanced`): a checklist of variables to log.
   - *Pretentious*: everything on, microns only, water GH and KH required. Unticking anything asks to step down and locks Pretentious for 24 hours (`pretentious_lock`).
 - **Charts**: risograph radar and blob (`Radar.tsx`, `Fingerprint.tsx`, `palette.ts` `ink()`). Tap a legend note to see it alone. PNG export is in `ExportChart.tsx`.
-- **AI** (`src/ai.ts`): fills a new bean from up to two bag photos with the user's own key (Claude, OpenAI or Gemini; kept in memory only). It also charts the notes: the roaster's printed axes if the bag has them, otherwise scored on the coffee's axes, with a palette colour per note.
+- **AI** (`src/ai.ts`): fills a new bean from up to two bag photos with the user's own key (Claude, OpenAI or Gemini; kept in memory, or in browser storage when "Remember on this device" is ticked). It also charts the notes: the roaster's printed axes if the bag has them, otherwise scored on the coffee's axes, with a palette colour per note.
 - **Roaster QR codes** (`src/share.ts`, `src/components/qr.ts`, `src/views/Share.tsx`):
   - A coffee plus a recommended recipe travels in the link's `#s=` fragment as deflated, compacted JSON. No backend is involved.
   - The QR is drawn in the site's dot style with accent finder eyes, at medium error correction.

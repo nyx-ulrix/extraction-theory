@@ -11,14 +11,27 @@ export const PROVIDERS: { id: Provider; label: string; model: string; keyUrl: st
   { id: "gemini", label: "Gemini", model: "gemini-2.5-flash-lite", keyUrl: "https://aistudio.google.com/apikey" },
 ];
 
-// Keys live only in this page's memory: never on the device, in the sheet or in the repo. A reload or a trip
-// to Google's sign-in page forgets them. Keys saved by older versions are wiped from storage on load.
+// Keys stay in this page's memory unless the user ticks "Remember on this device", which keeps them in this
+// browser's storage (never in the sheet or the repo) until cleared. Keys saved by older versions under
+// `et.key.*` are wiped from storage on load.
 const keys = new Map<Provider, string>();
-for (const p of PROVIDERS) try { localStorage.removeItem(`et.key.${p.id}`); } catch { /* storage blocked */ }
+const stored = (p: Provider) => `et.apikey.${p}`;
+for (const p of PROVIDERS) try {
+  localStorage.removeItem(`et.key.${p.id}`);
+  const k = localStorage.getItem(stored(p.id));
+  if (k) keys.set(p.id, k);
+} catch { /* storage blocked */ }
 export const getKey = (p: Provider) => keys.get(p) ?? "";
-export function setKey(p: Provider, key: string) {
-  if (key.trim()) keys.set(p, key.trim());
+export const isRemembered = (p: Provider) => { try { return !!localStorage.getItem(stored(p)); } catch { return false; } };
+/** Sets the key for this page; `remember` also keeps it in this browser's storage (false removes it from there). */
+export function setKey(p: Provider, key: string, remember = false) {
+  const k = key.trim();
+  if (k) keys.set(p, k);
   else keys.delete(p);
+  try {
+    if (remember && k) localStorage.setItem(stored(p), k);
+    else localStorage.removeItem(stored(p));
+  } catch { /* storage blocked: memory only */ }
 }
 
 export interface Img { type: string; data: string } // base64, no data: prefix
