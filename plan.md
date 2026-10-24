@@ -13,7 +13,7 @@ Public repo `nyx-ulrix/extraction-theory`, MIT licence. Commits never credit Cla
 | Domain | `extractiontheory.liewjiaen.com` (Cloudflare DNS, proxy off) | Root `liewjiaen.com` is the portfolio on GitHub Pages and stays untouched |
 | Auth | Google code flow through a small Cloudflare Worker (`auth-worker/`), scope `drive.file` | The app can only see files it created. The Worker only keeps you signed in; no secrets in the bundle |
 | Storage | Google Sheets API v4 + Drive API v3 (find the sheet on any device) | Sheet is human readable and yours |
-| Flavour AI | User key for Claude, OpenAI or Gemini, called from the browser | Key lives only in the open page: never stored on the device, in the sheet or in the repo |
+| Flavour AI | User key for Claude, OpenAI or Gemini, called from the browser | Key lives only in the open page unless "Remember on this device" is ticked (then this browser, cleared on sign out or account switch); never in the sheet or the repo |
 
 The only server piece is the sign-in Worker (section 9, "Staying signed in"); it never sees sheet data. The app's only config value is `VITE_AUTH_URL` in `.env`. The client secret lives only as a Worker secret. Don't remove the Worker to "simplify": without it every session ends after an hour.
 

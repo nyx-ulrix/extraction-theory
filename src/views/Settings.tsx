@@ -597,7 +597,7 @@ function KeyField({ p, edit, onEdit }: { p: (typeof PROVIDERS)[number]; edit: Ke
   return (
     <div className="stack" style={{ gap: 8 }}>
       <Field label={`${p.label} API key`} id={id} hint={remember
-        ? `Saved in this browser on this device until you clear it. Sent only to ${p.label}.`
+        ? `Saved in this browser on this device until you clear it or sign out. Sent only to ${p.label}.`
         : `Kept only while this page is open. Sent only to ${p.label}.`}>
         <div className="inline">
           <input id={id} className="input" type="password" autoComplete="off" spellCheck={false} placeholder="Paste your key"

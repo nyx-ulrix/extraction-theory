@@ -23,6 +23,11 @@ for (const p of PROVIDERS) try {
 } catch { /* storage blocked */ }
 export const getKey = (p: Provider) => keys.get(p) ?? "";
 export const isRemembered = (p: Provider) => { try { return !!localStorage.getItem(stored(p)); } catch { return false; } };
+/** Drops every key from this page and this browser: on sign out and account switch, so nobody uses another's key. */
+export function forgetKeys() {
+  keys.clear();
+  for (const p of PROVIDERS) try { localStorage.removeItem(stored(p.id)); } catch { /* storage blocked */ }
+}
 /** Sets the key for this page; `remember` also keeps it in this browser's storage (false removes it from there). */
 export function setKey(p: Provider, key: string, remember = false) {
   const k = key.trim();

@@ -1,5 +1,6 @@
 // Google sign-in: a full-page redirect through a small Cloudflare Worker (auth-worker/), which keeps a
 // refresh token in an HttpOnly cookie, so access tokens renew silently instead of ending every hour.
+import { forgetKeys } from "./ai.ts";
 
 const AUTH = (import.meta.env.VITE_AUTH_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -80,11 +81,12 @@ export function signOut() {
   try { localStorage.removeItem(KNOWN); } catch { /* storage blocked */ }
 }
 
-/** Drop data tied to an account: its sheet copy and drafts. AI keys are never stored; they live in memory until the reload. */
+/** Drop data tied to an account: its sheet copy, drafts and AI keys (remembered ones too). */
 export function forgetAccount() {
   for (const k of ["et.draft", "et.form.bean", "et.form.settings", "et.sheetId", "et.cache"]) {
     try { localStorage.removeItem(k); } catch { /* storage blocked */ }
   }
+  forgetKeys();
 }
 
 export async function api<T = unknown>(url: string, init: RequestInit = {}, retried = false): Promise<T> {
