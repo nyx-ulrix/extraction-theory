@@ -158,9 +158,11 @@ export type BagInfo = Partial<Record<Exclude<keyof typeof BAG_FIELDS, "notes" | 
 export async function readBag(images: Img[], provider: Provider, model: string, axes: AxisDef[]): Promise<BagInfo> {
   const key = getKey(provider);
   if (!key) throw new Error("Add an API key in Settings first.");
+  const sent = images.filter((i) => i.data).slice(0, MAX_BAG_PHOTOS);
+  if (!sent.length) throw new Error("Could not read that photo. Remove it and add it again.");
   const list = axes.map((a) => `${a.label}${a.shared ? " (cup-wide)" : ""}`).join(", ");
   const raw = await ask<Record<string, unknown>>(provider, model, key, {
-    system: BAG, schema: BAG_SCHEMA, name: "bean_label", images: images.slice(0, MAX_BAG_PHOTOS),
+    system: BAG, schema: BAG_SCHEMA, name: "bean_label", images: sent,
     text: `Fill in the bean from this label. The flavour chart's axes, in order: ${list}.`,
   });
   const out: BagInfo = {};
@@ -187,12 +189,44 @@ export async function readBag(images: Img[], provider: Provider, model: string, 
 
 /** A photo shrunk to at most `max` px on its long side as JPEG, so the call stays small and cheap. */
 export async function photo(file: File, max = 1568): Promise<Img> {
-  const bmp = await createImageBitmap(file);
-  const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * s);
-  c.height = Math.round(bmp.height * s);
-  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
-  bmp.close();
-  return { type: "image/jpeg", data: c.toDataURL("image/jpeg", 0.85).split(",")[1] };
+  const { src, done } = await decode(file);
+  try {
+    // Mobile browsers can fail to draw or encode a canvas without throwing (an empty "data:," result,
+    // e.g. when memory is short), which the API rejects as an empty image: check it, and retry smaller.
+    for (const side of [max, 1024, 768]) {
+      const s = Math.min(1, side / Math.max(src.width, src.height));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(src.width * s));
+      c.height = Math.max(1, Math.round(src.height * s));
+      const ctx = c.getContext("2d");
+      if (!ctx) continue;
+      ctx.drawImage(src, 0, 0, c.width, c.height);
+      const data = c.toDataURL("image/jpeg", 0.85).split(",")[1] ?? "";
+      c.width = c.height = 0; // free the canvas memory straight away
+      if (data.length > 100) return { type: "image/jpeg", data };
+    }
+  } finally {
+    done();
+  }
+  throw new Error("Could not read that photo.");
+}
+
+/** The photo decoded, upright, and how to free it; falls back to an <img> where createImageBitmap cannot read the file. */
+async function decode(file: File): Promise<{ src: ImageBitmap | HTMLImageElement; done: () => void }> {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    if (bmp.width && bmp.height) return { src: bmp, done: () => bmp.close() };
+    bmp.close();
+  } catch { /* try an <img> below */ }
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.src = url;
+  try {
+    await img.decode();
+  } catch { /* checked below */ }
+  if (!img.naturalWidth || !img.naturalHeight) {
+    URL.revokeObjectURL(url);
+    throw new Error("Could not read that photo.");
+  }
+  return { src: img, done: () => URL.revokeObjectURL(url) };
 }
