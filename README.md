@@ -34,11 +34,11 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET     # the OAuth client's secret fro
 
 When a change touches both, deploy the Worker first, then the site: a site build expects the Worker routes it calls.
 
-What stays on the device: the theme, display preferences, the sheet's ID, a copy of the sheet's coffee data, and unsaved brew, bean or settings edits until they're saved or discarded. Nothing that can sign someone in is stored: the access token and AI keys live only in the open page, and the refresh token sits in the Worker's HttpOnly cookie.
+What stays on the device: the theme, display preferences, the sheet's ID, a copy of the sheet's coffee data, and unsaved brew, bean or settings edits until they're saved or discarded. Nothing that can sign someone in is stored: the access token lives only in the open page, and the refresh token sits in the Worker's HttpOnly cookie. AI keys stay in the open page too, unless you tick "Remember on this device", which keeps them in this browser's storage until cleared.
 
 ## Bulk import and AI (optional)
 
-Settings, Import takes JSON. Download the import guide there (`src/import-guide.md`) and give it to any AI chat with photos of your bags or your notes; it writes the JSON for you. In the app itself, AI only fills a new bean from bag photos, with your own Claude, OpenAI or Gemini key (kept only in the open page, never stored, sent only to that provider). It reads the label and charts the tasting notes: the roaster's printed flavour axes if the bag has them, otherwise each note scored on your chart's axes, each with a palette colour. Every value stays yours to drag and change.
+Settings, Import takes JSON. Download the import guide there (`src/import-guide.md`) and give it to any AI chat with photos of your bags or your notes; it writes the JSON for you. In the app itself, AI only fills a new bean from bag photos, with your own Claude, OpenAI or Gemini key (kept only in the open page unless you tick "Remember on this device"; sent only to that provider). It reads the label and charts the tasting notes: the roaster's printed flavour axes if the bag has them, otherwise each note scored on your chart's axes, each with a palette colour. Every value stays yours to drag and change.
 
 ## License
 
