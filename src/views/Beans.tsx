@@ -160,11 +160,11 @@ function BeanForm({ bean, onDone, onSaved, notesStart }: { bean: Rec; onDone: ()
         <h1>{bean.id ? str(bean.name) || "Edit bean" : "New bean"}</h1>
       </div>
       <div className="stack">
-        <BagFill onFill={fill} axes={flav.axes} />
         <FlavourEditor
           label="Roaster tasting notes" notes={str(f.roaster_notes)} onNotes={set("roaster_notes")}
           value={flav} onChange={setFlav} template={db.settings.axes} start={notesStart}
         />
+        <BagFill onFill={fill} axes={flav.axes} />
         <div className="grid-2">
           <TextField label="Bean name" value={str(f.name)} onChange={set("name")} hint="What's on the front of the bag, for example Colombia Huila" />
           <TextField label="Roaster's name for it" value={str(f.product)} onChange={set("product")} hint="For example Halo or Nano" />
