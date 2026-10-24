@@ -161,6 +161,10 @@ function BeanForm({ bean, onDone, onSaved, notesStart }: { bean: Rec; onDone: ()
       </div>
       <div className="stack">
         <BagFill onFill={fill} axes={flav.axes} />
+        <FlavourEditor
+          label="Roaster tasting notes" notes={str(f.roaster_notes)} onNotes={set("roaster_notes")}
+          value={flav} onChange={setFlav} template={db.settings.axes} start={notesStart}
+        />
         <div className="grid-2">
           <TextField label="Bean name" value={str(f.name)} onChange={set("name")} hint="What's on the front of the bag, for example Colombia Huila" />
           <TextField label="Roaster's name for it" value={str(f.product)} onChange={set("product")} hint="For example Halo or Nano" />
@@ -198,10 +202,6 @@ function BeanForm({ bean, onDone, onSaved, notesStart }: { bean: Rec; onDone: ()
             <DateField label="Frozen on" value={num(f.frozen_date)} onChange={(v) => setF((p) => ({ ...p, frozen_date: v }))} />
           )}
         </div>
-        <FlavourEditor
-          label="Roaster tasting notes" notes={str(f.roaster_notes)} onNotes={set("roaster_notes")}
-          value={flav} onChange={setFlav} template={db.settings.axes} start={notesStart}
-        />
         {!getKey(db.settings.ai_provider) && (
           <p className="meta">
             Optional: add an AI key in <button type="button" className="linkish" onClick={() => go("settings", "ai")}>Settings, AI</button> to fill this form from photos of the bag.
@@ -378,13 +378,6 @@ function PageArt({ fl, title, extra }: { fl: Flavour; title: string; extra?: Rea
   const set = (p: Partial<typeof s>) => { if (!busy) update((d) => saveSettings(d, { ...d.settings, ...p })); };
   return (
     <div className="stack">
-      <div className="grid-3">
-        <Segmented full disabled={busy} label="Chart view" value={art} options={[["radar", "Spider"], ["blob", "Blob"]]} onChange={(page_art) => set({ page_art })} />
-        {art === "radar" && <>
-          <Segmented full disabled={busy} label="Shape" value={s.page_shape} options={[["sharp", "Sharp"], ["rounded", "Rounded"]]} onChange={(page_shape) => set({ page_shape })} />
-          <Segmented full disabled={busy} label="Chart lines" value={s.page_grid ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ page_grid: v === "show" })} />
-        </>}
-      </div>
       {art === "blob" ? (
         <>
           <div style={{ display: "grid", placeItems: "center" }} role="img" aria-label={title}>
@@ -393,6 +386,13 @@ function PageArt({ fl, title, extra }: { fl: Flavour; title: string; extra?: Rea
           <NoteChips layers={fl.layers} active={solo} onTap={setSolo} end={extra} />
         </>
       ) : <Radar axes={fl.axes} layers={fl.layers} size={360} title={title} rounded={s.page_shape === "rounded"} grid={s.page_grid} pitch={2.3} legendEnd={extra} />}
+      <div className="grid-3">
+        <Segmented full disabled={busy} label="Chart view" value={art} options={[["radar", "Spider"], ["blob", "Blob"]]} onChange={(page_art) => set({ page_art })} />
+        {art === "radar" && <>
+          <Segmented full disabled={busy} label="Shape" value={s.page_shape} options={[["sharp", "Sharp"], ["rounded", "Rounded"]]} onChange={(page_shape) => set({ page_shape })} />
+          <Segmented full disabled={busy} label="Chart lines" value={s.page_grid ? "show" : "hide"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => set({ page_grid: v === "show" })} />
+        </>}
+      </div>
     </div>
   );
 }
