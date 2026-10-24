@@ -131,9 +131,13 @@ case with spelling mistakes fixed.
 
 Then chart each tasting note, as a coffee taster filling in a flavour radar:
 - Descriptors such as "smooth", "juicy" or "long finish" are notes too.
-- If the label prints its own flavour chart or wheel with axes, set printed_axes to its axis labels in order (clockwise
-  from the top) and score each note on those axes so that, across the notes, the highest value on each axis matches the
-  printed one. Otherwise set printed_axes to null and score each note on the axes you are given.
+- If the label or card prints its own flavour chart (a spider or radar chart, a filled shape on axes, or a wheel), set
+  printed_axes to its axis labels in order, clockwise starting from the axis nearest the top, and printed_values to
+  the printed shape's value on each of those axes, in the same order: measure how far the shape's point on that axis
+  sits from the centre, as a fraction of the distance to the outer ring or the axis label, times 10 (0 to 10, steps
+  of 0.5). Read each axis on its own; printed shapes are often lopsided, with some axes near the centre and others
+  near the ring. Then score each note on those axes so that, across the notes, the highest value on each axis matches
+  printed_values. Otherwise set printed_axes and printed_values to null and score each note on the axes you are given.
 - values: one number per axis, in order: the printed axes when printed_axes is set, otherwise the axes you are given; from 0 to 10 in steps of 0.5. Score what the note brings: a citrus
   note scores high on acidity and low on body; a chocolate note high on sweetness and body; "long finish" high on finish.
 - Axes marked cup-wide (such as body or bitterness) describe the whole cup: give every note the same value on them.
@@ -148,6 +152,7 @@ const BAG_FIELDS = {
   variety: opt("string"), process: opt("string"), roast_level: opt("string"), roast_date: opt("string"),
   altitude_low_m: opt("number"), altitude_high_m: opt("number"),
   printed_axes: { anyOf: [{ type: "array", items: { type: "string" } }, { type: "null" }] },
+  printed_values: { anyOf: [{ type: "array", items: { type: "number" } }, { type: "null" }] },
   notes: {
     type: "array",
     items: {
@@ -160,7 +165,7 @@ const BAG_FIELDS = {
 const BAG_SCHEMA = { type: "object", properties: BAG_FIELDS, required: Object.keys(BAG_FIELDS), additionalProperties: false };
 
 export interface ChartNote { note: string; colour: string; values: number[] }
-export type BagInfo = Partial<Record<Exclude<keyof typeof BAG_FIELDS, "notes" | "printed_axes">, string | number>> & {
+export type BagInfo = Partial<Record<Exclude<keyof typeof BAG_FIELDS, "notes" | "printed_axes" | "printed_values">, string | number>> & {
   tasting_notes?: string[];
   /** The roaster's own chart axes when the bag prints one (3 or more), else the notes are scored on the given axes. */
   printed_axes?: string[];
@@ -188,6 +193,8 @@ export async function readBag(images: Img[], provider: Provider, model: string, 
         values: Array.isArray(n.values) ? n.values.slice(0, 12).map((x: unknown) => { const v = Number(x); return Number.isFinite(v) ? v : 0; }) : [],
       })).filter((n) => n.note);
       if (notes.length) { out.chart = notes; out.tasting_notes = notes.map((n) => n.note); }
+    } else if (k === "printed_values") {
+      continue; // used below to fit the notes to the printed shape
     } else if (k === "printed_axes") {
       if (Array.isArray(v)) {
         const labels = v.map((x) => String(x).trim().slice(0, 24)).filter(Boolean).slice(0, 12);
@@ -197,7 +204,23 @@ export async function readBag(images: Img[], provider: Provider, model: string, 
       (out as Record<string, unknown>)[k] = typeof v === "string" ? v.trim().slice(0, 200) : v;
     }
   }
+  if (out.printed_axes && out.chart) out.chart = fitPrinted(out.chart, out.printed_axes.length, raw?.printed_values);
   return out;
+}
+
+/**
+ * The notes rescaled per axis so their outline (the highest value on each axis) is the printed chart's shape,
+ * keeping how the notes compare with each other. Without readable printed values the notes are left as scored.
+ */
+function fitPrinted(chart: ChartNote[], n: number, printed: unknown): ChartNote[] {
+  if (!Array.isArray(printed) || printed.length !== n || !chart.every((c) => c.values.length === n)) return chart;
+  const target = printed.map((x) => Math.min(10, Math.max(0, Number(x) || 0)));
+  const top = target.map((_, a) => Math.max(...chart.map((c) => c.values[a])));
+  const half = (v: number) => Math.round(Math.min(10, Math.max(0, v)) * 2) / 2;
+  return chart.map((c) => ({
+    ...c,
+    values: c.values.map((v, a) => half(top[a] > 0 ? (v * target[a]) / top[a] : target[a])),
+  }));
 }
 
 /** A photo shrunk to at most `max` px on its long side as JPEG, so the call stays small and cheap. */
