@@ -97,14 +97,6 @@ p { margin: 0; }
 .grid-2 { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid-3 { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 479px) { .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-/* Brew recipe: every field on one row, even on a phone. Short labels, tight padding, units tucked in. */
-.recipe-line { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; align-items: end; }
-.recipe-line .label { letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.recipe-line .input { padding: 10px 6px; letter-spacing: 0; }
-.recipe-line .unit .input { padding-right: 18px; }
-.recipe-line .unit > span { right: 4px; font-size: 10px; }
-.recipe-line .readout { overflow: hidden; white-space: nowrap; }
-.recipe-line .hint { display: none; } /* said once under the row instead */
 .section { border-top: 1px solid var(--border-soft); padding-top: 24px; display: grid; gap: 16px; }
 .section > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .spacer { flex: 1; }
