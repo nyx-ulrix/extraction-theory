@@ -58,7 +58,7 @@ export function TimeField({ label, value, onChange, hint }: { label: string; val
     if (s != null || !shown.trim()) onChange(s);
   };
   return (
-    <Field label={label} hint={hint ?? "Type the digits: 230 is 2:30, 45 is 0:45"} error={bad ? "Type the time as digits, for example 245 for 2:45" : undefined} id={id}>
+    <Field label={label} hint={hint} error={bad ? "Type the time as digits, for example 245 for 2:45" : undefined} id={id}>
       <input
         id={id} className="input num" inputMode="numeric" placeholder="0:00" value={text} aria-invalid={bad}
         onChange={(e) => type(e.target.value)}
