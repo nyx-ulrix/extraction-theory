@@ -22,16 +22,15 @@ export default function Recipe({ d, up, m, err }: { d: Draft; up: Up; m: MethodD
   const ratioHint = !basic ? undefined : m.liquid === "yield"
     ? `Espresso out per gram of coffee. 1:${start.ratio ?? 2} is a good start.`
     : `Water per gram of coffee. 1:${start.ratio ?? 16} is a good start.`;
-  const temp = <NumField label={m.tempLabel} unit="°C" value={num(f.temp_c)} placeholder={ph(start.temp)} onChange={(v) => up(withF({ temp_c: v }))} />;
+  const temp = <NumField label="Temp" unit="°C" value={num(f.temp_c)} placeholder={ph(start.temp)} onChange={(v) => up(withF({ temp_c: v }))} />;
   // Pour phases switched off: the water poured is typed here instead.
   const noPours = !!m.pours && !layoutFor(m, db.fields, st).includes("pours");
   const pressTotal = pressTimes(d.presses.map((p) => ({ start: p.start_s, duration: p.duration_s }))).total;
   const time =
     m.time === "shot" || m.time === "total" ? (
-      <TimeField label={m.time === "shot" ? "Shot time" : "Total time"} value={num(f.total_s)} onChange={(v) => up(withF({ total_s: v }))}
-        hint={basic && m.time === "shot" ? "Aim for about 25 to 35 s" : undefined} />
+      <TimeField label="Time" value={num(f.total_s)} onChange={(v) => up(withF({ total_s: v }))} />
     ) : m.time === "derived" ? (
-      <Readout label="Total time">{pressTotal != null ? fmtTime(pressTotal) : null}</Readout>
+      <Readout label="Time">{pressTotal != null ? fmtTime(pressTotal) : null}</Readout>
     ) : null;
 
   let body;
@@ -43,9 +42,9 @@ export default function Recipe({ d, up, m, err }: { d: Draft; up: Up; m: MethodD
     body = (
       <>
         <NumField label={doseLabel} unit="g" min={0} value={dose} placeholder={ph(start.dose)} onChange={edit("dose")} />
-        <NumField label={m.liquid === "yield" ? (basic ? "Espresso out" : "Yield") : "Water"} unit="g" min={0} value={num(f[lk])}
+        <NumField label={m.liquid === "yield" ? (basic ? "Out" : "Yield") : "Water"} unit="g" min={0} value={num(f[lk])}
           placeholder={ph(start.liquid)} onChange={edit("liquid")} />
-        <NumField label="Ratio (1:x)" min={0} value={num(f.ratio)} placeholder={ph(start.ratio)} hint={ratioHint} onChange={edit("ratio")} />
+        <NumField label="Ratio" min={0} value={num(f.ratio)} placeholder={ph(start.ratio)} onChange={edit("ratio")} />
       </>
     );
   } else {
@@ -58,9 +57,9 @@ export default function Recipe({ d, up, m, err }: { d: Draft; up: Up; m: MethodD
       body = (
         <>
           <NumField label={doseLabel} unit="g" min={0} value={dose} placeholder={ph(start.dose)} onChange={(v) => set(null, { dose_g: v })} />
-          <NumField label="Final ratio (1:x)" min={0} value={num(f.final_ratio)} placeholder={ph(start.ratio)} hint={ratioHint}
+          <NumField label="Final" min={0} value={num(f.final_ratio)} placeholder={ph(start.ratio)}
             onChange={(v) => set(null, { final_ratio: v })} />
-          <NumField label="Ice share" unit="%" min={0} max={100} value={d.x.ice_pct} onChange={(v) => set({ ice_pct: v }, {})} />
+          <NumField label="Ice" unit="%" min={0} max={100} value={d.x.ice_pct} onChange={(v) => set({ ice_pct: v }, {})} />
         </>
       );
       readouts = [
@@ -71,16 +70,14 @@ export default function Recipe({ d, up, m, err }: { d: Draft; up: Up; m: MethodD
         ["Final ratio poured", r(finalRatio(dose, water, num(f.ice_g), !!f.ice_max))],
       ];
     } else {
-      // Water is the sum of the pours; the ratio here is the target the splitter uses.
+      // Water is the sum of the pours; the ratio here is the target the splitter uses. The water poured
+      // and the ratio it makes are in the summary bar, so the row keeps room for what is typed.
       body = (
         <>
           <NumField label={doseLabel} unit="g" min={0} value={dose} placeholder={ph(start.dose)} onChange={(v) => up(withF({ dose_g: v }))} />
-          <NumField label={noPours ? "Ratio (1:x)" : "Target ratio (1:x)"} min={0} value={num(f.ratio)} placeholder={ph(start.ratio)} hint={ratioHint}
+          <NumField label={noPours ? "Ratio" : "Target"} min={0} value={num(f.ratio)} placeholder={ph(start.ratio)}
             onChange={(v) => up(withF({ ratio: v }))} />
-          {noPours
-            ? <NumField label="Water" unit="g" min={0} value={num(f.water_g)} onChange={(v) => up(withF({ water_g: v }))} />
-            : <Readout label="Water poured">{g(water)}</Readout>}
-          <Readout label="Ratio">{r(brewRatio)}</Readout>
+          {noPours && <NumField label="Water" unit="g" min={0} value={num(f.water_g)} onChange={(v) => up(withF({ water_g: v }))} />}
         </>
       );
     }
@@ -92,21 +89,31 @@ export default function Recipe({ d, up, m, err }: { d: Draft; up: Up; m: MethodD
     readouts.push(["Average flow", out && run > 0 ? `${round(out / run, 2)} g/s` : null]);
   }
   const ey = extraction(m, f);
+  const typed = showTime && (m.time === "shot" || m.time === "total");
+  const hint = [
+    ratioHint,
+    typed ? `Time: type the digits, 230 is 2:30${basic && m.time === "shot" ? "; aim for about 25 to 35 s" : ""}.` : "",
+  ].filter(Boolean).join(" ");
   return (
     <Section title="Recipe">
-      <div className="grid-3">
+      {/* One line per row, so the recipe reads at a glance without scrolling; hints sit under it. */}
+      <div className="recipe-line">
         {body}
         {temp}
         {showTime && time}
       </div>
+      {hint && <p className="meta">{hint}</p>}
       {shows(st, "extraction") && (
-        <div className="grid-3">
-          <NumField label="TDS" unit="%" min={0} max={30} value={num(f.tds_pct)} hint="Refractometer reading" onChange={(v) => up(withF({ tds_pct: v }))} />
-          {m.liquid !== "yield" && (
-            <NumField label="Beverage" unit="g" min={0} value={num(f.beverage_g)} hint="Weight of the drink" onChange={(v) => up(withF({ beverage_g: v }))} />
-          )}
-          <Readout label="Extraction yield">{ey != null ? `${ey}%` : null}</Readout>
-        </div>
+        <>
+          <div className="recipe-line">
+            <NumField label="TDS" unit="%" min={0} max={30} value={num(f.tds_pct)} onChange={(v) => up(withF({ tds_pct: v }))} />
+            {m.liquid !== "yield" && (
+              <NumField label="Drink" unit="g" min={0} value={num(f.beverage_g)} onChange={(v) => up(withF({ beverage_g: v }))} />
+            )}
+            <Readout label="EY">{ey != null ? `${ey}%` : null}</Readout>
+          </div>
+          <p className="meta">TDS from a refractometer{m.liquid !== "yield" ? "; drink is the weight of the brewed coffee" : ""}. EY is the extraction yield.</p>
+        </>
       )}
       {err && <p className="brew-err" role="alert">{err}</p>}
       {readouts.length > 0 && (
